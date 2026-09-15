@@ -5,7 +5,11 @@
   left: 0;
   z-index: 30;
   padding: 0 8px calc(8px + env(safe-area-inset-bottom));
-  background: linear-gradient(to top, #000 78%, rgba(0, 0, 0, 0));
+  background: linear-gradient(
+    to top,
+    var(--color-bg) 78%,
+    color-mix(in srgb, var(--color-bg) 0%, transparent)
+  );
   transform: translate3d(0, 0, 0);
   transition:
     opacity 180ms ease,
@@ -29,7 +33,11 @@
   bottom: var(--aura-mobile-keyboard-inset, 0px);
   padding-bottom: 0;
   transform: translate3d(0, 0, 0);
-  background: linear-gradient(to top, #000 84%, rgba(0, 0, 0, 0));
+  background: linear-gradient(
+    to top,
+    var(--color-bg) 84%,
+    color-mix(in srgb, var(--color-bg) 0%, transparent)
+  );
 }
 
 .modeSelector {
@@ -88,7 +96,7 @@
   gap: 0;
   border: 1px solid color-mix(in srgb, var(--color-border) 30%, transparent);
   border-radius: 24px;
-  background: #111213;
+  background: var(--color-bg-surface);
   box-shadow:
     0 18px 44px rgba(0, 0, 0, 0.34),
     inset 0 1px 0 rgba(255, 255, 255, 0.03);

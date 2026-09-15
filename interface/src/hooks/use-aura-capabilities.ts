@@ -116,7 +116,11 @@ function requestRuntimeCapabilities(force = false): Promise<void> {
       }
       serverRuntimeCapabilities = data;
       runtimeCapabilitiesStatus = "loaded";
-      scheduleRecompute();
+      // Capability responses are infrequent and directly gate actions such as
+      // starting a local agent. Publish them immediately: native WebViews can
+      // defer requestAnimationFrame while restoring or changing activities,
+      // which otherwise leaves consumers on the fail-closed boot snapshot.
+      recompute();
     })
     .catch(() => {
       runtimeCapabilitiesStatus = "failed";

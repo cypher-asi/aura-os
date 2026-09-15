@@ -68,18 +68,22 @@ function ExecutionAction({
 function ExecutionSummary({ projectId }: { projectId: string }) {
   const connected = useEventStore((s) => s.connected);
   const [confirmStopOpen, setConfirmStopOpen] = useState(false);
-  const { features } = useAuraCapabilities();
+  const { features, localAgentRuntimeAvailable } = useAuraCapabilities();
   const terminalTarget = useTerminalTarget({ projectId });
+  const canReachLocalWorkspace =
+    localAgentRuntimeAvailable && Boolean(terminalTarget.localAgentInstanceId);
   const workspaceAccess = resolveWorkspaceAccess({
     workspacePath: terminalTarget.workspacePath,
     remoteWorkspacePath: terminalTarget.remoteWorkspacePath,
     remoteAgentId: terminalTarget.remoteAgentId,
-    linkedWorkspace: features.linkedWorkspace,
+    linkedWorkspace: features.linkedWorkspace || canReachLocalWorkspace,
   });
   const startAgentInstanceId =
     workspaceAccess.kind === "remote"
       ? terminalTarget.remoteAgentInstanceId
-      : undefined;
+      : workspaceAccess.kind === "local"
+        ? terminalTarget.localAgentInstanceId
+        : undefined;
   const workspaceGateActive =
     terminalTarget.status === "loading" ||
     !canStartWorkspaceAutomation(workspaceAccess, startAgentInstanceId);
@@ -88,7 +92,14 @@ function ExecutionSummary({ projectId }: { projectId: string }) {
       ? "Workspace is still loading"
       : terminalTarget.remoteAgentId
         ? "Remote workspace is not available yet"
-        : "Build tools for local workspaces are available in Aura Desktop";
+        : !localAgentRuntimeAvailable
+          ? "This Aura host does not currently provide a local agent runtime"
+          : !terminalTarget.localAgentInstanceId
+            ? "Connect a local agent to this project to start work"
+            : "Local workspace is not available yet";
+  const workTargetLabel = workspaceAccess.kind === "remote" || terminalTarget.remoteAgentId
+    ? "remote work"
+    : "local work";
   const projectAgents = useProjectsListStore((s) => s.agentsByProject[projectId] ?? EMPTY_PROJECT_AGENTS);
   const activeAgent = useMemo(() => {
     const rememberedAgentId = getLastAgent(projectId);
@@ -140,20 +151,20 @@ function ExecutionSummary({ projectId }: { projectId: string }) {
           <div className={styles.executionControlRow}>
             {!loopRunning && !loopPaused && (
               <ExecutionAction
-                label="Start remote work"
+                label={`Start ${workTargetLabel}`}
                 className={`${styles.executionButton} ${styles.executionButtonPrimary}`}
                 onPress={() => { void handleStart(); }}
                 disabled={workspaceGateActive}
-                title={workspaceGateActive ? workspaceGateTitle : "Start remote work"}
+                title={workspaceGateActive ? workspaceGateTitle : `Start ${workTargetLabel}`}
               />
             )}
             {loopPaused && (
               <ExecutionAction
-                label="Resume remote work"
+                label={`Resume ${workTargetLabel}`}
                 className={`${styles.executionButton} ${styles.executionButtonPrimary}`}
                 onPress={() => { void handleStart(); }}
                 disabled={workspaceGateActive}
-                title={workspaceGateActive ? workspaceGateTitle : "Resume remote work"}
+                title={workspaceGateActive ? workspaceGateTitle : `Resume ${workTargetLabel}`}
               />
             )}
             {loopRunning && !loopPaused && (

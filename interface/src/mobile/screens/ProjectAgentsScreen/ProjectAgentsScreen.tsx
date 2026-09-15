@@ -150,7 +150,7 @@ export function MobileProjectAgentsScreen() {
                       <span className={styles.agentTime}>{formatChatTime(agent.updated_at)}</span>
                     </span>
                     <span className={styles.agentMetaLine}>
-                      <span>{agent.role?.trim() || "Remote AURA agent"}</span>
+                      <span>{agent.role?.trim() || "AURA agent"}</span>
                       <span className={styles.statusDotText}>{formatAgentStatus(agent.status)}</span>
                     </span>
                   </span>

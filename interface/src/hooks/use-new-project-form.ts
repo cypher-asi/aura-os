@@ -6,6 +6,16 @@ import { useProjectsList } from "../apps/projects/useProjectsList";
 import { clearNewProjectDraftFiles } from "../lib/new-project-draft";
 import { useNewProjectDraft } from "./use-new-project-draft";
 import { useOrbitRepos } from "./use-orbit-repos";
+import { ApiClientError } from "../shared/api/core";
+import { getApiErrorMessage } from "../shared/utils/api-errors";
+
+function getProjectCreationErrorMessage(error: unknown): string {
+  if (error instanceof ApiClientError && error.status === 401) {
+    return "Your session is no longer authorized. Sign in again and retry.";
+  }
+  return getApiErrorMessage(error);
+}
+
 function slugFromName(name: string): string {
   return name
     .trim()
@@ -202,7 +212,7 @@ export function useNewProjectForm(
       await onCreated(project);
       reset();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create project");
+      setError(getProjectCreationErrorMessage(err));
     } finally { setLoading(false); }
   }, [name, orbitRepoMode,
       selectedOrbitRepo, orbitRepoName, proposedRepoSlug, orbitOwner,

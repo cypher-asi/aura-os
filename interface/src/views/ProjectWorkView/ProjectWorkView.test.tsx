@@ -102,10 +102,12 @@ beforeEach(() => {
   mockUseAuraCapabilities.mockReturnValue({
     isMobileLayout: true,
     features: { linkedWorkspace: true },
+    localAgentRuntimeAvailable: true,
   });
   mockUseTerminalTarget.mockReturnValue({
     remoteAgentId: undefined,
     remoteAgentInstanceId: undefined,
+    localAgentInstanceId: "agent-a",
     remoteWorkspacePath: undefined,
     workspacePath: "/Users/demo/project",
     status: "ready",
@@ -191,14 +193,16 @@ describe("ProjectWorkView", () => {
     expect(screen.getByText("Start the loop to see live task progress and planning activity here.")).toBeInTheDocument();
   });
 
-  it("disables mobile start when a local workspace is not reachable from web", () => {
+  it("disables mobile start when the connected host has no local runtime", () => {
     mockUseAuraCapabilities.mockReturnValue({
       isMobileLayout: true,
       features: { linkedWorkspace: false },
+      localAgentRuntimeAvailable: false,
     });
     mockUseTerminalTarget.mockReturnValue({
       remoteAgentId: undefined,
       remoteAgentInstanceId: undefined,
+      localAgentInstanceId: "agent-a",
       remoteWorkspacePath: undefined,
       workspacePath: "/Users/demo/project",
       status: "ready",
@@ -206,16 +210,37 @@ describe("ProjectWorkView", () => {
 
     render(<ProjectWorkView />);
 
-    expect(screen.getByRole("button", { name: "Start remote work" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Start local work" })).toBeDisabled();
     expect(
-      screen.getByText("Build tools for local workspaces are available in Aura Desktop"),
+      screen.getByText("This Aura host does not currently provide a local agent runtime"),
     ).toBeInTheDocument();
+  });
+
+  it("enables mobile start for a local agent exposed by the connected Aura host", () => {
+    mockUseAuraCapabilities.mockReturnValue({
+      isMobileLayout: true,
+      features: { linkedWorkspace: false },
+      localAgentRuntimeAvailable: true,
+    });
+    mockUseTerminalTarget.mockReturnValue({
+      remoteAgentId: undefined,
+      remoteAgentInstanceId: undefined,
+      localAgentInstanceId: "agent-a",
+      remoteWorkspacePath: undefined,
+      workspacePath: "/srv/aura/workspaces/proj-1",
+      status: "ready",
+    });
+
+    render(<ProjectWorkView />);
+
+    expect(screen.getByRole("button", { name: "Start local work" })).toBeEnabled();
   });
 
   it("disables mobile start when a remote workspace has no startable instance", () => {
     mockUseAuraCapabilities.mockReturnValue({
       isMobileLayout: true,
       features: { linkedWorkspace: false },
+      localAgentRuntimeAvailable: false,
     });
     mockUseTerminalTarget.mockReturnValue({
       remoteAgentId: "remote-template-1",

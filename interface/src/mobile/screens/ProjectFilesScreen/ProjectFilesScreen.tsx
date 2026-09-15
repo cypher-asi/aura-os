@@ -5,13 +5,16 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { api } from "../../../api/client";
 import { FileExplorer } from "../../../components/FileExplorer";
 import { PanelSearch } from "../../../components/PanelSearch";
+import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../../hooks/use-terminal-target";
+import type { HostedWorkspaceTarget } from "../../../shared/api/hosted-workspace";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
 import styles from "./ProjectFilesScreen.module.css";
 
 interface ProjectFilesContentProps {
   rootPath: string | null;
   remoteAgentId?: string;
+  hostedWorkspace?: HostedWorkspaceTarget;
   status: "loading" | "ready" | "error";
   workspaceSourceLabel: string;
   workspaceDisplay: string | null;
@@ -20,19 +23,31 @@ interface ProjectFilesContentProps {
 
 export function MobileProjectFilesScreen() {
   const { projectId } = useParams<{ projectId: string }>();
-  const { remoteAgentId, remoteWorkspacePath, workspacePath, status } = useTerminalTarget({ projectId });
+  const { hostedLocalHarness } = useAuraCapabilities();
+  const {
+    remoteAgentId,
+    localAgentInstanceId,
+    remoteWorkspacePath,
+    workspacePath,
+    status,
+  } = useTerminalTarget({ projectId, preferLocalWorkspace: hostedLocalHarness });
   const project = useProjectsListStore((state) => (
     projectId ? state.projects.find((candidate) => candidate.project_id === projectId) ?? null : null
   ));
 
   if (!projectId) return null;
 
+  const hostedWorkspace = hostedLocalHarness && localAgentInstanceId
+    ? { projectId, agentInstanceId: localAgentInstanceId }
+    : undefined;
+
   return (
     <MobileProjectFilesContent
       rootPath={remoteWorkspacePath ?? null}
       remoteAgentId={remoteAgentId}
+      hostedWorkspace={hostedWorkspace}
       status={status}
-      workspaceSourceLabel="Remote workspace"
+      workspaceSourceLabel={hostedWorkspace ? "Project workspace" : "Remote workspace"}
       workspaceDisplay={remoteWorkspacePath ?? workspacePath ?? null}
       projectName={project?.name ?? "Project"}
     />
@@ -42,6 +57,7 @@ export function MobileProjectFilesScreen() {
 function MobileProjectFilesContent({
   rootPath,
   remoteAgentId,
+  hostedWorkspace,
   status,
   workspaceSourceLabel,
   workspaceDisplay,
@@ -50,7 +66,7 @@ function MobileProjectFilesContent({
   const [searchQuery, setSearchQuery] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedFilePath = searchParams.get("file");
-  const canBrowseRemoteWorkspace = Boolean(rootPath) && Boolean(remoteAgentId);
+  const canBrowseWorkspace = Boolean(hostedWorkspace) || (Boolean(rootPath) && Boolean(remoteAgentId));
 
   const handleFileSelect = useCallback((filePath: string) => {
     setSearchParams((current) => {
@@ -74,9 +90,9 @@ function MobileProjectFilesContent({
         <div className={styles.remoteCard}>
           <div className={styles.remoteHeader}>
             <Text size="xs" variant="muted" className={styles.eyebrow}>Files</Text>
-            <Text size="lg" weight="medium">Remote workspace is still loading.</Text>
+            <Text size="lg" weight="medium">Workspace is still loading.</Text>
             <Text size="sm" variant="muted">
-              AURA is resolving the active remote workspace for this project.
+              AURA is resolving the active workspace for this project.
             </Text>
           </div>
           <div className={styles.loadingState}>
@@ -93,28 +109,28 @@ function MobileProjectFilesContent({
         <div className={styles.remoteCard}>
           <div className={styles.remoteHeader}>
             <Text size="xs" variant="muted" className={styles.eyebrow}>Files</Text>
-            <Text size="lg" weight="medium">Remote workspace data could not load.</Text>
+            <Text size="lg" weight="medium">Workspace data could not load.</Text>
             <Text size="sm" variant="muted">
               AURA could not resolve the live workspace details just now.
             </Text>
           </div>
           <div className={styles.remoteMeta}>
             <Text size="sm" weight="medium">{projectName}</Text>
-            <Text size="sm" variant="muted">Waiting for a live remote workspace.</Text>
+            <Text size="sm" variant="muted">Waiting for a live workspace.</Text>
           </div>
         </div>
       </div>
     );
   }
 
-  if (!canBrowseRemoteWorkspace || !rootPath || !remoteAgentId) {
+  if (!canBrowseWorkspace) {
     return (
       <div className={styles.remoteRoot}>
         <div className={styles.remoteCard}>
           <div className={styles.remoteHeader}>
             <Text size="xs" variant="muted" className={styles.eyebrow}>Files</Text>
             <Text size="lg" weight="medium">
-              Workspace files will appear here when this project has a live remote workspace.
+              Workspace files will appear here when the connected Aura host exposes a live workspace.
             </Text>
             <Text size="sm" variant="muted">
               Once AURA reports the live workspace, you will be able to browse and preview files here.
@@ -122,7 +138,7 @@ function MobileProjectFilesContent({
           </div>
           <div className={styles.remoteMeta}>
             <Text size="sm" weight="medium">{projectName}</Text>
-            <Text size="sm" variant="muted">Waiting for a live remote workspace.</Text>
+            <Text size="sm" variant="muted">Waiting for a live workspace.</Text>
           </div>
         </div>
       </div>
@@ -134,6 +150,7 @@ function MobileProjectFilesContent({
       <MobileRemoteFilePreview
         filePath={selectedFilePath}
         remoteAgentId={remoteAgentId}
+        hostedWorkspace={hostedWorkspace}
         workspaceDisplay={workspaceDisplay}
         onBack={clearSelectedFile}
       />
@@ -154,8 +171,10 @@ function MobileProjectFilesContent({
       </div>
       <div className={styles.explorerArea}>
         <FileExplorer
-          rootPath={rootPath}
+          rootPath={hostedWorkspace ? undefined : rootPath ?? undefined}
           remoteAgentId={remoteAgentId}
+          hostedWorkspace={hostedWorkspace}
+          rootLabel={hostedWorkspace ? "Project files" : undefined}
           searchQuery={searchQuery}
           onFileSelect={handleFileSelect}
         />
@@ -167,20 +186,23 @@ function MobileProjectFilesContent({
 function MobileRemoteFilePreview({
   filePath,
   remoteAgentId,
+  hostedWorkspace,
   workspaceDisplay,
   onBack,
 }: {
   filePath: string;
-  remoteAgentId: string;
+  remoteAgentId?: string;
+  hostedWorkspace?: HostedWorkspaceTarget;
   workspaceDisplay: string | null;
   onBack: () => void;
 }) {
   const [refreshKey, setRefreshKey] = useState(0);
   return (
     <MobileRemoteFilePreviewRequest
-      key={`${remoteAgentId}:${filePath}:${refreshKey}`}
+      key={`${hostedWorkspace ? `hosted:${hostedWorkspace.agentInstanceId}` : `remote:${remoteAgentId}`}:${filePath}:${refreshKey}`}
       filePath={filePath}
       remoteAgentId={remoteAgentId}
+      hostedWorkspace={hostedWorkspace}
       workspaceDisplay={workspaceDisplay}
       onBack={onBack}
       onRefresh={() => setRefreshKey((current) => current + 1)}
@@ -188,13 +210,16 @@ function MobileRemoteFilePreview({
   );
 }
 
-function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, workspaceDisplay, onBack, onRefresh }: {
+function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, hostedWorkspace, workspaceDisplay, onBack, onRefresh }: {
   filePath: string;
-  remoteAgentId: string;
+  remoteAgentId?: string;
+  hostedWorkspace?: HostedWorkspaceTarget;
   workspaceDisplay: string | null;
   onBack: () => void;
   onRefresh: () => void;
 }) {
+  const hostedProjectId = hostedWorkspace?.projectId;
+  const hostedAgentInstanceId = hostedWorkspace?.agentInstanceId;
   const [state, setState] = useState<{
     loading: boolean;
     content: string | null;
@@ -213,7 +238,16 @@ function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, workspaceDisp
 
     let cancelled = false;
 
-    void api.swarm.readRemoteFile(remoteAgentId, filePath)
+    const readRequest = hostedProjectId && hostedAgentInstanceId
+      ? api.hostedWorkspace.readFile({
+          projectId: hostedProjectId,
+          agentInstanceId: hostedAgentInstanceId,
+        }, filePath)
+      : remoteAgentId
+        ? api.swarm.readRemoteFile(remoteAgentId, filePath)
+        : Promise.reject(new Error("No workspace source available"));
+
+    void readRequest
       .then((result) => {
         if (cancelled) return;
         if (result.ok && typeof result.content === "string") {
@@ -230,7 +264,13 @@ function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, workspaceDisp
     return () => {
       cancelled = true;
     };
-  }, [filePath, previewSupported, remoteAgentId]);
+  }, [
+    filePath,
+    hostedAgentInstanceId,
+    hostedProjectId,
+    previewSupported,
+    remoteAgentId,
+  ]);
 
   return (
     <div className={styles.previewRoot}>
@@ -260,7 +300,7 @@ function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, workspaceDisp
           <div className={styles.remoteCard}>
             <Text size="sm" weight="medium">Preview this file on desktop for now.</Text>
             <Text size="sm" variant="muted">
-              Mobile preview currently supports text, code, markdown, config, and log files from a remote workspace.
+              Mobile preview currently supports text, code, markdown, config, and log files.
             </Text>
           </div>
         ) : state.loading ? (
@@ -289,5 +329,5 @@ function isMobilePreviewableTextFile(path: string): boolean {
 }
 
 function getRemoteFileErrorDescription(): string {
-  return "This remote file is temporarily unavailable. Try again in a moment.";
+  return "This workspace file is temporarily unavailable. Try again in a moment.";
 }
