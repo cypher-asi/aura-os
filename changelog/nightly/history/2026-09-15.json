@@ -3,19 +3,20 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-09-15T20:30:27.599Z",
+  "generatedAt": "2026-09-16T01:33:41.462Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.837.1",
+  "version": "0.1.0-nightly.838.1",
   "date": "2026-09-15",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.837.1",
-  "lastIncludedSha": "ad4d78f8fc5d7bdf4831c09a319191b658c0a61b",
-  "previousProcessedSha": "98fe6c10c28cd4015780c734192d5330d2ac6135",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.838.1",
+  "lastIncludedSha": "297f1c788c1d0ef011b3c66c887d38b978c9d223",
+  "previousProcessedSha": "ad4d78f8fc5d7bdf4831c09a319191b658c0a61b",
   "commitShas": [
-    "ad4d78f8fc5d7bdf4831c09a319191b658c0a61b"
+    "ad4d78f8fc5d7bdf4831c09a319191b658c0a61b",
+    "297f1c788c1d0ef011b3c66c887d38b978c9d223"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 2,
+  "filteredCommitCount": 2,
   "rawCommits": [
     {
       "sha": "ad4d78f8fc5d7bdf4831c09a319191b658c0a61b",
@@ -95,36 +96,80 @@
         "Release Infrastructure",
         "Android"
       ]
+    },
+    {
+      "sha": "297f1c788c1d0ef011b3c66c887d38b978c9d223",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-09-15T21:18:21-04:00",
+      "subject": "build(android): add signed bundle artifact lane (#183)",
+      "body": "",
+      "parents": [
+        "ad4d78f8fc5d7bdf4831c09a319191b658c0a61b"
+      ],
+      "files": [
+        ".github/workflows/android-mobile.yml",
+        "README.md",
+        "interface/android/fastlane/Fastfile",
+        "scripts/ci/verify-android-release-secrets.mjs"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 14,
+        "deletions": 0
+      },
+      "committedAtMs": 1789521501000,
+      "cleanSubject": "add signed bundle artifact lane (#183)",
+      "keywords": [
+        "signed",
+        "bundle",
+        "artifact",
+        "lane"
+      ],
+      "fileGroups": [
+        ".github/workflows/android-mobile.yml",
+        "README.md",
+        "interface/android/fastlane",
+        "scripts/ci/verify-android-release-secrets.mjs"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Android",
+        "Release Infrastructure"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 2,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.837.1",
+      "version": "0.1.0-nightly.838.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.837.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.838.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 67110204
+          "sizeBytes": 67110668
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.837.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.838.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.837.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.838.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 133982712
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.837.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.838.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -134,29 +179,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.837.1",
+      "version": "0.1.0-nightly.838.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.837.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.838.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62774122
+          "sizeBytes": 62776299
         },
         {
-          "name": "AURA_0.1.0-nightly.837.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.838.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.837.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.838.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61695080
+          "sizeBytes": 61697560
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.837.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.838.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -166,29 +211,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.837.1",
+      "version": "0.1.0-nightly.838.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.837.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.838.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 64936944
+          "sizeBytes": 64942214
         },
         {
-          "name": "AURA_0.1.0-nightly.837.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.838.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.837.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.838.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 64031221
+          "sizeBytes": 64030487
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.837.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.838.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -198,17 +243,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.837.1",
+      "version": "0.1.0-nightly.838.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.837.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.838.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 49349021
+          "sizeBytes": 49344023
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.837.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.838.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -217,42 +262,73 @@
     }
   ],
   "rendered": {
-    "title": "Android mobile hits release readiness",
-    "intro": "Today's nightly is a focused mobile push: a single large change rounds out the Android build so it can ship. It brings SPA-aware back navigation, cleaner project and chat flows on small screens, and CI adjustments to keep the Android release pipeline green.",
+    "title": "Android reaches release readiness with a signed bundle lane",
+    "intro": "Today's nightly is an Android-focused milestone: the mobile app closes out its release-readiness checklist with real navigation, capability-aware setup, and friendlier chat errors, and CI gains a dedicated signed App Bundle lane for manual Play Console uploads.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "1:13 PM",
         "started_at": "2026-09-15T20:13:03.000Z",
         "ended_at": "2026-09-15T20:13:03.000Z",
-        "title": "Android back button, mobile navigation, and release pipeline land together",
-        "summary": "A single PR closes the remaining gaps blocking an Android release: native back-navigation behavior, mobile shell polish, capability-aware agent setup, and greener Android CI runs.",
+        "title": "Android app closes out release-readiness checklist",
+        "summary": "A broad mobile push lands persistent navigation, friendlier chat errors, capability-aware agent setup, and a proper Android hardware-back behavior, alongside CI fixes needed to keep the Android build green.",
         "items": [
           {
-            "text": "Android's hardware back button now cooperates with the in-app React Router history via a new OnBackPressedCallback in MainActivity, popping SPA routes before falling through to the default activity back behavior so users no longer get bounced out of the app on same-document navigations.",
+            "text": "Chat now has persistent mobile navigation and project screens expose task and project creation directly from the nav, closing several usability gaps around getting into and around the mobile app.",
             "commit_shas": [
               "ad4d78f8fc5d7bdf4831c09a319191b658c0a61b"
             ],
             "confidence": "high"
           },
           {
-            "text": "Mobile shell gains a persistent Chat entry point, exposes project creation from navigation, and lets users create tasks directly from a project, tightening the core mobile flows across MobileShell, ProjectNavigationDrawer, and the Project Tasks/Work views.",
+            "text": "Android's hardware back button now cooperates with the in-app SPA router: MainActivity inspects the History API's index and pops the React Router route before falling through to Android's activity back, so back no longer unexpectedly exits the app during in-app navigation.",
             "commit_shas": [
               "ad4d78f8fc5d7bdf4831c09a319191b658c0a61b"
             ],
             "confidence": "high"
           },
           {
-            "text": "Hosted agent setup on mobile is now capability-aware through use-aura-capabilities and the refreshed ProjectAgentSetupView, and long technical chat errors collapse into a readable mobile-friendly summary in MessageBubble.",
+            "text": "Hosted agent setup is now capability-aware, and chat error bubbles collapse noisy technical details behind a summary so mobile users see a readable message instead of a wall of stack trace.",
             "commit_shas": [
               "ad4d78f8fc5d7bdf4831c09a319191b658c0a61b"
             ],
             "confidence": "high"
           },
           {
-            "text": "Android CI is realigned with current toolchains: the android-mobile and release-mobile-nightly workflows pin setup-android to install explicit SDK packages, working around the removal of the legacy `tools` package in command-line tools v20 that was breaking nightly builds.",
+            "text": "Android CI was realigned with current runtimes by pinning the setup-android action to install only the SDK packages we actually need, working around the removal of the legacy `tools` package in command-line tools v20 that had been breaking the mobile and nightly release workflows.",
             "commit_shas": [
               "ad4d78f8fc5d7bdf4831c09a319191b658c0a61b"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "6:18 PM",
+        "started_at": "2026-09-16T01:18:21.000Z",
+        "ended_at": "2026-09-16T01:18:21.000Z",
+        "title": "Signed Android App Bundle lane for manual Play uploads",
+        "summary": "A new Fastlane lane and CI option produce a signed .aab artifact you can hand-upload to the Play Console without wiring up Play API credentials.",
+        "items": [
+          {
+            "text": "Added a `signed_bundle` Fastlane lane that builds a signed Android App Bundle and surfaces its path, giving operators a way to ship to Google Play manually when Play API credentials aren't available.",
+            "commit_shas": [
+              "297f1c788c1d0ef011b3c66c887d38b978c9d223"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The Android mobile workflow exposes the new `signed_bundle` choice (mapped to the `bundle` channel), and the release-secrets verifier now recognizes the lane and enforces the standard signing variables.",
+            "commit_shas": [
+              "297f1c788c1d0ef011b3c66c887d38b978c9d223"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "README release docs document the new lane alongside `preflight`, `beta`, and `release`, so the manual Play Console path is discoverable.",
+            "commit_shas": [
+              "297f1c788c1d0ef011b3c66c887d38b978c9d223"
             ],
             "confidence": "high"
           }
@@ -260,11 +336,10 @@
       }
     ],
     "highlights": [
-      "Android in-app back button now follows SPA history",
-      "Persistent Chat entry point and project task creation on mobile",
-      "Capability-aware hosted agent setup on mobile",
-      "Android SDK setup fixed for command-line tools v20"
+      "Android release readiness completed",
+      "Persistent Chat nav and hardware back button on Android",
+      "New signed .aab lane for manual Play Console uploads"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 2
   }
 }
