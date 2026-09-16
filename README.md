@@ -474,6 +474,7 @@ GitHub Actions release input:
 - Run `Android Validation + Play/GitHub Release`
 - Pushes to `main` publish the signed Android APK through the separate `Mobile Nightly GitHub Release` workflow
 - Choose lane `preflight` to validate secrets/signing config, `beta` for Play Internal Testing, or `release` for a release candidate
+- Choose lane `signed_bundle` to build a signed `.aab` artifact for a manual Play Console upload without requiring Play API credentials
 - Choose the Play track (`internal`, `closed`, or `production`)
 - Leave `release_status=draft` until you are ready for a real rollout
 

@@ -18,6 +18,10 @@ const LANE_REQUIREMENTS = {
     description: "Signed Android APK for GitHub distribution",
     required: [...SIGNING_VARS],
   },
+  signed_bundle: {
+    description: "Signed Android App Bundle for manual Google Play upload",
+    required: [...SIGNING_VARS],
+  },
   preflight: {
     description: "Validate Google Play release configuration",
     required: [...SIGNING_VARS, ...PLAY_STORE_VARS],
