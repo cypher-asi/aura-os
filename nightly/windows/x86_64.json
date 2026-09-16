@@ -1,6 +1,6 @@
 {
-  "version": "0.1.0-nightly.837.1",
-  "url": "https://github.com/cypher-asi/aura-os/releases/download/v0.1.0-nightly.837.1/aura-os-desktop_0.1.0-nightly.837.1_x64-setup.exe",
-  "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIGNhcmdvLXBhY2thZ2VyIHNlY3JldCBrZXkKUlVUSFhQYVV5cTUycTBZLzg4WHVoMER4Zko3dmx6YTV6L2J0YWVUSDVOcDdBZ0xleFR4cFRENGNCdElWRUtKZmZ3U05CNTBNcmN5MFRXYXNyOXRocUtTTTZmWFh6dExXSkF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NTAzNDYxCWZpbGU6YXVyYS1vcy1kZXNrdG9wXzAuMS4wLW5pZ2h0bHkuODM3LjFfeDY0LXNldHVwLmV4ZQo3bFV2R3haZjAwdjZIb2lueTFZWDBQU1U0anlWQ252MElBZXhmeldEVkJ6M1lMRmwxY2dBM3hEazhLNWFlSVhheVBiVk5qSGFGSnc5VXJIb2k2N21CUT09Cg==",
+  "version": "0.1.0-nightly.838.1",
+  "url": "https://github.com/cypher-asi/aura-os/releases/download/v0.1.0-nightly.838.1/aura-os-desktop_0.1.0-nightly.838.1_x64-setup.exe",
+  "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIGNhcmdvLXBhY2thZ2VyIHNlY3JldCBrZXkKUlVUSFhQYVV5cTUycXdjTk1aRzZQelp6OWZic0V1NU9ZZzJaMThMN3dxMW0wUEhnSW5xbHBrdWM3bGpHVDMyRi85M05naTROSnFZWldQMFZtdHJlVlBxRk1mNEExZVF5ekFvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NTIxNzM1CWZpbGU6YXVyYS1vcy1kZXNrdG9wXzAuMS4wLW5pZ2h0bHkuODM4LjFfeDY0LXNldHVwLmV4ZQpiQUJpeWF2ZGk3WHZ6MFY5bjZqdEtQUjJJZnFScU9uOFZnN2hZcjBWVGZqVlc4c2VVaXd1MnlOQ2VUZTRSaVI1UDU4d0pta2xLOFdXRG9PS3hkbEVDZz09Cg==",
   "format": "nsis"
 }
