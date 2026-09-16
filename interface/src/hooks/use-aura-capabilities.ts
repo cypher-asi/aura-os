@@ -22,6 +22,13 @@ export interface AuraFeatureAvailability {
 
 export interface AuraCapabilities {
   hasDesktopBridge: boolean;
+  /**
+   * True once the connected Aura host has either answered the runtime
+   * capability probe or the probe has failed closed. Native/mobile creation
+   * flows use this to avoid defaulting to a Swarm agent during the short boot
+   * window before a hosted Harness is discovered.
+   */
+  runtimeCapabilitiesResolved: boolean;
   remoteOnly: boolean;
   localAgentRuntimeAvailable: boolean;
   hostedLocalHarness: boolean;
@@ -107,11 +114,13 @@ function requestRuntimeCapabilities(force = false): Promise<void> {
     .then(async (response) => {
       if (!response.ok) {
         runtimeCapabilitiesStatus = "failed";
+        recompute();
         return;
       }
       const data: unknown = await response.json();
       if (!isServerRuntimeCapabilities(data)) {
         runtimeCapabilitiesStatus = "failed";
+        recompute();
         return;
       }
       serverRuntimeCapabilities = data;
@@ -124,6 +133,7 @@ function requestRuntimeCapabilities(force = false): Promise<void> {
     })
     .catch(() => {
       runtimeCapabilitiesStatus = "failed";
+      recompute();
     });
   return runtimeCapabilitiesRequest;
 }
@@ -133,6 +143,7 @@ function readCapabilities(): AuraCapabilities {
     const features = buildFeatureAvailability(false);
     return {
       hasDesktopBridge: false,
+      runtimeCapabilitiesResolved: false,
       remoteOnly: true,
       localAgentRuntimeAvailable: false,
       hostedLocalHarness: false,
@@ -176,6 +187,8 @@ function readCapabilities(): AuraCapabilities {
 
   return {
     hasDesktopBridge,
+    runtimeCapabilitiesResolved:
+      runtimeCapabilitiesStatus === "loaded" || runtimeCapabilitiesStatus === "failed",
     remoteOnly: !localRuntimeAvailable,
     localAgentRuntimeAvailable: localRuntimeAvailable,
     hostedLocalHarness: serverRuntimeCapabilities?.hostedLocalHarness === true,
@@ -208,6 +221,7 @@ function featuresEqual(a: AuraFeatureAvailability, b: AuraFeatureAvailability): 
 function capabilitiesEqual(a: AuraCapabilities, b: AuraCapabilities): boolean {
   return (
     a.hasDesktopBridge === b.hasDesktopBridge &&
+    a.runtimeCapabilitiesResolved === b.runtimeCapabilitiesResolved &&
     a.remoteOnly === b.remoteOnly &&
     a.localAgentRuntimeAvailable === b.localAgentRuntimeAvailable &&
     a.hostedLocalHarness === b.hostedLocalHarness &&
