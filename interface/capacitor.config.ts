@@ -6,7 +6,7 @@ const androidNeedsHttpDevOrigin = Boolean(androidDefaultHost && androidDefaultHo
 
 const config: CapacitorConfig = {
   appId: "tech.zero.aura",
-  appName: "AURA",
+  appName: "Aura",
   // Ship the bundled Vite build inside the native shell rather than pointing
   // Capacitor at a hosted URL. The backend/API host is configured separately.
   webDir: "dist",
