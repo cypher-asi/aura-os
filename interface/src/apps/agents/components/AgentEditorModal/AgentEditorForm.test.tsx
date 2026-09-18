@@ -164,6 +164,11 @@ const mockOrgState = {
 vi.mock("../../../../hooks/use-aura-capabilities", () => ({
   useAuraCapabilities: () => mockUseAuraCapabilities(),
 }));
+mockUseAuraCapabilities.mockReturnValue({
+  hasDesktopBridge: true,
+  hostedLocalHarness: false,
+  isMobileLayout: false,
+});
 
 vi.mock("../../../../hooks/use-modal-initial-focus", () => ({
   useModalInitialFocus: () => ({
@@ -215,7 +220,11 @@ function makeAgent(overrides: Partial<Agent> = {}): Agent {
 describe("useAgentEditorForm save payload", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+    mockUseAuraCapabilities.mockReturnValue({
+      hasDesktopBridge: true,
+      hostedLocalHarness: false,
+      isMobileLayout: false,
+    });
     vi.mocked(api.agents.create).mockResolvedValue(makeAgent());
     vi.mocked(api.agents.update).mockResolvedValue(makeAgent());
   });

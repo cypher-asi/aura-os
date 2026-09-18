@@ -182,6 +182,46 @@ describe("ProjectAgentSetupView", () => {
     expect(mockListAgents).not.toHaveBeenCalled();
   });
 
+  it("waits for host capabilities before choosing the mobile agent runtime", () => {
+    mockUseAuraCapabilities.mockReturnValue({
+      hasDesktopBridge: false,
+      hostedLocalHarness: false,
+      isMobileLayout: true,
+      isNativeApp: true,
+      remoteOnly: true,
+      runtimeCapabilitiesResolved: false,
+    });
+
+    const view = render(
+      <Routes>
+        <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
+      </Routes>,
+      { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
+    );
+
+    expect(screen.getByText("Checking the connected agent runtime…")).toBeInTheDocument();
+    expect(screen.queryByTestId("agent-editor-modal")).not.toBeInTheDocument();
+
+    mockUseAuraCapabilities.mockReturnValue({
+      hasDesktopBridge: false,
+      hostedLocalHarness: true,
+      isMobileLayout: true,
+      isNativeApp: true,
+      remoteOnly: false,
+      runtimeCapabilitiesResolved: true,
+    });
+    view.rerender(
+      <Routes>
+        <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
+      </Routes>,
+    );
+
+    expect(screen.getByTestId("agent-editor-modal")).toBeInTheDocument();
+    expect(mockAgentEditorModal.mock.lastCall?.[0]).toEqual(expect.objectContaining({
+      forceRemoteOnlyCreate: false,
+    }));
+  });
+
   it("attaches a newly saved shared-editor agent and navigates to chat with handoff state", async () => {
     const user = userEvent.setup();
 

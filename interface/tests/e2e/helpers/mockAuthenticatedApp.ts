@@ -19,6 +19,7 @@ interface MockAuthenticatedAppOptions {
   processes?: Record<string, unknown>[];
   processRuns?: Record<string, Record<string, unknown>[]>;
   orgsUnavailable?: boolean;
+  hostedLocalHarness?: boolean;
   lastAppId?: string | null;
 }
 
@@ -247,7 +248,7 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
     };
 
     const agentInstances = options.agentInstances ?? [defaultAgentInstance];
-    const hasLocalAgentRuntime = agentInstances.some(
+    const hasLocalAgentRuntime = options.hostedLocalHarness === true || agentInstances.some(
       (instance) => instance.machine_type === "local",
     );
 
@@ -407,7 +408,8 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
       return json({
         remoteOnly: !hasLocalAgentRuntime,
         localAgentRuntimeAvailable: hasLocalAgentRuntime,
-        hostedLocalHarness: false,
+        hostedLocalHarness: options.hostedLocalHarness === true,
+        hostedSafeWorkspace: options.hostedLocalHarness === true,
       });
     }
     if (pathname === "/api/users/me") {
