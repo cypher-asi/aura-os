@@ -2,20 +2,20 @@
   "schemaVersion": 1,
   "title": "AURA Observability",
   "description": "Feature health backed by AURA-owned live eval probes.",
-  "generatedAt": "2026-09-18T00:59:21.855Z",
+  "generatedAt": "2026-09-18T02:24:46.588Z",
   "environment": "production",
-  "source": "github-actions",
+  "source": "desktop-nightly-release",
   "overall": "major_outage",
   "totals": {
     "features": 19,
-    "operational": 14,
+    "operational": 11,
     "degraded": 2,
-    "partialOutage": 0,
-    "majorOutage": 3,
+    "partialOutage": 1,
+    "majorOutage": 5,
     "unknown": 0,
     "maintenance": 0,
     "runtimeEnvironments": 2,
-    "investigations": 5
+    "investigations": 8
   },
   "runtimeEnvironments": [
     {
@@ -38,12 +38,12 @@
       "description": "AURA OS API reachability, authenticated session reads, and runtime environment metadata.",
       "publicSummary": "Core API routes and environment metadata are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-09-18T00:58:26.188Z",
+      "lastCheckedAt": "2026-09-18T02:23:44.259Z",
       "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 64,
+      "latencyP95Ms": 237,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -56,11 +56,11 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:25.729Z",
-          "latencyMs": 51,
+          "checkedAt": "2026-09-18T02:23:43.644Z",
+          "latencyMs": 237,
           "evidence": {
             "status": "ok",
-            "timestamp": "2026-09-18T00:58:25.718575707+00:00"
+            "timestamp": "2026-09-18T02:23:43.980879611+00:00"
           }
         },
         {
@@ -73,8 +73,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:25.794Z",
-          "latencyMs": 64,
+          "checkedAt": "2026-09-18T02:23:43.754Z",
+          "latencyMs": 110,
           "evidence": {
             "userPresent": true,
             "keys": [
@@ -105,8 +105,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:26.188Z",
-          "latencyMs": 64,
+          "checkedAt": "2026-09-18T02:23:44.259Z",
+          "latencyMs": 105,
           "evidence": {
             "keys": [
               "os",
@@ -127,12 +127,12 @@
       "description": "Session validation, current user profile sync, and organization membership lookup.",
       "publicSummary": "Signed-in users can validate identity and resolve their organizations.",
       "status": "operational",
-      "lastCheckedAt": "2026-09-18T00:58:26.382Z",
+      "lastCheckedAt": "2026-09-18T02:23:44.568Z",
       "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 330,
+      "latencyP95Ms": 400,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -145,8 +145,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:26.124Z",
-          "latencyMs": 330,
+          "checkedAt": "2026-09-18T02:23:44.154Z",
+          "latencyMs": 400,
           "evidence": {
             "userIdPresent": true
           }
@@ -161,8 +161,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:26.286Z",
-          "latencyMs": 98,
+          "checkedAt": "2026-09-18T02:23:44.415Z",
+          "latencyMs": 156,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "orgCount": 1
@@ -178,8 +178,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:26.382Z",
-          "latencyMs": 96,
+          "checkedAt": "2026-09-18T02:23:44.568Z",
+          "latencyMs": 153,
           "evidence": {
             "userIdPresent": true,
             "keys": [
@@ -206,12 +206,12 @@
       "description": "Anonymous guest setup, public chat streaming, and public content APIs.",
       "publicSummary": "Logged-out visitors can access public chat and public content APIs.",
       "status": "degraded",
-      "lastCheckedAt": "2026-09-18T00:59:17.071Z",
+      "lastCheckedAt": "2026-09-18T02:24:38.079Z",
       "checksPassed": 6,
       "checksTotal": 7,
       "checksFailed": 1,
       "checksUnknown": 0,
-      "latencyP95Ms": 468,
+      "latencyP95Ms": 809,
       "message": "POST /api/public/chat/stream failed with 502: {\"error\":\"public demo agent failed to start a session\",\"code\":\"bad_gateway\",\"details\":null}",
       "checks": [
         {
@@ -224,8 +224,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:59:15.920Z",
-          "latencyMs": 53,
+          "checkedAt": "2026-09-18T02:24:36.143Z",
+          "latencyMs": 103,
           "evidence": {
             "tokenPresent": true,
             "turnCount": 0,
@@ -242,46 +242,9 @@
           "status": "fail",
           "featureStatus": "degraded",
           "message": "POST /api/public/chat/stream failed with 502: {\"error\":\"public demo agent failed to start a session\",\"code\":\"bad_gateway\",\"details\":null}",
-          "checkedAt": "2026-09-18T00:59:16.388Z",
-          "latencyMs": 468,
-          "evidence": {},
-          "investigation": {
-            "schemaVersion": 1,
-            "kind": "llm-investigation",
-            "id": "public-experience:production-api:public-chat-stream:66a2d6cdd67f",
-            "featureId": "public-experience",
-            "featureLabel": "Public Chat and APIs",
-            "checkId": "public-chat-stream",
-            "runtimeEnvironment": "production-api",
-            "title": "Investigator failed",
-            "status": "failed",
-            "checkStatus": "fail",
-            "featureStatus": "degraded",
-            "generatedAt": "2026-09-18T00:59:18.446Z",
-            "environment": "production",
-            "source": "github-actions",
-            "provider": "anthropic",
-            "model": "claude-sonnet-4-6",
-            "confidence": "low",
-            "summary": "The investigator model did not return a usable report.",
-            "rootCause": "Investigator execution failed before a diagnosis could be produced.",
-            "proof": [],
-            "possibleCauses": [],
-            "reproductionSteps": [],
-            "affectedAreas": [],
-            "recommendedNextActions": [
-              "Rerun the observability investigation with model/provider logs enabled."
-            ],
-            "recommendedVerifierProbes": [],
-            "whatWouldDisproveThis": [],
-            "followUpEvals": [],
-            "evidenceDigest": {
-              "message": "POST /api/public/chat/stream failed with 502: {\"error\":\"public demo agent failed to start a session\",\"code\":\"bad_gateway\",\"details\":null}",
-              "latencyMs": 468,
-              "evidence": {}
-            },
-            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011Cf9ztbpDcS1DiqjLmmBcX\"}"
-          }
+          "checkedAt": "2026-09-18T02:24:36.653Z",
+          "latencyMs": 510,
+          "evidence": {}
         },
         {
           "id": "public-feedback-api",
@@ -293,8 +256,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:59:16.528Z",
-          "latencyMs": 140,
+          "checkedAt": "2026-09-18T02:24:36.908Z",
+          "latencyMs": 255,
           "evidence": {
             "count": 100
           }
@@ -309,8 +272,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:59:16.620Z",
-          "latencyMs": 92,
+          "checkedAt": "2026-09-18T02:24:37.069Z",
+          "latencyMs": 161,
           "evidence": {
             "count": 7
           }
@@ -325,8 +288,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:59:16.997Z",
-          "latencyMs": 377,
+          "checkedAt": "2026-09-18T02:24:37.878Z",
+          "latencyMs": 809,
           "evidence": {
             "blogCount": 7,
             "blogDetailChecked": true,
@@ -353,8 +316,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:59:17.034Z",
-          "latencyMs": 37,
+          "checkedAt": "2026-09-18T02:24:37.974Z",
+          "latencyMs": 96,
           "evidence": {
             "object": "list",
             "modelCount": 1
@@ -370,8 +333,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:59:17.071Z",
-          "latencyMs": 37,
+          "checkedAt": "2026-09-18T02:24:38.079Z",
+          "latencyMs": 105,
           "evidence": {
             "status": 402,
             "payToPresent": true,
@@ -391,14 +354,14 @@
       "priority": 20,
       "description": "Local agent template creation, persisted permissions, project binding, and workspace-backed chat readiness.",
       "publicSummary": "Local agents can be created, scoped, and exercised through the harness.",
-      "status": "operational",
-      "lastCheckedAt": "2026-09-16T01:20:37.675Z",
-      "checksPassed": 3,
+      "status": "partial_outage",
+      "lastCheckedAt": "2026-09-18T02:20:37.367Z",
+      "checksPassed": 2,
       "checksTotal": 3,
-      "checksFailed": 0,
+      "checksFailed": 1,
       "checksUnknown": 0,
-      "latencyP95Ms": 5986,
-      "message": "All required checks are passing.",
+      "latencyP95Ms": 5475,
+      "message": "POST /api/agents/5a358198-8973-4855-9227-c578c9cfd7a1/runtime/test failed with 502: {\"error\":\"harness runtime test failed (llm_error): API error (status 400): 400 Bad Request - {\\\"error\\\":{\\\"code\\\":\\\"provider_account_unavailable\\\",\\\"message\\\":\\\"AURA is temporarily unable to reach the model provider. This is an issue on our side, not with your account or credits. Please try again shortly.\\\",\\\"type\\\":\\\"invalid_request_error\\\"},\\\"type\\\":\\\"error\\\"}\",\"code\":\"bad_gateway\",\"details\":null}",
       "checks": [
         {
           "id": "local-agent-create",
@@ -408,13 +371,13 @@
           "statusImpact": "feature",
           "required": true,
           "status": "pass",
-          "featureStatus": "operational",
-          "message": "Check passed",
-          "checkedAt": "2026-09-16T01:20:26.927Z",
-          "latencyMs": 4926,
+          "featureStatus": "degraded",
+          "message": "Latency 5026ms exceeded warning threshold",
+          "checkedAt": "2026-09-18T02:20:26.938Z",
+          "latencyMs": 5026,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "agentId": "3f2ad268-48ab-40d0-8439-b395e9c1c082",
+            "agentId": "913f962f-4b12-415a-8345-23b3b67381ca",
             "machineType": "local",
             "environment": "local_host"
           }
@@ -426,17 +389,48 @@
           "runtimeLabel": "Desktop Release",
           "statusImpact": "feature",
           "required": true,
-          "status": "pass",
-          "featureStatus": "operational",
-          "message": "Check passed",
-          "checkedAt": "2026-09-16T01:20:32.913Z",
-          "latencyMs": 5986,
-          "evidence": {
-            "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "agentId": "aa596a4c-f37a-4310-8d7f-e118bc750257",
-            "model": "aura-claude-opus-5",
+          "status": "fail",
+          "featureStatus": "partial_outage",
+          "message": "POST /api/agents/5a358198-8973-4855-9227-c578c9cfd7a1/runtime/test failed with 502: {\"error\":\"harness runtime test failed (llm_error): API error (status 400): 400 Bad Request - {\\\"error\\\":{\\\"code\\\":\\\"provider_account_unavailable\\\",\\\"message\\\":\\\"AURA is temporarily unable to reach the model provider. This is an issue on our side, not with your account or credits. Please try again shortly.\\\",\\\"type\\\":\\\"invalid_request_error\\\"},\\\"type\\\":\\\"error\\\"}\",\"code\":\"bad_gateway\",\"details\":null}",
+          "checkedAt": "2026-09-18T02:20:32.413Z",
+          "latencyMs": 5475,
+          "evidence": {},
+          "investigation": {
+            "schemaVersion": 1,
+            "kind": "llm-investigation",
+            "id": "local-agents:desktop-release:local-agent-runtime:ec66e69c8533",
+            "featureId": "local-agents",
+            "featureLabel": "Local Agents",
+            "checkId": "local-agent-runtime",
+            "runtimeEnvironment": "desktop-release",
+            "title": "Investigator failed",
+            "status": "failed",
+            "checkStatus": "fail",
+            "featureStatus": "partial_outage",
+            "generatedAt": "2026-09-18T02:24:39.754Z",
+            "environment": "production",
+            "source": "desktop-nightly-release",
             "provider": "anthropic",
-            "message": "hello from aura"
+            "model": "claude-sonnet-4-6",
+            "confidence": "low",
+            "summary": "The investigator model did not return a usable report.",
+            "rootCause": "Investigator execution failed before a diagnosis could be produced.",
+            "proof": [],
+            "possibleCauses": [],
+            "reproductionSteps": [],
+            "affectedAreas": [],
+            "recommendedNextActions": [
+              "Rerun the observability investigation with model/provider logs enabled."
+            ],
+            "recommendedVerifierProbes": [],
+            "whatWouldDisproveThis": [],
+            "followUpEvals": [],
+            "evidenceDigest": {
+              "message": "POST /api/agents/[REDACTED]/runtime/test failed with 502: {\"error\":\"harness runtime test failed (llm_error): API error (status 400): 400 Bad Request - {\\\"error\\\":{\\\"code\\\":\\\"provider_account_unavailable\\\",\\\"message\\\":\\\"AURA is temporarily unable to reach the model provider. This is an issue on our side, not with your account or credits. Please try again shortly.\\\",\\\"type\\\":\\\"invalid_request_error\\\"},\\\"type\\\":\\\"error\\\"}\",\"code\":\"bad_gateway\",\"details\":null}",
+              "latencyMs": 5475,
+              "evidence": {}
+            },
+            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfA7Q7EYEJr4kJAy5T5pG\"}"
           }
         },
         {
@@ -449,11 +443,11 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-16T01:20:37.675Z",
-          "latencyMs": 4761,
+          "checkedAt": "2026-09-18T02:20:37.367Z",
+          "latencyMs": 4954,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "agentId": "1cacc763-bf27-41d0-aaca-ce6f1a9d33be",
+            "agentId": "71c0b02b-92ca-4794-85a0-35d12cdc8d2c",
             "permissionsPresent": true,
             "orgScope": [
               "88b25bd0-9d92-401b-b9aa-0e86adcbd9df"
@@ -474,14 +468,14 @@
       "priority": 22,
       "description": "Desktop release project-bound agent instance chat streams, persisted sessions, and public session share reads.",
       "publicSummary": "Project agents can stream chat through the real project/session path.",
-      "status": "operational",
-      "lastCheckedAt": "2026-09-16T01:21:57.920Z",
-      "checksPassed": 5,
+      "status": "major_outage",
+      "lastCheckedAt": "2026-09-18T02:23:27.970Z",
+      "checksPassed": 0,
       "checksTotal": 5,
-      "checksFailed": 0,
+      "checksFailed": 5,
       "checksUnknown": 0,
-      "latencyP95Ms": 30843,
-      "message": "All required checks are passing.",
+      "latencyP95Ms": 134625,
+      "message": "API error (status 400): 400 Bad Request - {\"error\":{\"code\":\"provider_account_unavailable\",\"message\":\"AURA is temporarily unable to reach the model provider. This is an issue on our side, not with your account or credits. Please try again shortly.\",\"type\":\"invalid_request_error\"},\"type\":\"error\"} (support_id=ba023a5e9d11); Missing expected evidence: sessionId, sessionCount, expectedPhrase",
       "checks": [
         {
           "id": "project-agent-chat-stream",
@@ -490,28 +484,74 @@
           "runtimeLabel": "Desktop Release",
           "statusImpact": "feature",
           "required": true,
-          "status": "pass",
-          "featureStatus": "operational",
-          "message": "Check passed",
-          "checkedAt": "2026-09-16T01:20:46.072Z",
-          "latencyMs": 8397,
+          "status": "fail",
+          "featureStatus": "partial_outage",
+          "message": "API error (status 400): 400 Bad Request - {\"error\":{\"code\":\"provider_account_unavailable\",\"message\":\"AURA is temporarily unable to reach the model provider. This is an issue on our side, not with your account or credits. Please try again shortly.\",\"type\":\"invalid_request_error\"},\"type\":\"error\"} (support_id=ba023a5e9d11); Missing expected evidence: sessionId, sessionCount, expectedPhrase",
+          "checkedAt": "2026-09-18T02:20:44.246Z",
+          "latencyMs": 6879,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "b0127571-23bb-4c4c-9f27-ff1615ed95cd",
-            "agentId": "3b367d21-1449-45c8-a194-2a5932eadf50",
-            "agentInstanceId": "e2e6c5cb-0359-4e9a-8440-f2e30c1334f7",
-            "sessionId": "fce70c8f-bc22-4263-8051-112c0dc6bb47",
+            "projectId": "a18b05dd-c424-48f7-a671-5aee105eadeb",
+            "agentId": "b952a972-6055-4208-9b48-196441a291db",
+            "agentInstanceId": "6b595943-8033-435b-b208-7933bd62d219",
             "frameTypes": [
               "progress",
               "session_ready",
               "assistant_message_start",
-              "text_delta",
-              "assistant_message_end",
+              "error",
               "message"
             ],
-            "textSample": "hello from aura",
-            "sessionCount": 1,
-            "expectedPhrase": "hello from aura"
+            "textSample": ""
+          },
+          "investigation": {
+            "schemaVersion": 1,
+            "kind": "llm-investigation",
+            "id": "project-agent-workflows:desktop-release:project-agent-chat-stream:5b062c86555f",
+            "featureId": "project-agent-workflows",
+            "featureLabel": "Project Agent Workflows",
+            "checkId": "project-agent-chat-stream",
+            "runtimeEnvironment": "desktop-release",
+            "title": "Investigator failed",
+            "status": "failed",
+            "checkStatus": "fail",
+            "featureStatus": "partial_outage",
+            "generatedAt": "2026-09-18T02:24:39.754Z",
+            "environment": "production",
+            "source": "desktop-nightly-release",
+            "provider": "anthropic",
+            "model": "claude-sonnet-4-6",
+            "confidence": "low",
+            "summary": "The investigator model did not return a usable report.",
+            "rootCause": "Investigator execution failed before a diagnosis could be produced.",
+            "proof": [],
+            "possibleCauses": [],
+            "reproductionSteps": [],
+            "affectedAreas": [],
+            "recommendedNextActions": [
+              "Rerun the observability investigation with model/provider logs enabled."
+            ],
+            "recommendedVerifierProbes": [],
+            "whatWouldDisproveThis": [],
+            "followUpEvals": [],
+            "evidenceDigest": {
+              "message": "API error (status 400): 400 Bad Request - {\"error\":{\"code\":\"provider_account_unavailable\",\"message\":\"AURA is temporarily unable to reach the model provider. This is an issue on our side, not with your account or credits. Please try again shortly.\",\"type\":\"invalid_request_error\"},\"type\":\"error\"} (support_id=ba023a5e9d11); Missing expected evidence: sessionId, sessionCount, expectedPhrase",
+              "latencyMs": 6879,
+              "evidence": {
+                "orgId": "[REDACTED]",
+                "projectId": "[REDACTED]",
+                "agentId": "[REDACTED]",
+                "agentInstanceId": "[REDACTED]",
+                "frameTypes": [
+                  "progress",
+                  "session_ready",
+                  "assistant_message_start",
+                  "error",
+                  "message"
+                ],
+                "textSample": ""
+              }
+            },
+            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfA7Q8BLxsyL7wnhychAx\"}"
           }
         },
         {
@@ -521,48 +561,94 @@
           "runtimeLabel": "Desktop Release",
           "statusImpact": "feature",
           "required": true,
-          "status": "pass",
-          "featureStatus": "operational",
-          "message": "Check passed",
-          "checkedAt": "2026-09-16T01:20:57.546Z",
-          "latencyMs": 11474,
+          "status": "fail",
+          "featureStatus": "partial_outage",
+          "message": "Project agent did not complete file read/write and shell tool roundtrip; Expected evidence assertion failed: toolNames expected to contain \"write_file\"; toolNames expected to contain \"read_file\"; toolNames expected to contain \"run_command\"; requiredToolsUsed expected true but got false; writeOk expected true but got false; readBackOk expected true but got false; commandOk expected true but got false; passMarkerPresent expected true but got false",
+          "checkedAt": "2026-09-18T02:20:51.119Z",
+          "latencyMs": 6873,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "27d61c0c-2876-4926-922b-2a4634919736",
-            "agentId": "0f8820cb-e10e-490f-a834-f9af4b5f39d8",
-            "agentInstanceId": "5711093a-f2f7-4504-8ca3-18e6554555e1",
+            "projectId": "3ba4f67b-75b3-45e6-9b37-c05348313e41",
+            "agentId": "ab7ac397-4e73-466f-a624-84375f80e087",
+            "agentInstanceId": "d54151b8-e9a8-4d31-9380-0fefdb260e9e",
             "frameTypes": [
               "progress",
               "session_ready",
               "assistant_message_start",
-              "tool_use_start",
-              "tool_call_snapshot",
-              "tool_result",
-              "tool_use_start",
-              "tool_call_snapshot",
-              "tool_use_start",
-              "tool_call_snapshot",
-              "tool_result",
-              "tool_result",
-              "text_delta",
-              "assistant_message_end",
+              "error",
               "message"
             ],
-            "toolNames": [
-              "write_file",
-              "read_file",
-              "run_command"
-            ],
-            "requiredToolsUsed": true,
-            "writeOk": true,
-            "readBackOk": true,
-            "commandOk": true,
-            "commandExitCode": 0,
-            "passMarkerPresent": true,
-            "textSample": "TOOL_PROBE_PASS",
+            "toolNames": [],
+            "requiredToolsUsed": false,
+            "writeOk": false,
+            "readBackOk": false,
+            "commandOk": false,
+            "commandExitCode": null,
+            "passMarkerPresent": false,
+            "textSample": "",
             "expectedFileName": "AURA_STATUS_TOOL_PROBE.txt",
             "expectedFileMarker": "AURA_TOOL_PROBE_OK",
             "expectedShellMarker": "AURA_SHELL_PROBE_OK"
+          },
+          "investigation": {
+            "schemaVersion": 1,
+            "kind": "llm-investigation",
+            "id": "project-agent-workflows:desktop-release:project-agent-tool-roundtrip:efe5a5328ead",
+            "featureId": "project-agent-workflows",
+            "featureLabel": "Project Agent Workflows",
+            "checkId": "project-agent-tool-roundtrip",
+            "runtimeEnvironment": "desktop-release",
+            "title": "Investigator failed",
+            "status": "failed",
+            "checkStatus": "fail",
+            "featureStatus": "partial_outage",
+            "generatedAt": "2026-09-18T02:24:39.754Z",
+            "environment": "production",
+            "source": "desktop-nightly-release",
+            "provider": "anthropic",
+            "model": "claude-sonnet-4-6",
+            "confidence": "low",
+            "summary": "The investigator model did not return a usable report.",
+            "rootCause": "Investigator execution failed before a diagnosis could be produced.",
+            "proof": [],
+            "possibleCauses": [],
+            "reproductionSteps": [],
+            "affectedAreas": [],
+            "recommendedNextActions": [
+              "Rerun the observability investigation with model/provider logs enabled."
+            ],
+            "recommendedVerifierProbes": [],
+            "whatWouldDisproveThis": [],
+            "followUpEvals": [],
+            "evidenceDigest": {
+              "message": "Project agent did not complete file read/write and shell tool roundtrip; Expected evidence assertion failed: toolNames expected to contain \"write_file\"; toolNames expected to contain \"read_file\"; toolNames expected to contain \"run_command\"; requiredToolsUsed expected true but got false; writeOk expected true but got false; readBackOk expected true but got false; commandOk expected true but got false; passMarkerPresent expected true but got false",
+              "latencyMs": 6873,
+              "evidence": {
+                "orgId": "[REDACTED]",
+                "projectId": "[REDACTED]",
+                "agentId": "[REDACTED]",
+                "agentInstanceId": "[REDACTED]",
+                "frameTypes": [
+                  "progress",
+                  "session_ready",
+                  "assistant_message_start",
+                  "error",
+                  "message"
+                ],
+                "toolNames": [],
+                "requiredToolsUsed": false,
+                "writeOk": false,
+                "readBackOk": false,
+                "commandOk": false,
+                "commandExitCode": null,
+                "passMarkerPresent": false,
+                "textSample": "",
+                "expectedFileName": "AURA_STATUS_TOOL_PROBE.txt",
+                "expectedFileMarker": "AURA_TOOL_PROBE_OK",
+                "expectedShellMarker": "AURA_SHELL_PROBE_OK"
+              }
+            },
+            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfA7Q9L3eAtxba2FtTV3r\"}"
           }
         },
         {
@@ -572,57 +658,118 @@
           "runtimeLabel": "Desktop Release",
           "statusImpact": "feature",
           "required": true,
-          "status": "pass",
-          "featureStatus": "operational",
-          "message": "Check passed",
-          "checkedAt": "2026-09-16T01:21:28.389Z",
-          "latencyMs": 30843,
+          "status": "fail",
+          "featureStatus": "partial_outage",
+          "message": "Agent-to-agent send/callback roundtrip did not complete; Expected evidence assertion failed: toolNames expected to contain \"list_agents\"; toolNames expected to contain \"send_to_agent\"; listAgentsUsed expected true but got false; sendToAgentUsed expected true but got false; delivered expected true but got false; targetMatches expected true but got false; reviewerAckObserved expected true but got false",
+          "checkedAt": "2026-09-18T02:23:05.744Z",
+          "latencyMs": 134625,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "804bbedd-6358-4d3c-aaea-d3d2696d1ef5",
-            "plannerAgentId": "1c50877a-b7d3-4305-9807-c9d2292009b1",
-            "plannerAgentInstanceId": "bc34f96b-fae6-4143-9772-0fd94c5a9fde",
-            "reviewerAgentId": "40a2d564-0f6a-4607-b2c8-a4ca62d8a1ea",
-            "reviewerAgentInstanceId": "1479d473-78b6-48f7-864f-4385049a6288",
+            "projectId": "9e367f08-2106-4dd0-bb8f-1e3dc4977f48",
+            "plannerAgentId": "4950c461-4d64-436a-97f9-80234e58ee78",
+            "plannerAgentInstanceId": "016bef7d-ee4e-4ff3-bcb0-bdf0d0fb82b9",
+            "reviewerAgentId": "48f461a8-ab3c-4e1c-b5d2-de1398ffcd31",
+            "reviewerAgentInstanceId": "f66e51b4-a14e-4c09-8b37-0b0e673e610a",
             "frameTypes": [
               "progress",
               "session_ready",
               "assistant_message_start",
-              "tool_use_start",
-              "tool_call_snapshot",
-              "tool_result",
-              "text_delta",
-              "assistant_message_end",
+              "error",
               "message",
               "progress",
               "session_ready",
               "assistant_message_start",
-              "tool_use_start",
-              "tool_call_snapshot",
-              "tool_result",
-              "text_delta",
-              "assistant_message_end",
+              "error",
               "message"
             ],
-            "toolNames": [
-              "list_agents",
-              "send_to_agent"
-            ],
-            "listAgentsUsed": true,
-            "listResultContainsReviewer": true,
-            "sendToAgentUsed": true,
-            "delivered": true,
-            "targetMatches": true,
-            "targetAgentId": "40a2d564-0f6a-4607-b2c8-a4ca62d8a1ea",
-            "reviewerAckObserved": true,
+            "toolNames": [],
+            "listAgentsUsed": false,
+            "listResultContainsReviewer": false,
+            "sendToAgentUsed": false,
+            "delivered": false,
+            "targetMatches": false,
+            "targetAgentId": null,
+            "reviewerAckObserved": false,
             "parentCallbackObserved": true,
-            "reviewerEventCount": 2,
+            "reviewerEventCount": 0,
             "plannerEventCount": 4,
-            "reviewerEventsError": null,
+            "reviewerEventsError": "Timed out after 120000ms waiting for expected value",
             "plannerEventsError": null,
-            "listTurnTextSample": "Confirmed: `list_agents` returned one call's worth of results, and it does contain an agent named `aura-status-reviewer-1789521657755` (role: AgentToAgentReview",
-            "sendTurnTextSample": "A2A_DELIVERED",
+            "listTurnTextSample": "",
+            "sendTurnTextSample": "",
             "expectedReply": "AURA_A2A_PROBE_ACK"
+          },
+          "investigation": {
+            "schemaVersion": 1,
+            "kind": "llm-investigation",
+            "id": "project-agent-workflows:desktop-release:project-agent-a2a-roundtrip:77db9bfc1284",
+            "featureId": "project-agent-workflows",
+            "featureLabel": "Project Agent Workflows",
+            "checkId": "project-agent-a2a-roundtrip",
+            "runtimeEnvironment": "desktop-release",
+            "title": "Investigator failed",
+            "status": "failed",
+            "checkStatus": "fail",
+            "featureStatus": "partial_outage",
+            "generatedAt": "2026-09-18T02:24:39.754Z",
+            "environment": "production",
+            "source": "desktop-nightly-release",
+            "provider": "anthropic",
+            "model": "claude-sonnet-4-6",
+            "confidence": "low",
+            "summary": "The investigator model did not return a usable report.",
+            "rootCause": "Investigator execution failed before a diagnosis could be produced.",
+            "proof": [],
+            "possibleCauses": [],
+            "reproductionSteps": [],
+            "affectedAreas": [],
+            "recommendedNextActions": [
+              "Rerun the observability investigation with model/provider logs enabled."
+            ],
+            "recommendedVerifierProbes": [],
+            "whatWouldDisproveThis": [],
+            "followUpEvals": [],
+            "evidenceDigest": {
+              "message": "Agent-to-agent send/callback roundtrip did not complete; Expected evidence assertion failed: toolNames expected to contain \"list_agents\"; toolNames expected to contain \"send_to_agent\"; listAgentsUsed expected true but got false; sendToAgentUsed expected true but got false; delivered expected true but got false; targetMatches expected true but got false; reviewerAckObserved expected true but got false",
+              "latencyMs": 134625,
+              "evidence": {
+                "orgId": "[REDACTED]",
+                "projectId": "[REDACTED]",
+                "plannerAgentId": "[REDACTED]",
+                "plannerAgentInstanceId": "[REDACTED]",
+                "reviewerAgentId": "[REDACTED]",
+                "reviewerAgentInstanceId": "[REDACTED]",
+                "frameTypes": [
+                  "progress",
+                  "session_ready",
+                  "assistant_message_start",
+                  "error",
+                  "message",
+                  "progress",
+                  "session_ready",
+                  "assistant_message_start",
+                  "error",
+                  "message"
+                ],
+                "toolNames": [],
+                "listAgentsUsed": false,
+                "listResultContainsReviewer": false,
+                "sendToAgentUsed": false,
+                "delivered": false,
+                "targetMatches": false,
+                "targetAgentId": null,
+                "reviewerAckObserved": false,
+                "parentCallbackObserved": true,
+                "reviewerEventCount": 0,
+                "plannerEventCount": 4,
+                "reviewerEventsError": "Timed out after 120000ms waiting for expected value",
+                "plannerEventsError": null,
+                "listTurnTextSample": "",
+                "sendTurnTextSample": "",
+                "expectedReply": "AURA_A2A_PROBE_ACK"
+              }
+            },
+            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfA7QAK5qz5MokSetNPA2\"}"
           }
         },
         {
@@ -632,52 +779,110 @@
           "runtimeLabel": "Desktop Release",
           "statusImpact": "feature",
           "required": true,
-          "status": "pass",
-          "featureStatus": "operational",
-          "message": "Check passed",
-          "checkedAt": "2026-09-16T01:21:49.316Z",
-          "latencyMs": 20927,
+          "status": "fail",
+          "featureStatus": "partial_outage",
+          "message": "Project agent subagent task did not complete with persisted child-thread evidence; Missing expected evidence: childRunId",
+          "checkedAt": "2026-09-18T02:23:20.434Z",
+          "latencyMs": 14690,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "3de9684c-2d9f-42b9-b743-6fd7b2de5792",
-            "agentId": "29c4ee2f-b63b-4e91-b785-67a2c6615729",
-            "agentInstanceId": "ff6bc6ea-2c1e-466f-a11e-5990e4a03302",
-            "sessionId": "07602132-6d41-4510-ad32-af044660f0b6",
+            "projectId": "aeed8f58-b027-4941-9fba-9b18e1d707d7",
+            "agentId": "58284a00-56e3-403c-bb7f-18ac497360fb",
+            "agentInstanceId": "fecba291-132d-4ab3-b6c3-8bef48350abe",
+            "sessionId": "7df0d110-c00c-4495-95a5-b3d19e5db0bc",
             "streamPersisted": true,
             "frameTypes": [
               "progress",
               "session_ready",
               "assistant_message_start",
-              "tool_use_start",
-              "tool_call_snapshot",
-              "subagent_spawned",
-              "subagent_status",
-              "tool_result",
-              "text_delta",
-              "assistant_message_end",
+              "error",
               "message"
             ],
-            "toolNames": [
-              "task"
-            ],
-            "taskToolUsed": true,
-            "subagentSpawned": true,
-            "subagentCompleted": true,
-            "subagentReturnedMarker": true,
-            "childRunId": "2fbd3bc0-ed36-4349-87e1-69c296c22bef",
-            "sessionSubagentThreadCount": 1,
+            "toolNames": [],
+            "taskToolUsed": false,
+            "subagentSpawned": false,
+            "subagentCompleted": false,
+            "subagentReturnedMarker": false,
+            "childRunId": null,
+            "sessionSubagentThreadCount": 0,
             "sessionSubagentThreadMatchesChild": true,
-            "sessionSubagentCompleted": true,
-            "sessionSubagentStates": [
-              "completed"
-            ],
-            "sessionSubagentError": null,
+            "sessionSubagentCompleted": false,
+            "sessionSubagentStates": [],
+            "sessionSubagentError": "Parent chat stream did not emit a child run id",
             "contextUtilization": 0,
             "subagentContextCount": 0,
             "subagentContextLabels": [],
             "toolsContextContainsTask": false,
             "contextError": "Timed out after 5000ms waiting for expected value",
             "expectedReply": "SUBAGENT_PROBE_OK"
+          },
+          "investigation": {
+            "schemaVersion": 1,
+            "kind": "llm-investigation",
+            "id": "project-agent-workflows:desktop-release:project-agent-subagent-roundtrip:88029000bbf2",
+            "featureId": "project-agent-workflows",
+            "featureLabel": "Project Agent Workflows",
+            "checkId": "project-agent-subagent-roundtrip",
+            "runtimeEnvironment": "desktop-release",
+            "title": "Investigator failed",
+            "status": "failed",
+            "checkStatus": "fail",
+            "featureStatus": "partial_outage",
+            "generatedAt": "2026-09-18T02:24:39.754Z",
+            "environment": "production",
+            "source": "desktop-nightly-release",
+            "provider": "anthropic",
+            "model": "claude-sonnet-4-6",
+            "confidence": "low",
+            "summary": "The investigator model did not return a usable report.",
+            "rootCause": "Investigator execution failed before a diagnosis could be produced.",
+            "proof": [],
+            "possibleCauses": [],
+            "reproductionSteps": [],
+            "affectedAreas": [],
+            "recommendedNextActions": [
+              "Rerun the observability investigation with model/provider logs enabled."
+            ],
+            "recommendedVerifierProbes": [],
+            "whatWouldDisproveThis": [],
+            "followUpEvals": [],
+            "evidenceDigest": {
+              "message": "Project agent subagent task did not complete with persisted child-thread evidence; Missing expected evidence: childRunId",
+              "latencyMs": 14690,
+              "evidence": {
+                "orgId": "[REDACTED]",
+                "projectId": "[REDACTED]",
+                "agentId": "[REDACTED]",
+                "agentInstanceId": "[REDACTED]",
+                "sessionId": "[REDACTED]",
+                "streamPersisted": true,
+                "frameTypes": [
+                  "progress",
+                  "session_ready",
+                  "assistant_message_start",
+                  "error",
+                  "message"
+                ],
+                "toolNames": [],
+                "taskToolUsed": false,
+                "subagentSpawned": false,
+                "subagentCompleted": false,
+                "subagentReturnedMarker": false,
+                "childRunId": null,
+                "sessionSubagentThreadCount": 0,
+                "sessionSubagentThreadMatchesChild": true,
+                "sessionSubagentCompleted": false,
+                "sessionSubagentStates": [],
+                "sessionSubagentError": "Parent chat stream did not emit a child run id",
+                "contextUtilization": 0,
+                "subagentContextCount": 0,
+                "subagentContextLabels": [],
+                "toolsContextContainsTask": false,
+                "contextError": "Timed out after 5000ms waiting for expected value",
+                "expectedReply": "SUBAGENT_PROBE_OK"
+              }
+            },
+            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfA7QBJNGGoEPT75rbpD4\"}"
           }
         },
         {
@@ -687,20 +892,74 @@
           "runtimeLabel": "Desktop Release",
           "statusImpact": "feature",
           "required": false,
-          "status": "pass",
-          "featureStatus": "operational",
-          "message": "Check passed",
-          "checkedAt": "2026-09-16T01:21:57.920Z",
-          "latencyMs": 8603,
+          "status": "fail",
+          "featureStatus": "degraded",
+          "message": "API error (status 400): 400 Bad Request - {\"error\":{\"code\":\"provider_account_unavailable\",\"message\":\"AURA is temporarily unable to reach the model provider. This is an issue on our side, not with your account or credits. Please try again shortly.\",\"type\":\"invalid_request_error\"},\"type\":\"error\"} (support_id=8c1450b402f1); Missing expected evidence: sessionId, shareIdPresent, shareUrlPresent, publicMessageCount",
+          "checkedAt": "2026-09-18T02:23:27.970Z",
+          "latencyMs": 7536,
           "evidence": {
-            "projectId": "536544c4-5447-44e2-963a-167726d5229f",
-            "agentInstanceId": "0bc874cf-1c67-456c-ad5e-4fa21d219ce0",
-            "sessionId": "66a1a18e-0c37-459c-9988-64c3684b82a1",
-            "shareIdPresent": true,
-            "shareUrlPresent": true,
-            "shareReadBaseUrl": "https://api.aura.ai",
-            "publicMessageCount": 2,
-            "textSample": "hello from aura"
+            "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
+            "projectId": "81dd218b-5b29-40a0-b09a-4057d63970c8",
+            "agentId": "b90d1648-b7c5-423a-8477-81e88fe25bfa",
+            "agentInstanceId": "2ea8ddb1-b195-4227-87b6-a95286396376",
+            "frameTypes": [
+              "progress",
+              "session_ready",
+              "assistant_message_start",
+              "error",
+              "message"
+            ],
+            "textSample": ""
+          },
+          "investigation": {
+            "schemaVersion": 1,
+            "kind": "llm-investigation",
+            "id": "project-agent-workflows:desktop-release:session-share-public-read:ab31c289b1b6",
+            "featureId": "project-agent-workflows",
+            "featureLabel": "Project Agent Workflows",
+            "checkId": "session-share-public-read",
+            "runtimeEnvironment": "desktop-release",
+            "title": "Investigator failed",
+            "status": "failed",
+            "checkStatus": "fail",
+            "featureStatus": "degraded",
+            "generatedAt": "2026-09-18T02:24:39.754Z",
+            "environment": "production",
+            "source": "desktop-nightly-release",
+            "provider": "anthropic",
+            "model": "claude-sonnet-4-6",
+            "confidence": "low",
+            "summary": "The investigator model did not return a usable report.",
+            "rootCause": "Investigator execution failed before a diagnosis could be produced.",
+            "proof": [],
+            "possibleCauses": [],
+            "reproductionSteps": [],
+            "affectedAreas": [],
+            "recommendedNextActions": [
+              "Rerun the observability investigation with model/provider logs enabled."
+            ],
+            "recommendedVerifierProbes": [],
+            "whatWouldDisproveThis": [],
+            "followUpEvals": [],
+            "evidenceDigest": {
+              "message": "API error (status 400): 400 Bad Request - {\"error\":{\"code\":\"provider_account_unavailable\",\"message\":\"AURA is temporarily unable to reach the model provider. This is an issue on our side, not with your account or credits. Please try again shortly.\",\"type\":\"invalid_request_error\"},\"type\":\"error\"} (support_id=8c1450b402f1); Missing expected evidence: sessionId, shareIdPresent, shareUrlPresent, publicMessageCount",
+              "latencyMs": 7536,
+              "evidence": {
+                "orgId": "[REDACTED]",
+                "projectId": "[REDACTED]",
+                "agentId": "[REDACTED]",
+                "agentInstanceId": "[REDACTED]",
+                "frameTypes": [
+                  "progress",
+                  "session_ready",
+                  "assistant_message_start",
+                  "error",
+                  "message"
+                ],
+                "textSample": ""
+              }
+            },
+            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfA7QCR6CCcJk3jbwnJjW\"}"
           }
         }
       ]
@@ -712,14 +971,14 @@
       "priority": 24,
       "description": "Desktop release local harness memory persistence and user-authored skill create/install/delete workflows.",
       "publicSummary": "The bundled harness can persist agent memory and manage local skills.",
-      "status": "operational",
-      "lastCheckedAt": "2026-09-16T01:20:21.988Z",
-      "checksPassed": 3,
+      "status": "major_outage",
+      "lastCheckedAt": "2026-09-18T02:20:21.902Z",
+      "checksPassed": 2,
       "checksTotal": 3,
-      "checksFailed": 0,
+      "checksFailed": 1,
       "checksUnknown": 0,
-      "latencyP95Ms": 9760,
-      "message": "All required checks are passing.",
+      "latencyP95Ms": 7569,
+      "message": "Installed skill was not invoked through a real project chat turn; Expected evidence assertion failed: textMatches expected true but got false; skillInContext expected true but got false",
       "checks": [
         {
           "id": "harness-memory-roundtrip",
@@ -731,15 +990,15 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-16T01:20:06.247Z",
-          "latencyMs": 5167,
+          "checkedAt": "2026-09-18T02:20:08.818Z",
+          "latencyMs": 5144,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "agentId": "8feb253f-88cd-4d62-a08d-c25c454a5f9c",
-            "factId": "ad48d83ffaf24294bc8cff207380eb6f",
-            "eventId": "35c8040ae9984a879cb221f603219e30",
-            "procedureId": "15584c02992d48bfbf4be1f5eb13a0db",
-            "factKey": "status_probe_1789521605014",
+            "agentId": "b7470a65-bddd-4296-bf47-d47e0fb598eb",
+            "factId": "51525c6be6db4f10a0b5e5b39c70043e",
+            "eventId": "9669e28a2f5f4872ab627dd8754fe752",
+            "procedureId": "7e755dd10b83413699ac1de342da0b02",
+            "factKey": "status_probe_1789698007394",
             "factByKeyMatches": true,
             "updatedFactPresent": true,
             "factCount": 1,
@@ -768,12 +1027,12 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-16T01:20:12.228Z",
-          "latencyMs": 5981,
+          "checkedAt": "2026-09-18T02:20:14.333Z",
+          "latencyMs": 5515,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "agentId": "7e136d09-8438-4d70-a958-2a1a2bf333fd",
-            "skillName": "aura-status-1789521606247",
+            "agentId": "91894d6e-7ef1-442d-8de0-d712c40c7e89",
+            "skillName": "aura-status-1789698008818",
             "created": true,
             "registered": true,
             "installedOnAgent": true,
@@ -792,34 +1051,88 @@
           "runtimeLabel": "Desktop Release",
           "statusImpact": "feature",
           "required": true,
-          "status": "pass",
-          "featureStatus": "operational",
-          "message": "Check passed",
-          "checkedAt": "2026-09-16T01:20:21.988Z",
-          "latencyMs": 9760,
+          "status": "fail",
+          "featureStatus": "partial_outage",
+          "message": "Installed skill was not invoked through a real project chat turn; Expected evidence assertion failed: textMatches expected true but got false; skillInContext expected true but got false",
+          "checkedAt": "2026-09-18T02:20:21.902Z",
+          "latencyMs": 7569,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "8f6d4361-e948-45a7-860e-e10afdf131d0",
-            "agentId": "3af5ddba-f0b3-4638-9406-a4d357153e3d",
-            "agentInstanceId": "7c5d815b-b507-4aa5-8a48-6ad93e0a0478",
-            "skillName": "aura-status-skill-1789521612437",
+            "projectId": "81a04b35-fe74-4dd6-9f85-bb03f9b42dfc",
+            "agentId": "aeecb057-451d-432f-9c83-2b23d887a183",
+            "agentInstanceId": "80973929-4fce-45be-964b-3f8a5b5208c3",
+            "skillName": "aura-status-skill-1789698014543",
             "created": true,
             "installedOnAgent": true,
             "frameTypes": [
               "progress",
               "session_ready",
               "assistant_message_start",
-              "text_delta",
-              "assistant_message_end",
+              "error",
               "message"
             ],
-            "textSample": "AURA_SKILL_PROBE_OK",
+            "textSample": "",
             "expectedPhrase": "AURA_SKILL_PROBE_OK",
-            "textMatches": true,
-            "skillLabels": [
-              "aura-status-skill-1789521612437"
+            "textMatches": false,
+            "skillLabels": [],
+            "skillInContext": false
+          },
+          "investigation": {
+            "schemaVersion": 1,
+            "kind": "llm-investigation",
+            "id": "harness-memory-skills:desktop-release:harness-skill-invocation:23def28d62c8",
+            "featureId": "harness-memory-skills",
+            "featureLabel": "Harness Memory and Skills",
+            "checkId": "harness-skill-invocation",
+            "runtimeEnvironment": "desktop-release",
+            "title": "Investigator failed",
+            "status": "failed",
+            "checkStatus": "fail",
+            "featureStatus": "partial_outage",
+            "generatedAt": "2026-09-18T02:24:39.754Z",
+            "environment": "production",
+            "source": "desktop-nightly-release",
+            "provider": "anthropic",
+            "model": "claude-sonnet-4-6",
+            "confidence": "low",
+            "summary": "The investigator model did not return a usable report.",
+            "rootCause": "Investigator execution failed before a diagnosis could be produced.",
+            "proof": [],
+            "possibleCauses": [],
+            "reproductionSteps": [],
+            "affectedAreas": [],
+            "recommendedNextActions": [
+              "Rerun the observability investigation with model/provider logs enabled."
             ],
-            "skillInContext": true
+            "recommendedVerifierProbes": [],
+            "whatWouldDisproveThis": [],
+            "followUpEvals": [],
+            "evidenceDigest": {
+              "message": "Installed skill was not invoked through a real project chat turn; Expected evidence assertion failed: textMatches expected true but got false; skillInContext expected true but got false",
+              "latencyMs": 7569,
+              "evidence": {
+                "orgId": "[REDACTED]",
+                "projectId": "[REDACTED]",
+                "agentId": "[REDACTED]",
+                "agentInstanceId": "[REDACTED]",
+                "skillName": "aura-status-skill-1789698014543",
+                "created": true,
+                "installedOnAgent": true,
+                "frameTypes": [
+                  "progress",
+                  "session_ready",
+                  "assistant_message_start",
+                  "error",
+                  "message"
+                ],
+                "textSample": "",
+                "expectedPhrase": "AURA_SKILL_PROBE_OK",
+                "textMatches": false,
+                "skillLabels": [],
+                "skillInContext": false
+              }
+            },
+            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfA7Q5ydydPv3zomXLUV5\"}"
           }
         }
       ]
@@ -832,12 +1145,12 @@
       "description": "Swarm-backed remote agent creation, VM readiness, lifecycle state, and chat readiness.",
       "publicSummary": "Remote agents can be provisioned and reached through their runtime.",
       "status": "major_outage",
-      "lastCheckedAt": "2026-09-18T00:59:15.867Z",
+      "lastCheckedAt": "2026-09-18T02:24:36.040Z",
       "checksPassed": 0,
       "checksTotal": 3,
       "checksFailed": 3,
       "checksUnknown": 0,
-      "latencyP95Ms": 11474,
+      "latencyP95Ms": 11304,
       "message": "POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
       "checks": [
         {
@@ -850,46 +1163,9 @@
           "status": "fail",
           "featureStatus": "partial_outage",
           "message": "POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
-          "checkedAt": "2026-09-18T00:58:53.887Z",
-          "latencyMs": 11474,
-          "evidence": {},
-          "investigation": {
-            "schemaVersion": 1,
-            "kind": "llm-investigation",
-            "id": "remote-agents:production-api:remote-agent-create:2b892a81b6c8",
-            "featureId": "remote-agents",
-            "featureLabel": "Remote Agents",
-            "checkId": "remote-agent-create",
-            "runtimeEnvironment": "production-api",
-            "title": "Investigator failed",
-            "status": "failed",
-            "checkStatus": "fail",
-            "featureStatus": "partial_outage",
-            "generatedAt": "2026-09-18T00:59:18.446Z",
-            "environment": "production",
-            "source": "github-actions",
-            "provider": "anthropic",
-            "model": "claude-sonnet-4-6",
-            "confidence": "low",
-            "summary": "The investigator model did not return a usable report.",
-            "rootCause": "Investigator execution failed before a diagnosis could be produced.",
-            "proof": [],
-            "possibleCauses": [],
-            "reproductionSteps": [],
-            "affectedAreas": [],
-            "recommendedNextActions": [
-              "Rerun the observability investigation with model/provider logs enabled."
-            ],
-            "recommendedVerifierProbes": [],
-            "whatWouldDisproveThis": [],
-            "followUpEvals": [],
-            "evidenceDigest": {
-              "message": "POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
-              "latencyMs": 11474,
-              "evidence": {}
-            },
-            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011Cf9ztYaFkxi4YdenGoDcT\"}"
-          }
+          "checkedAt": "2026-09-18T02:24:13.446Z",
+          "latencyMs": 11102,
+          "evidence": {}
         },
         {
           "id": "remote-agent-state",
@@ -901,46 +1177,9 @@
           "status": "fail",
           "featureStatus": "partial_outage",
           "message": "POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
-          "checkedAt": "2026-09-18T00:59:04.863Z",
-          "latencyMs": 10976,
-          "evidence": {},
-          "investigation": {
-            "schemaVersion": 1,
-            "kind": "llm-investigation",
-            "id": "remote-agents:production-api:remote-agent-state:1c8f1533b2bf",
-            "featureId": "remote-agents",
-            "featureLabel": "Remote Agents",
-            "checkId": "remote-agent-state",
-            "runtimeEnvironment": "production-api",
-            "title": "Investigator failed",
-            "status": "failed",
-            "checkStatus": "fail",
-            "featureStatus": "partial_outage",
-            "generatedAt": "2026-09-18T00:59:18.446Z",
-            "environment": "production",
-            "source": "github-actions",
-            "provider": "anthropic",
-            "model": "claude-sonnet-4-6",
-            "confidence": "low",
-            "summary": "The investigator model did not return a usable report.",
-            "rootCause": "Investigator execution failed before a diagnosis could be produced.",
-            "proof": [],
-            "possibleCauses": [],
-            "reproductionSteps": [],
-            "affectedAreas": [],
-            "recommendedNextActions": [
-              "Rerun the observability investigation with model/provider logs enabled."
-            ],
-            "recommendedVerifierProbes": [],
-            "whatWouldDisproveThis": [],
-            "followUpEvals": [],
-            "evidenceDigest": {
-              "message": "POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
-              "latencyMs": 10976,
-              "evidence": {}
-            },
-            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011Cf9ztZmSSMEviMkGoR7vc\"}"
-          }
+          "checkedAt": "2026-09-18T02:24:24.750Z",
+          "latencyMs": 11304,
+          "evidence": {}
         },
         {
           "id": "remote-agent-runtime",
@@ -952,46 +1191,9 @@
           "status": "fail",
           "featureStatus": "degraded",
           "message": "POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
-          "checkedAt": "2026-09-18T00:59:15.867Z",
-          "latencyMs": 11004,
-          "evidence": {},
-          "investigation": {
-            "schemaVersion": 1,
-            "kind": "llm-investigation",
-            "id": "remote-agents:production-api:remote-agent-runtime:dc238a8d587e",
-            "featureId": "remote-agents",
-            "featureLabel": "Remote Agents",
-            "checkId": "remote-agent-runtime",
-            "runtimeEnvironment": "production-api",
-            "title": "Investigator failed",
-            "status": "failed",
-            "checkStatus": "fail",
-            "featureStatus": "degraded",
-            "generatedAt": "2026-09-18T00:59:18.446Z",
-            "environment": "production",
-            "source": "github-actions",
-            "provider": "anthropic",
-            "model": "claude-sonnet-4-6",
-            "confidence": "low",
-            "summary": "The investigator model did not return a usable report.",
-            "rootCause": "Investigator execution failed before a diagnosis could be produced.",
-            "proof": [],
-            "possibleCauses": [],
-            "reproductionSteps": [],
-            "affectedAreas": [],
-            "recommendedNextActions": [
-              "Rerun the observability investigation with model/provider logs enabled."
-            ],
-            "recommendedVerifierProbes": [],
-            "whatWouldDisproveThis": [],
-            "followUpEvals": [],
-            "evidenceDigest": {
-              "message": "POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
-              "latencyMs": 11004,
-              "evidence": {}
-            },
-            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011Cf9ztamxc9RfevjSqMv6N\"}"
-          }
+          "checkedAt": "2026-09-18T02:24:36.040Z",
+          "latencyMs": 11290,
+          "evidence": {}
         }
       ]
     },
@@ -1003,12 +1205,12 @@
       "description": "Project creation, spec persistence, task persistence, project stats, and dev-loop status reads.",
       "publicSummary": "Project workspaces can persist specs and tasks and report automation status.",
       "status": "operational",
-      "lastCheckedAt": "2026-09-18T00:58:30.986Z",
+      "lastCheckedAt": "2026-09-18T02:23:50.756Z",
       "checksPassed": 4,
       "checksTotal": 4,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 1069,
+      "latencyP95Ms": 1625,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1021,13 +1223,13 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:29.004Z",
-          "latencyMs": 1039,
+          "checkedAt": "2026-09-18T02:23:47.765Z",
+          "latencyMs": 1249,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "01de5fc0-41bf-4ab0-bcff-ff2b1129b2fe",
+            "projectId": "d3b29a1b-5532-4a45-8776-7bc8e6ab9609",
             "listed": true,
-            "projectName": "AURA Status Project 1789693108066"
+            "projectName": "AURA Status Project 1789698226690"
           }
         },
         {
@@ -1040,13 +1242,13 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:30.073Z",
-          "latencyMs": 1069,
+          "checkedAt": "2026-09-18T02:23:49.390Z",
+          "latencyMs": 1625,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "505aa25f-6e2c-4efe-9c37-5ed911c631b1",
-            "specId": "069b0970-8780-4ede-839d-4c40fbba8ce8",
-            "taskId": "4d5b4c13-63ac-4b2a-9f5d-e5f730e1d11c",
+            "projectId": "c860ca5d-a2c9-454a-a1fa-976f206639c2",
+            "specId": "69fc6828-134f-4159-80c3-d0b723a0474d",
+            "taskId": "ba592aa5-3cfa-4f3e-ba86-cf6a3e03e0ab",
             "specHashPresent": true,
             "taskCount": 1
           }
@@ -1061,10 +1263,10 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:30.606Z",
-          "latencyMs": 533,
+          "checkedAt": "2026-09-18T02:23:50.136Z",
+          "latencyMs": 746,
           "evidence": {
-            "projectId": "fe0c4177-fd44-43a1-a573-fd02c4c913e1",
+            "projectId": "63f41493-f611-4e5a-b4af-71bfe9a74ada",
             "keys": [
               "total_tasks",
               "pending_tasks",
@@ -1096,10 +1298,10 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:30.986Z",
-          "latencyMs": 380,
+          "checkedAt": "2026-09-18T02:23:50.756Z",
+          "latencyMs": 620,
           "evidence": {
-            "projectId": "c2f27392-3a7f-483a-9934-d7e81a01de44",
+            "projectId": "f9962a08-e2d5-462c-a395-ee39cfc18c2a",
             "status": null,
             "keys": [
               "running",
@@ -1121,12 +1323,12 @@
       "description": "Storage-backed note folder, note, transition, comment, and project tree roundtrips.",
       "publicSummary": "Project notes can be created, updated, commented on, and listed.",
       "status": "operational",
-      "lastCheckedAt": "2026-09-18T00:58:32.377Z",
+      "lastCheckedAt": "2026-09-18T02:23:52.956Z",
       "checksPassed": 1,
       "checksTotal": 1,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 1391,
+      "latencyP95Ms": 2200,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1139,14 +1341,14 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:32.377Z",
-          "latencyMs": 1391,
+          "checkedAt": "2026-09-18T02:23:52.956Z",
+          "latencyMs": 2200,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "a4f8ae6f-ec92-4de0-8f9c-f98fb37b1545",
-            "folderId": "bc5875e6-1e0d-47d0-89a4-dda591cbc7a8",
-            "noteId": "b8877e5e-8a1c-4161-a273-fa943fe6e561",
-            "commentId": "3477f9f3-cf26-4ea7-a3a5-719e136cc928",
+            "projectId": "aba0885d-6a7c-452f-b231-61f3a71d0650",
+            "folderId": "d03519c5-eb57-446e-a190-2deca477f69c",
+            "noteId": "5644e462-d97c-4be3-9b66-c9bb56a17c09",
+            "commentId": "207551c3-3ed8-4fdc-8ba4-3b5c7fad8df4",
             "folderLinked": true,
             "titleUpdated": true,
             "transitionStatus": "draft",
@@ -1165,12 +1367,12 @@
       "description": "Process workflow lists, process creation, default ignition node creation, desktop release trigger/run lifecycle, and cleanup.",
       "publicSummary": "Process workflows can be listed, created, and triggered in the desktop release.",
       "status": "operational",
-      "lastCheckedAt": "2026-09-18T00:58:33.666Z",
+      "lastCheckedAt": "2026-09-18T02:23:54.480Z",
       "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 9048,
+      "latencyP95Ms": 9012,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1183,8 +1385,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:32.623Z",
-          "latencyMs": 246,
+          "checkedAt": "2026-09-18T02:23:53.237Z",
+          "latencyMs": 280,
           "evidence": {
             "processes": 0,
             "folders": 0
@@ -1200,11 +1402,11 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:33.666Z",
-          "latencyMs": 1043,
+          "checkedAt": "2026-09-18T02:23:54.480Z",
+          "latencyMs": 1243,
           "evidence": {
-            "projectId": "a7f3cf2d-b52b-43cd-9041-c92f2cb000c1",
-            "processId": "f59f5db4-fc7c-45b3-9d8f-78400d4d6dc0",
+            "projectId": "57a60875-a033-48f4-b412-68363d3c0240",
+            "processId": "3b62577c-77c3-43e9-912c-28f2566de714",
             "nodeCount": 1
           }
         },
@@ -1218,17 +1420,17 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-16T01:20:01.080Z",
-          "latencyMs": 9048,
+          "checkedAt": "2026-09-18T02:20:03.674Z",
+          "latencyMs": 9012,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "f0d35ac5-b9c6-45f1-bd12-aa712c125356",
-            "agentId": "a502c1c6-1024-4716-8803-38f24320adb8",
-            "processId": "7e81a4cc-f937-4de0-9123-222229ac6821",
-            "ignitionNodeId": "426242de-44fa-4149-923c-9dc5fd4e1240",
-            "actionNodeId": "2eb08470-d9ac-4ffd-9a28-c2a09b2ce036",
-            "connectionId": "4a852f80-600f-417b-8fbc-ad58ae8b6544",
-            "runId": "d70d3103-1202-419c-80be-f4641eab7fe0",
+            "projectId": "99747cd0-72ed-42c1-a5f4-0d2c773777e2",
+            "agentId": "ab26485d-6104-4d66-9db0-3f4dbb01a4d1",
+            "processId": "0f28cde5-38d6-4ec7-abd2-0a9ce65802e9",
+            "ignitionNodeId": "2015307e-b4a3-4f59-be18-04039b8b846d",
+            "actionNodeId": "3995fa85-a166-46f4-bf20-fb0befd0a029",
+            "connectionId": "86886b13-5583-4b4b-b2c8-f1f1aaf86d0d",
+            "runId": "dbf964bc-1e37-417e-8a24-7f14666d9a91",
             "runStatus": "pending",
             "runCount": 1,
             "eventCount": 0,
@@ -1245,13 +1447,13 @@
       "description": "Curated model matrix smoke tests through AURA's runtime path.",
       "publicSummary": "Supported text models are returning valid assistant responses.",
       "status": "major_outage",
-      "lastCheckedAt": "2026-09-16T01:22:10.973Z",
+      "lastCheckedAt": "2026-09-18T02:23:40.042Z",
       "checksPassed": 0,
       "checksTotal": 1,
       "checksFailed": 1,
       "checksUnknown": 0,
-      "latencyP95Ms": 13053,
-      "message": "1/2 models returned the expected response; Expected evidence assertion failed: allPassed expected true but got false; failedModelCount expected 0 but got 1",
+      "latencyP95Ms": 12072,
+      "message": "0/2 models returned the expected response; Expected evidence assertion failed: passed expected >= 1 but got 0; allPassed expected true but got false; failedModelCount expected 0 but got 2",
       "checks": [
         {
           "id": "model-matrix",
@@ -1262,35 +1464,100 @@
           "required": true,
           "status": "fail",
           "featureStatus": "partial_outage",
-          "message": "1/2 models returned the expected response; Expected evidence assertion failed: allPassed expected true but got false; failedModelCount expected 0 but got 1",
-          "checkedAt": "2026-09-16T01:22:10.973Z",
-          "latencyMs": 13053,
+          "message": "0/2 models returned the expected response; Expected evidence assertion failed: passed expected >= 1 but got 0; allPassed expected true but got false; failedModelCount expected 0 but got 2",
+          "checkedAt": "2026-09-18T02:23:40.042Z",
+          "latencyMs": 12072,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "passed": 1,
+            "passed": 0,
             "total": 2,
             "allPassed": false,
-            "failedModelCount": 1,
+            "failedModelCount": 2,
             "failedModels": [
+              "aura-claude-sonnet-4-6",
               "aura-gpt-5-5"
             ],
             "expectedPhrase": "hello from aura",
             "results": [
               {
                 "model": "aura-claude-sonnet-4-6",
-                "ok": true,
-                "provider": "anthropic",
-                "resolvedModel": "aura-claude-sonnet-4-6",
-                "messageSample": "hello from aura"
+                "ok": false,
+                "provider": null,
+                "resolvedModel": null,
+                "error": "POST /api/agents/2a24cc8e-3649-476d-bd53-9bc1d94b3538/runtime/test failed with 502: {\"error\":\"harness runtime test failed (llm_error): API error (status 400): 400 Bad Request - {\\\"error\\\":{\\\"code\\\":\\\"provider_account_unavailable\\\",\\\"message\\\":\\\"AURA is temporarily unable to reach the model provider. This is an issue on our side, not with your account or credits. Please try again shortly.\\\",\\\"type\\\":\\\"invalid_request_error\\\"},\\\"type\\\":\\\"error\\\"}\",\"code\":\"bad_gateway\",\"details\":null}"
               },
               {
                 "model": "aura-gpt-5-5",
                 "ok": false,
                 "provider": null,
                 "resolvedModel": null,
-                "error": "POST /api/agents/0d7ed7fb-f590-4bc2-871a-88c1ac687027/runtime/test failed with 502: {\"error\":\"harness runtime test failed (llm_error): API error (status 424): 424 Failed Dependency - {\\\"error\\\":{\\\"code\\\":\\\"provider_account_unavailable\\\",\\\"message\\\":\\\"AURA is temporarily unable to reach the model provider. This is an issue on our side, not with your account or credits. Please try again shortly.\\\",\\\"type\\\":\\\"api_error\\\"},\\\"type\\\":\\\"error\\\"}\",\"code\":\"bad_gateway\",\"details\":null}"
+                "error": "POST /api/agents/8b445208-1314-49bf-9418-f23dde68a9d1/runtime/test failed with 502: {\"error\":\"harness runtime test failed (llm_error): API error (status 424): 424 Failed Dependency - {\\\"error\\\":{\\\"code\\\":\\\"provider_account_unavailable\\\",\\\"message\\\":\\\"AURA is temporarily unable to reach the model provider. This is an issue on our side, not with your account or credits. Please try again shortly.\\\",\\\"type\\\":\\\"api_error\\\"},\\\"type\\\":\\\"error\\\"}\",\"code\":\"bad_gateway\",\"details\":null}"
               }
             ]
+          },
+          "investigation": {
+            "schemaVersion": 1,
+            "kind": "llm-investigation",
+            "id": "model-responses:desktop-release:model-matrix:bb252e7cd56a",
+            "featureId": "model-responses",
+            "featureLabel": "Model Responses",
+            "checkId": "model-matrix",
+            "runtimeEnvironment": "desktop-release",
+            "title": "Investigator failed",
+            "status": "failed",
+            "checkStatus": "fail",
+            "featureStatus": "partial_outage",
+            "generatedAt": "2026-09-18T02:24:39.754Z",
+            "environment": "production",
+            "source": "desktop-nightly-release",
+            "provider": "anthropic",
+            "model": "claude-sonnet-4-6",
+            "confidence": "low",
+            "summary": "The investigator model did not return a usable report.",
+            "rootCause": "Investigator execution failed before a diagnosis could be produced.",
+            "proof": [],
+            "possibleCauses": [],
+            "reproductionSteps": [],
+            "affectedAreas": [],
+            "recommendedNextActions": [
+              "Rerun the observability investigation with model/provider logs enabled."
+            ],
+            "recommendedVerifierProbes": [],
+            "whatWouldDisproveThis": [],
+            "followUpEvals": [],
+            "evidenceDigest": {
+              "message": "0/2 models returned the expected response; Expected evidence assertion failed: passed expected >= 1 but got 0; allPassed expected true but got false; failedModelCount expected 0 but got 2",
+              "latencyMs": 12072,
+              "evidence": {
+                "orgId": "[REDACTED]",
+                "passed": 0,
+                "total": 2,
+                "allPassed": false,
+                "failedModelCount": 2,
+                "failedModels": [
+                  "aura-claude-sonnet-4-6",
+                  "aura-gpt-5-5"
+                ],
+                "expectedPhrase": "hello from aura",
+                "results": [
+                  {
+                    "model": "aura-claude-sonnet-4-6",
+                    "ok": false,
+                    "provider": null,
+                    "resolvedModel": null,
+                    "error": "POST /api/agents/[REDACTED]/runtime/test failed with 502: {\"error\":\"harness runtime test failed (llm_error): API error (status 400): 400 Bad Request - {\\\"error\\\":{\\\"code\\\":\\\"provider_account_unavailable\\\",\\\"message\\\":\\\"AURA is temporarily unable to reach the model provider. This is an issue on our side, not with your account or credits. Please try again shortly.\\\",\\\"type\\\":\\\"invalid_request_error\\\"},\\\"type\\\":\\\"error\\\"}\",\"code\":\"bad_gateway\",\"details\":null}"
+                  },
+                  {
+                    "model": "aura-gpt-5-5",
+                    "ok": false,
+                    "provider": null,
+                    "resolvedModel": null,
+                    "error": "POST /api/agents/[REDACTED]/runtime/test failed with 502: {\"error\":\"harness runtime test failed (llm_error): API error (status 424): 424 Failed Dependency - {\\\"error\\\":{\\\"code\\\":\\\"provider_account_unavailable\\\",\\\"message\\\":\\\"AURA is temporarily unable to reach the model provider. This is an issue on our side, not with your account or credits. Please try again shortly.\\\",\\\"type\\\":\\\"api_error\\\"},\\\"type\\\":\\\"error\\\"}\",\"code\":\"bad_gateway\",\"details\":null}"
+                  }
+                ]
+              }
+            },
+            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfA7QDYZ2C884FYg3a6Tv\"}"
           }
         }
       ]
@@ -1303,12 +1570,12 @@
       "description": "Image generation stream routing, progress frames, completion payloads, and artifact URLs.",
       "publicSummary": "AURA image generation streams can complete with generated artifacts.",
       "status": "major_outage",
-      "lastCheckedAt": "2026-09-16T01:22:12.143Z",
+      "lastCheckedAt": "2026-09-18T02:23:41.669Z",
       "checksPassed": 0,
       "checksTotal": 1,
       "checksFailed": 1,
       "checksUnknown": 0,
-      "latencyP95Ms": 1170,
+      "latencyP95Ms": 1627,
       "message": "OpenAI error: {\n  \"error\": {\n    \"message\": \"You have no credits remaining. Add credits to continue using the API at https://platform.openai.com/settings/organization/billing/.\",\n    \"type\": \"insufficient_quota\",\n    \"param\": null,\n    \"code\": \"credit_balance_exhausted\"\n  }\n}; Expected evidence assertion failed: frameTypes expected to contain \"generation_completed\"; imageUrlPresent expected true but got false",
       "checks": [
         {
@@ -1321,8 +1588,8 @@
           "status": "fail",
           "featureStatus": "partial_outage",
           "message": "OpenAI error: {\n  \"error\": {\n    \"message\": \"You have no credits remaining. Add credits to continue using the API at https://platform.openai.com/settings/organization/billing/.\",\n    \"type\": \"insufficient_quota\",\n    \"param\": null,\n    \"code\": \"credit_balance_exhausted\"\n  }\n}; Expected evidence assertion failed: frameTypes expected to contain \"generation_completed\"; imageUrlPresent expected true but got false",
-          "checkedAt": "2026-09-16T01:22:12.143Z",
-          "latencyMs": 1170,
+          "checkedAt": "2026-09-18T02:23:41.669Z",
+          "latencyMs": 1627,
           "evidence": {
             "frameTypes": [
               "generation_start",
@@ -1379,13 +1646,13 @@
       "description": "Marketplace agent catalog and harness bootstrap health.",
       "publicSummary": "Marketplace and bootstrap services are reachable.",
       "status": "degraded",
-      "lastCheckedAt": "2026-09-18T00:58:41.331Z",
+      "lastCheckedAt": "2026-09-18T02:24:00.614Z",
       "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 7099,
-      "message": "Latency 7099ms exceeded warning threshold",
+      "latencyP95Ms": 5677,
+      "message": "Latency 5677ms exceeded warning threshold",
       "checks": [
         {
           "id": "marketplace-agents",
@@ -1396,9 +1663,9 @@
           "required": true,
           "status": "pass",
           "featureStatus": "degraded",
-          "message": "Latency 7099ms exceeded warning threshold",
-          "checkedAt": "2026-09-18T00:58:40.765Z",
-          "latencyMs": 7099,
+          "message": "Latency 5677ms exceeded warning threshold",
+          "checkedAt": "2026-09-18T02:24:00.157Z",
+          "latencyMs": 5677,
           "evidence": {
             "count": 17
           }
@@ -1413,12 +1680,12 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:41.331Z",
-          "latencyMs": 566,
+          "checkedAt": "2026-09-18T02:24:00.614Z",
+          "latencyMs": 457,
           "evidence": {
             "reachable": true,
             "url": "https://aura-harness-latest.onrender.com",
-            "latencyMs": 105,
+            "latencyMs": 65,
             "status": 200
           }
         }
@@ -1432,12 +1699,12 @@
       "description": "Org integrations, tool action catalog, subscription status, and credits balance.",
       "publicSummary": "Integrations and billing surfaces are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-09-18T00:58:27.965Z",
+      "lastCheckedAt": "2026-09-18T02:23:46.516Z",
       "checksPassed": 6,
       "checksTotal": 6,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 324,
+      "latencyP95Ms": 412,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1450,8 +1717,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:26.706Z",
-          "latencyMs": 324,
+          "checkedAt": "2026-09-18T02:23:44.934Z",
+          "latencyMs": 366,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "count": 0
@@ -1467,8 +1734,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:27.019Z",
-          "latencyMs": 313,
+          "checkedAt": "2026-09-18T02:23:45.272Z",
+          "latencyMs": 338,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "count": 6
@@ -1484,8 +1751,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:27.267Z",
-          "latencyMs": 248,
+          "checkedAt": "2026-09-18T02:23:45.614Z",
+          "latencyMs": 342,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "toolCount": 6,
@@ -1510,8 +1777,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:27.397Z",
-          "latencyMs": 130,
+          "checkedAt": "2026-09-18T02:23:45.780Z",
+          "latencyMs": 166,
           "evidence": {
             "keys": [
               "plan",
@@ -1533,8 +1800,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:27.680Z",
-          "latencyMs": 283,
+          "checkedAt": "2026-09-18T02:23:46.104Z",
+          "latencyMs": 324,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "keys": [
@@ -1554,8 +1821,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:27.965Z",
-          "latencyMs": 285,
+          "checkedAt": "2026-09-18T02:23:46.516Z",
+          "latencyMs": 412,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "accountKeys": [
@@ -1584,12 +1851,12 @@
       "description": "Feedback board, bug report list, feed, leaderboard, and platform stats.",
       "publicSummary": "Community and feedback data surfaces are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-09-18T00:58:42.413Z",
+      "lastCheckedAt": "2026-09-18T02:24:02.344Z",
       "checksPassed": 5,
       "checksTotal": 5,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 322,
+      "latencyP95Ms": 373,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1602,8 +1869,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:41.793Z",
-          "latencyMs": 322,
+          "checkedAt": "2026-09-18T02:24:01.383Z",
+          "latencyMs": 373,
           "evidence": {
             "count": 50
           }
@@ -1618,8 +1885,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:41.853Z",
-          "latencyMs": 60,
+          "checkedAt": "2026-09-18T02:24:01.504Z",
+          "latencyMs": 121,
           "evidence": {
             "count": 0
           }
@@ -1634,8 +1901,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:42.059Z",
-          "latencyMs": 206,
+          "checkedAt": "2026-09-18T02:24:01.850Z",
+          "latencyMs": 346,
           "evidence": {
             "count": 50
           }
@@ -1650,8 +1917,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:42.284Z",
-          "latencyMs": 225,
+          "checkedAt": "2026-09-18T02:24:02.190Z",
+          "latencyMs": 340,
           "evidence": {
             "count": 50
           }
@@ -1666,8 +1933,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:42.413Z",
-          "latencyMs": 129,
+          "checkedAt": "2026-09-18T02:24:02.344Z",
+          "latencyMs": 154,
           "evidence": {
             "present": true,
             "keys": [
@@ -1691,12 +1958,12 @@
       "description": "Desktop workspace defaults, updater status, bundled harness wiring, and local terminal API availability.",
       "publicSummary": "Desktop runtime support endpoints and bundled harness wiring are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-09-16T01:20:22.001Z",
+      "lastCheckedAt": "2026-09-18T02:20:21.911Z",
       "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 15,
+      "latencyP95Ms": 18,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1709,8 +1976,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-16T01:19:50.209Z",
-          "latencyMs": 15,
+          "checkedAt": "2026-09-18T02:19:52.487Z",
+          "latencyMs": 18,
           "evidence": {
             "workspaceRootPresent": true
           }
@@ -1725,8 +1992,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-16T01:20:21.994Z",
-          "latencyMs": 6,
+          "checkedAt": "2026-09-18T02:20:21.906Z",
+          "latencyMs": 4,
           "evidence": {
             "count": 0
           }
@@ -1741,8 +2008,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-16T01:20:22.001Z",
-          "latencyMs": 7,
+          "checkedAt": "2026-09-18T02:20:21.911Z",
+          "latencyMs": 5,
           "evidence": {
             "currentVersionPresent": true,
             "channel": "nightly",
@@ -1764,12 +2031,12 @@
       "description": "Stream reattachment registry and debug run index.",
       "publicSummary": "Stream and debug inspection endpoints are reachable.",
       "status": "operational",
-      "lastCheckedAt": "2026-09-18T00:58:41.471Z",
+      "lastCheckedAt": "2026-09-18T02:24:01.010Z",
       "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 81,
+      "latencyP95Ms": 276,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1782,8 +2049,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:41.412Z",
-          "latencyMs": 81,
+          "checkedAt": "2026-09-18T02:24:00.734Z",
+          "latencyMs": 120,
           "evidence": {
             "count": 0
           }
@@ -1798,8 +2065,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:58:41.471Z",
-          "latencyMs": 59,
+          "checkedAt": "2026-09-18T02:24:01.010Z",
+          "latencyMs": 276,
           "evidence": {
             "keys": [
               "projects"
@@ -1816,12 +2083,12 @@
       "description": "Existing Playwright and benchmark eval summaries produced by AURA's eval lanes.",
       "publicSummary": "AURA eval artifacts are being produced and retained.",
       "status": "operational",
-      "lastCheckedAt": "2026-09-18T00:59:18.282Z",
+      "lastCheckedAt": "2026-09-18T02:24:39.534Z",
       "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 1,
+      "latencyP95Ms": 2,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1834,8 +2101,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "3/4 eval summary artifacts found",
-          "checkedAt": "2026-09-18T00:59:18.281Z",
-          "latencyMs": 1,
+          "checkedAt": "2026-09-18T02:24:39.532Z",
+          "latencyMs": 0,
           "evidence": {
             "files": [
               {
@@ -1845,19 +2112,19 @@
               {
                 "file": "infra/evals/reports/baselines/smoke-summary.json",
                 "exists": true,
-                "mtime": "2026-09-18T00:58:19.619Z",
+                "mtime": "2026-09-18T02:19:19.887Z",
                 "size": 2796
               },
               {
                 "file": "infra/evals/reports/baselines/chat-core-summary.json",
                 "exists": true,
-                "mtime": "2026-09-18T00:58:19.619Z",
+                "mtime": "2026-09-18T02:19:19.887Z",
                 "size": 11513
               },
               {
                 "file": "infra/evals/reports/baselines/workflow-summary.json",
                 "exists": true,
-                "mtime": "2026-09-18T00:58:19.619Z",
+                "mtime": "2026-09-18T02:19:19.887Z",
                 "size": 2219
               }
             ],
@@ -1875,8 +2142,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:59:18.282Z",
-          "latencyMs": 1,
+          "checkedAt": "2026-09-18T02:24:39.534Z",
+          "latencyMs": 2,
           "evidence": {
             "registryPresent": true,
             "eventCount": 53,
@@ -1900,12 +2167,12 @@
       "description": "Public AURA pages, observability snapshot JSON, and marketing routes.",
       "publicSummary": "AURA's public web surfaces are reachable.",
       "status": "operational",
-      "lastCheckedAt": "2026-09-18T00:59:18.280Z",
-      "checksPassed": 3,
+      "lastCheckedAt": "2026-09-18T02:24:39.532Z",
+      "checksPassed": 4,
       "checksTotal": 4,
-      "checksFailed": 1,
+      "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 731,
+      "latencyP95Ms": 996,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1915,11 +2182,11 @@
           "runtimeLabel": "Production API",
           "statusImpact": "informational",
           "required": false,
-          "status": "fail",
+          "status": "pass",
           "featureStatus": "operational",
-          "message": "Published observability snapshot is missing live workflow data or is stale; Expected evidence assertion failed: snapshotAgeMinutes expected <= 300 but got 742",
-          "checkedAt": "2026-09-18T00:59:17.426Z",
-          "latencyMs": 159,
+          "message": "Informational runtime check",
+          "checkedAt": "2026-09-18T02:24:38.340Z",
+          "latencyMs": 52,
           "evidence": {
             "schemaVersion": 1,
             "overall": "major_outage",
@@ -1928,61 +2195,11 @@
             "featureCount": 19,
             "totalsFeatures": 19,
             "unknownFeatureCount": 0,
-            "snapshotAgeMinutes": 742,
+            "snapshotAgeMinutes": 85,
             "hasLiveSource": true,
             "hasNonUnknownFeatureData": true,
             "snapshotUrl": "https://cypher-asi.github.io/aura-os/observability/status.json",
             "maxAgeMinutes": 300
-          },
-          "investigation": {
-            "schemaVersion": 1,
-            "kind": "llm-investigation",
-            "id": "public-website:production-api:published-observability-snapshot:53927d4de816",
-            "featureId": "public-website",
-            "featureLabel": "Public Website",
-            "checkId": "published-observability-snapshot",
-            "runtimeEnvironment": "production-api",
-            "title": "Investigator failed",
-            "status": "failed",
-            "checkStatus": "fail",
-            "featureStatus": "operational",
-            "generatedAt": "2026-09-18T00:59:18.446Z",
-            "environment": "production",
-            "source": "github-actions",
-            "provider": "anthropic",
-            "model": "claude-sonnet-4-6",
-            "confidence": "low",
-            "summary": "The investigator model did not return a usable report.",
-            "rootCause": "Investigator execution failed before a diagnosis could be produced.",
-            "proof": [],
-            "possibleCauses": [],
-            "reproductionSteps": [],
-            "affectedAreas": [],
-            "recommendedNextActions": [
-              "Rerun the observability investigation with model/provider logs enabled."
-            ],
-            "recommendedVerifierProbes": [],
-            "whatWouldDisproveThis": [],
-            "followUpEvals": [],
-            "evidenceDigest": {
-              "message": "Published observability snapshot is missing live workflow data or is stale; Expected evidence assertion failed: snapshotAgeMinutes expected <= 300 but got 742",
-              "latencyMs": 159,
-              "evidence": {
-                "schemaVersion": 1,
-                "overall": "major_outage",
-                "generatedAtPresent": true,
-                "source": "github-actions",
-                "featureCount": 19,
-                "totalsFeatures": 19,
-                "unknownFeatureCount": 0,
-                "snapshotAgeMinutes": 742,
-                "hasLiveSource": true,
-                "hasNonUnknownFeatureData": true,
-                "snapshotUrl": "https://cypher-asi.github.io/aura-os/observability/status.json",
-                "maxAgeMinutes": 300
-              }
-            },
-            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011Cf9ztcyuxW7FZLSwArLKR\"}"
           }
         },
         {
@@ -1995,8 +2212,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:59:17.267Z",
-          "latencyMs": 196,
+          "checkedAt": "2026-09-18T02:24:38.288Z",
+          "latencyMs": 209,
           "evidence": {
             "status": 200,
             "hasAppShell": true,
@@ -2013,8 +2230,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:59:17.549Z",
-          "latencyMs": 123,
+          "checkedAt": "2026-09-18T02:24:38.536Z",
+          "latencyMs": 196,
           "evidence": {
             "status": 200,
             "hasAppShell": true,
@@ -2031,8 +2248,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-18T00:59:18.280Z",
-          "latencyMs": 731,
+          "checkedAt": "2026-09-18T02:24:39.532Z",
+          "latencyMs": 996,
           "evidence": {
             "allRoutesOk": true,
             "routeCount": 8,
@@ -2089,18 +2306,18 @@
     {
       "schemaVersion": 1,
       "kind": "llm-investigation",
-      "id": "remote-agents:production-api:remote-agent-create:2b892a81b6c8",
-      "featureId": "remote-agents",
-      "featureLabel": "Remote Agents",
-      "checkId": "remote-agent-create",
-      "runtimeEnvironment": "production-api",
+      "id": "harness-memory-skills:desktop-release:harness-skill-invocation:23def28d62c8",
+      "featureId": "harness-memory-skills",
+      "featureLabel": "Harness Memory and Skills",
+      "checkId": "harness-skill-invocation",
+      "runtimeEnvironment": "desktop-release",
       "title": "Investigator failed",
       "status": "failed",
       "checkStatus": "fail",
       "featureStatus": "partial_outage",
-      "generatedAt": "2026-09-18T00:59:18.446Z",
+      "generatedAt": "2026-09-18T02:24:39.754Z",
       "environment": "production",
-      "source": "github-actions",
+      "source": "desktop-nightly-release",
       "provider": "anthropic",
       "model": "claude-sonnet-4-6",
       "confidence": "low",
@@ -2117,172 +2334,432 @@
       "whatWouldDisproveThis": [],
       "followUpEvals": [],
       "evidenceDigest": {
-        "message": "POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
-        "latencyMs": 11474,
-        "evidence": {}
-      },
-      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011Cf9ztYaFkxi4YdenGoDcT\"}"
-    },
-    {
-      "schemaVersion": 1,
-      "kind": "llm-investigation",
-      "id": "remote-agents:production-api:remote-agent-state:1c8f1533b2bf",
-      "featureId": "remote-agents",
-      "featureLabel": "Remote Agents",
-      "checkId": "remote-agent-state",
-      "runtimeEnvironment": "production-api",
-      "title": "Investigator failed",
-      "status": "failed",
-      "checkStatus": "fail",
-      "featureStatus": "partial_outage",
-      "generatedAt": "2026-09-18T00:59:18.446Z",
-      "environment": "production",
-      "source": "github-actions",
-      "provider": "anthropic",
-      "model": "claude-sonnet-4-6",
-      "confidence": "low",
-      "summary": "The investigator model did not return a usable report.",
-      "rootCause": "Investigator execution failed before a diagnosis could be produced.",
-      "proof": [],
-      "possibleCauses": [],
-      "reproductionSteps": [],
-      "affectedAreas": [],
-      "recommendedNextActions": [
-        "Rerun the observability investigation with model/provider logs enabled."
-      ],
-      "recommendedVerifierProbes": [],
-      "whatWouldDisproveThis": [],
-      "followUpEvals": [],
-      "evidenceDigest": {
-        "message": "POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
-        "latencyMs": 10976,
-        "evidence": {}
-      },
-      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011Cf9ztZmSSMEviMkGoR7vc\"}"
-    },
-    {
-      "schemaVersion": 1,
-      "kind": "llm-investigation",
-      "id": "public-experience:production-api:public-chat-stream:66a2d6cdd67f",
-      "featureId": "public-experience",
-      "featureLabel": "Public Chat and APIs",
-      "checkId": "public-chat-stream",
-      "runtimeEnvironment": "production-api",
-      "title": "Investigator failed",
-      "status": "failed",
-      "checkStatus": "fail",
-      "featureStatus": "degraded",
-      "generatedAt": "2026-09-18T00:59:18.446Z",
-      "environment": "production",
-      "source": "github-actions",
-      "provider": "anthropic",
-      "model": "claude-sonnet-4-6",
-      "confidence": "low",
-      "summary": "The investigator model did not return a usable report.",
-      "rootCause": "Investigator execution failed before a diagnosis could be produced.",
-      "proof": [],
-      "possibleCauses": [],
-      "reproductionSteps": [],
-      "affectedAreas": [],
-      "recommendedNextActions": [
-        "Rerun the observability investigation with model/provider logs enabled."
-      ],
-      "recommendedVerifierProbes": [],
-      "whatWouldDisproveThis": [],
-      "followUpEvals": [],
-      "evidenceDigest": {
-        "message": "POST /api/public/chat/stream failed with 502: {\"error\":\"public demo agent failed to start a session\",\"code\":\"bad_gateway\",\"details\":null}",
-        "latencyMs": 468,
-        "evidence": {}
-      },
-      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011Cf9ztbpDcS1DiqjLmmBcX\"}"
-    },
-    {
-      "schemaVersion": 1,
-      "kind": "llm-investigation",
-      "id": "remote-agents:production-api:remote-agent-runtime:dc238a8d587e",
-      "featureId": "remote-agents",
-      "featureLabel": "Remote Agents",
-      "checkId": "remote-agent-runtime",
-      "runtimeEnvironment": "production-api",
-      "title": "Investigator failed",
-      "status": "failed",
-      "checkStatus": "fail",
-      "featureStatus": "degraded",
-      "generatedAt": "2026-09-18T00:59:18.446Z",
-      "environment": "production",
-      "source": "github-actions",
-      "provider": "anthropic",
-      "model": "claude-sonnet-4-6",
-      "confidence": "low",
-      "summary": "The investigator model did not return a usable report.",
-      "rootCause": "Investigator execution failed before a diagnosis could be produced.",
-      "proof": [],
-      "possibleCauses": [],
-      "reproductionSteps": [],
-      "affectedAreas": [],
-      "recommendedNextActions": [
-        "Rerun the observability investigation with model/provider logs enabled."
-      ],
-      "recommendedVerifierProbes": [],
-      "whatWouldDisproveThis": [],
-      "followUpEvals": [],
-      "evidenceDigest": {
-        "message": "POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
-        "latencyMs": 11004,
-        "evidence": {}
-      },
-      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011Cf9ztamxc9RfevjSqMv6N\"}"
-    },
-    {
-      "schemaVersion": 1,
-      "kind": "llm-investigation",
-      "id": "public-website:production-api:published-observability-snapshot:53927d4de816",
-      "featureId": "public-website",
-      "featureLabel": "Public Website",
-      "checkId": "published-observability-snapshot",
-      "runtimeEnvironment": "production-api",
-      "title": "Investigator failed",
-      "status": "failed",
-      "checkStatus": "fail",
-      "featureStatus": "operational",
-      "generatedAt": "2026-09-18T00:59:18.446Z",
-      "environment": "production",
-      "source": "github-actions",
-      "provider": "anthropic",
-      "model": "claude-sonnet-4-6",
-      "confidence": "low",
-      "summary": "The investigator model did not return a usable report.",
-      "rootCause": "Investigator execution failed before a diagnosis could be produced.",
-      "proof": [],
-      "possibleCauses": [],
-      "reproductionSteps": [],
-      "affectedAreas": [],
-      "recommendedNextActions": [
-        "Rerun the observability investigation with model/provider logs enabled."
-      ],
-      "recommendedVerifierProbes": [],
-      "whatWouldDisproveThis": [],
-      "followUpEvals": [],
-      "evidenceDigest": {
-        "message": "Published observability snapshot is missing live workflow data or is stale; Expected evidence assertion failed: snapshotAgeMinutes expected <= 300 but got 742",
-        "latencyMs": 159,
+        "message": "Installed skill was not invoked through a real project chat turn; Expected evidence assertion failed: textMatches expected true but got false; skillInContext expected true but got false",
+        "latencyMs": 7569,
         "evidence": {
-          "schemaVersion": 1,
-          "overall": "major_outage",
-          "generatedAtPresent": true,
-          "source": "github-actions",
-          "featureCount": 19,
-          "totalsFeatures": 19,
-          "unknownFeatureCount": 0,
-          "snapshotAgeMinutes": 742,
-          "hasLiveSource": true,
-          "hasNonUnknownFeatureData": true,
-          "snapshotUrl": "https://cypher-asi.github.io/aura-os/observability/status.json",
-          "maxAgeMinutes": 300
+          "orgId": "[REDACTED]",
+          "projectId": "[REDACTED]",
+          "agentId": "[REDACTED]",
+          "agentInstanceId": "[REDACTED]",
+          "skillName": "aura-status-skill-1789698014543",
+          "created": true,
+          "installedOnAgent": true,
+          "frameTypes": [
+            "progress",
+            "session_ready",
+            "assistant_message_start",
+            "error",
+            "message"
+          ],
+          "textSample": "",
+          "expectedPhrase": "AURA_SKILL_PROBE_OK",
+          "textMatches": false,
+          "skillLabels": [],
+          "skillInContext": false
         }
       },
-      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011Cf9ztcyuxW7FZLSwArLKR\"}"
+      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfA7Q5ydydPv3zomXLUV5\"}"
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "llm-investigation",
+      "id": "local-agents:desktop-release:local-agent-runtime:ec66e69c8533",
+      "featureId": "local-agents",
+      "featureLabel": "Local Agents",
+      "checkId": "local-agent-runtime",
+      "runtimeEnvironment": "desktop-release",
+      "title": "Investigator failed",
+      "status": "failed",
+      "checkStatus": "fail",
+      "featureStatus": "partial_outage",
+      "generatedAt": "2026-09-18T02:24:39.754Z",
+      "environment": "production",
+      "source": "desktop-nightly-release",
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "confidence": "low",
+      "summary": "The investigator model did not return a usable report.",
+      "rootCause": "Investigator execution failed before a diagnosis could be produced.",
+      "proof": [],
+      "possibleCauses": [],
+      "reproductionSteps": [],
+      "affectedAreas": [],
+      "recommendedNextActions": [
+        "Rerun the observability investigation with model/provider logs enabled."
+      ],
+      "recommendedVerifierProbes": [],
+      "whatWouldDisproveThis": [],
+      "followUpEvals": [],
+      "evidenceDigest": {
+        "message": "POST /api/agents/[REDACTED]/runtime/test failed with 502: {\"error\":\"harness runtime test failed (llm_error): API error (status 400): 400 Bad Request - {\\\"error\\\":{\\\"code\\\":\\\"provider_account_unavailable\\\",\\\"message\\\":\\\"AURA is temporarily unable to reach the model provider. This is an issue on our side, not with your account or credits. Please try again shortly.\\\",\\\"type\\\":\\\"invalid_request_error\\\"},\\\"type\\\":\\\"error\\\"}\",\"code\":\"bad_gateway\",\"details\":null}",
+        "latencyMs": 5475,
+        "evidence": {}
+      },
+      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfA7Q7EYEJr4kJAy5T5pG\"}"
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "llm-investigation",
+      "id": "model-responses:desktop-release:model-matrix:bb252e7cd56a",
+      "featureId": "model-responses",
+      "featureLabel": "Model Responses",
+      "checkId": "model-matrix",
+      "runtimeEnvironment": "desktop-release",
+      "title": "Investigator failed",
+      "status": "failed",
+      "checkStatus": "fail",
+      "featureStatus": "partial_outage",
+      "generatedAt": "2026-09-18T02:24:39.754Z",
+      "environment": "production",
+      "source": "desktop-nightly-release",
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "confidence": "low",
+      "summary": "The investigator model did not return a usable report.",
+      "rootCause": "Investigator execution failed before a diagnosis could be produced.",
+      "proof": [],
+      "possibleCauses": [],
+      "reproductionSteps": [],
+      "affectedAreas": [],
+      "recommendedNextActions": [
+        "Rerun the observability investigation with model/provider logs enabled."
+      ],
+      "recommendedVerifierProbes": [],
+      "whatWouldDisproveThis": [],
+      "followUpEvals": [],
+      "evidenceDigest": {
+        "message": "0/2 models returned the expected response; Expected evidence assertion failed: passed expected >= 1 but got 0; allPassed expected true but got false; failedModelCount expected 0 but got 2",
+        "latencyMs": 12072,
+        "evidence": {
+          "orgId": "[REDACTED]",
+          "passed": 0,
+          "total": 2,
+          "allPassed": false,
+          "failedModelCount": 2,
+          "failedModels": [
+            "aura-claude-sonnet-4-6",
+            "aura-gpt-5-5"
+          ],
+          "expectedPhrase": "hello from aura",
+          "results": [
+            {
+              "model": "aura-claude-sonnet-4-6",
+              "ok": false,
+              "provider": null,
+              "resolvedModel": null,
+              "error": "POST /api/agents/[REDACTED]/runtime/test failed with 502: {\"error\":\"harness runtime test failed (llm_error): API error (status 400): 400 Bad Request - {\\\"error\\\":{\\\"code\\\":\\\"provider_account_unavailable\\\",\\\"message\\\":\\\"AURA is temporarily unable to reach the model provider. This is an issue on our side, not with your account or credits. Please try again shortly.\\\",\\\"type\\\":\\\"invalid_request_error\\\"},\\\"type\\\":\\\"error\\\"}\",\"code\":\"bad_gateway\",\"details\":null}"
+            },
+            {
+              "model": "aura-gpt-5-5",
+              "ok": false,
+              "provider": null,
+              "resolvedModel": null,
+              "error": "POST /api/agents/[REDACTED]/runtime/test failed with 502: {\"error\":\"harness runtime test failed (llm_error): API error (status 424): 424 Failed Dependency - {\\\"error\\\":{\\\"code\\\":\\\"provider_account_unavailable\\\",\\\"message\\\":\\\"AURA is temporarily unable to reach the model provider. This is an issue on our side, not with your account or credits. Please try again shortly.\\\",\\\"type\\\":\\\"api_error\\\"},\\\"type\\\":\\\"error\\\"}\",\"code\":\"bad_gateway\",\"details\":null}"
+            }
+          ]
+        }
+      },
+      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfA7QDYZ2C884FYg3a6Tv\"}"
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "llm-investigation",
+      "id": "project-agent-workflows:desktop-release:project-agent-a2a-roundtrip:77db9bfc1284",
+      "featureId": "project-agent-workflows",
+      "featureLabel": "Project Agent Workflows",
+      "checkId": "project-agent-a2a-roundtrip",
+      "runtimeEnvironment": "desktop-release",
+      "title": "Investigator failed",
+      "status": "failed",
+      "checkStatus": "fail",
+      "featureStatus": "partial_outage",
+      "generatedAt": "2026-09-18T02:24:39.754Z",
+      "environment": "production",
+      "source": "desktop-nightly-release",
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "confidence": "low",
+      "summary": "The investigator model did not return a usable report.",
+      "rootCause": "Investigator execution failed before a diagnosis could be produced.",
+      "proof": [],
+      "possibleCauses": [],
+      "reproductionSteps": [],
+      "affectedAreas": [],
+      "recommendedNextActions": [
+        "Rerun the observability investigation with model/provider logs enabled."
+      ],
+      "recommendedVerifierProbes": [],
+      "whatWouldDisproveThis": [],
+      "followUpEvals": [],
+      "evidenceDigest": {
+        "message": "Agent-to-agent send/callback roundtrip did not complete; Expected evidence assertion failed: toolNames expected to contain \"list_agents\"; toolNames expected to contain \"send_to_agent\"; listAgentsUsed expected true but got false; sendToAgentUsed expected true but got false; delivered expected true but got false; targetMatches expected true but got false; reviewerAckObserved expected true but got false",
+        "latencyMs": 134625,
+        "evidence": {
+          "orgId": "[REDACTED]",
+          "projectId": "[REDACTED]",
+          "plannerAgentId": "[REDACTED]",
+          "plannerAgentInstanceId": "[REDACTED]",
+          "reviewerAgentId": "[REDACTED]",
+          "reviewerAgentInstanceId": "[REDACTED]",
+          "frameTypes": [
+            "progress",
+            "session_ready",
+            "assistant_message_start",
+            "error",
+            "message",
+            "progress",
+            "session_ready",
+            "assistant_message_start",
+            "error",
+            "message"
+          ],
+          "toolNames": [],
+          "listAgentsUsed": false,
+          "listResultContainsReviewer": false,
+          "sendToAgentUsed": false,
+          "delivered": false,
+          "targetMatches": false,
+          "targetAgentId": null,
+          "reviewerAckObserved": false,
+          "parentCallbackObserved": true,
+          "reviewerEventCount": 0,
+          "plannerEventCount": 4,
+          "reviewerEventsError": "Timed out after 120000ms waiting for expected value",
+          "plannerEventsError": null,
+          "listTurnTextSample": "",
+          "sendTurnTextSample": "",
+          "expectedReply": "AURA_A2A_PROBE_ACK"
+        }
+      },
+      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfA7QAK5qz5MokSetNPA2\"}"
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "llm-investigation",
+      "id": "project-agent-workflows:desktop-release:project-agent-chat-stream:5b062c86555f",
+      "featureId": "project-agent-workflows",
+      "featureLabel": "Project Agent Workflows",
+      "checkId": "project-agent-chat-stream",
+      "runtimeEnvironment": "desktop-release",
+      "title": "Investigator failed",
+      "status": "failed",
+      "checkStatus": "fail",
+      "featureStatus": "partial_outage",
+      "generatedAt": "2026-09-18T02:24:39.754Z",
+      "environment": "production",
+      "source": "desktop-nightly-release",
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "confidence": "low",
+      "summary": "The investigator model did not return a usable report.",
+      "rootCause": "Investigator execution failed before a diagnosis could be produced.",
+      "proof": [],
+      "possibleCauses": [],
+      "reproductionSteps": [],
+      "affectedAreas": [],
+      "recommendedNextActions": [
+        "Rerun the observability investigation with model/provider logs enabled."
+      ],
+      "recommendedVerifierProbes": [],
+      "whatWouldDisproveThis": [],
+      "followUpEvals": [],
+      "evidenceDigest": {
+        "message": "API error (status 400): 400 Bad Request - {\"error\":{\"code\":\"provider_account_unavailable\",\"message\":\"AURA is temporarily unable to reach the model provider. This is an issue on our side, not with your account or credits. Please try again shortly.\",\"type\":\"invalid_request_error\"},\"type\":\"error\"} (support_id=ba023a5e9d11); Missing expected evidence: sessionId, sessionCount, expectedPhrase",
+        "latencyMs": 6879,
+        "evidence": {
+          "orgId": "[REDACTED]",
+          "projectId": "[REDACTED]",
+          "agentId": "[REDACTED]",
+          "agentInstanceId": "[REDACTED]",
+          "frameTypes": [
+            "progress",
+            "session_ready",
+            "assistant_message_start",
+            "error",
+            "message"
+          ],
+          "textSample": ""
+        }
+      },
+      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfA7Q8BLxsyL7wnhychAx\"}"
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "llm-investigation",
+      "id": "project-agent-workflows:desktop-release:project-agent-subagent-roundtrip:88029000bbf2",
+      "featureId": "project-agent-workflows",
+      "featureLabel": "Project Agent Workflows",
+      "checkId": "project-agent-subagent-roundtrip",
+      "runtimeEnvironment": "desktop-release",
+      "title": "Investigator failed",
+      "status": "failed",
+      "checkStatus": "fail",
+      "featureStatus": "partial_outage",
+      "generatedAt": "2026-09-18T02:24:39.754Z",
+      "environment": "production",
+      "source": "desktop-nightly-release",
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "confidence": "low",
+      "summary": "The investigator model did not return a usable report.",
+      "rootCause": "Investigator execution failed before a diagnosis could be produced.",
+      "proof": [],
+      "possibleCauses": [],
+      "reproductionSteps": [],
+      "affectedAreas": [],
+      "recommendedNextActions": [
+        "Rerun the observability investigation with model/provider logs enabled."
+      ],
+      "recommendedVerifierProbes": [],
+      "whatWouldDisproveThis": [],
+      "followUpEvals": [],
+      "evidenceDigest": {
+        "message": "Project agent subagent task did not complete with persisted child-thread evidence; Missing expected evidence: childRunId",
+        "latencyMs": 14690,
+        "evidence": {
+          "orgId": "[REDACTED]",
+          "projectId": "[REDACTED]",
+          "agentId": "[REDACTED]",
+          "agentInstanceId": "[REDACTED]",
+          "sessionId": "[REDACTED]",
+          "streamPersisted": true,
+          "frameTypes": [
+            "progress",
+            "session_ready",
+            "assistant_message_start",
+            "error",
+            "message"
+          ],
+          "toolNames": [],
+          "taskToolUsed": false,
+          "subagentSpawned": false,
+          "subagentCompleted": false,
+          "subagentReturnedMarker": false,
+          "childRunId": null,
+          "sessionSubagentThreadCount": 0,
+          "sessionSubagentThreadMatchesChild": true,
+          "sessionSubagentCompleted": false,
+          "sessionSubagentStates": [],
+          "sessionSubagentError": "Parent chat stream did not emit a child run id",
+          "contextUtilization": 0,
+          "subagentContextCount": 0,
+          "subagentContextLabels": [],
+          "toolsContextContainsTask": false,
+          "contextError": "Timed out after 5000ms waiting for expected value",
+          "expectedReply": "SUBAGENT_PROBE_OK"
+        }
+      },
+      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfA7QBJNGGoEPT75rbpD4\"}"
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "llm-investigation",
+      "id": "project-agent-workflows:desktop-release:project-agent-tool-roundtrip:efe5a5328ead",
+      "featureId": "project-agent-workflows",
+      "featureLabel": "Project Agent Workflows",
+      "checkId": "project-agent-tool-roundtrip",
+      "runtimeEnvironment": "desktop-release",
+      "title": "Investigator failed",
+      "status": "failed",
+      "checkStatus": "fail",
+      "featureStatus": "partial_outage",
+      "generatedAt": "2026-09-18T02:24:39.754Z",
+      "environment": "production",
+      "source": "desktop-nightly-release",
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "confidence": "low",
+      "summary": "The investigator model did not return a usable report.",
+      "rootCause": "Investigator execution failed before a diagnosis could be produced.",
+      "proof": [],
+      "possibleCauses": [],
+      "reproductionSteps": [],
+      "affectedAreas": [],
+      "recommendedNextActions": [
+        "Rerun the observability investigation with model/provider logs enabled."
+      ],
+      "recommendedVerifierProbes": [],
+      "whatWouldDisproveThis": [],
+      "followUpEvals": [],
+      "evidenceDigest": {
+        "message": "Project agent did not complete file read/write and shell tool roundtrip; Expected evidence assertion failed: toolNames expected to contain \"write_file\"; toolNames expected to contain \"read_file\"; toolNames expected to contain \"run_command\"; requiredToolsUsed expected true but got false; writeOk expected true but got false; readBackOk expected true but got false; commandOk expected true but got false; passMarkerPresent expected true but got false",
+        "latencyMs": 6873,
+        "evidence": {
+          "orgId": "[REDACTED]",
+          "projectId": "[REDACTED]",
+          "agentId": "[REDACTED]",
+          "agentInstanceId": "[REDACTED]",
+          "frameTypes": [
+            "progress",
+            "session_ready",
+            "assistant_message_start",
+            "error",
+            "message"
+          ],
+          "toolNames": [],
+          "requiredToolsUsed": false,
+          "writeOk": false,
+          "readBackOk": false,
+          "commandOk": false,
+          "commandExitCode": null,
+          "passMarkerPresent": false,
+          "textSample": "",
+          "expectedFileName": "AURA_STATUS_TOOL_PROBE.txt",
+          "expectedFileMarker": "AURA_TOOL_PROBE_OK",
+          "expectedShellMarker": "AURA_SHELL_PROBE_OK"
+        }
+      },
+      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfA7Q9L3eAtxba2FtTV3r\"}"
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "llm-investigation",
+      "id": "project-agent-workflows:desktop-release:session-share-public-read:ab31c289b1b6",
+      "featureId": "project-agent-workflows",
+      "featureLabel": "Project Agent Workflows",
+      "checkId": "session-share-public-read",
+      "runtimeEnvironment": "desktop-release",
+      "title": "Investigator failed",
+      "status": "failed",
+      "checkStatus": "fail",
+      "featureStatus": "degraded",
+      "generatedAt": "2026-09-18T02:24:39.754Z",
+      "environment": "production",
+      "source": "desktop-nightly-release",
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "confidence": "low",
+      "summary": "The investigator model did not return a usable report.",
+      "rootCause": "Investigator execution failed before a diagnosis could be produced.",
+      "proof": [],
+      "possibleCauses": [],
+      "reproductionSteps": [],
+      "affectedAreas": [],
+      "recommendedNextActions": [
+        "Rerun the observability investigation with model/provider logs enabled."
+      ],
+      "recommendedVerifierProbes": [],
+      "whatWouldDisproveThis": [],
+      "followUpEvals": [],
+      "evidenceDigest": {
+        "message": "API error (status 400): 400 Bad Request - {\"error\":{\"code\":\"provider_account_unavailable\",\"message\":\"AURA is temporarily unable to reach the model provider. This is an issue on our side, not with your account or credits. Please try again shortly.\",\"type\":\"invalid_request_error\"},\"type\":\"error\"} (support_id=8c1450b402f1); Missing expected evidence: sessionId, shareIdPresent, shareUrlPresent, publicMessageCount",
+        "latencyMs": 7536,
+        "evidence": {
+          "orgId": "[REDACTED]",
+          "projectId": "[REDACTED]",
+          "agentId": "[REDACTED]",
+          "agentInstanceId": "[REDACTED]",
+          "frameTypes": [
+            "progress",
+            "session_ready",
+            "assistant_message_start",
+            "error",
+            "message"
+          ],
+          "textSample": ""
+        }
+      },
+      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfA7QCR6CCcJk3jbwnJjW\"}"
     }
   ]
 }
