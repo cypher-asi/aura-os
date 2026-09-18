@@ -72,3 +72,120 @@ test("native chat hides browser dictation even when the WebView exposes the API"
   await expect(page.getByRole("textbox", { name: "Message agent" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Start voice dictation" })).toHaveCount(0);
 });
+
+test("native mobile creates a hosted web agent without provisioning a remote VM", async ({ page }) => {
+  const hostedAgent = {
+    agent_id: "agent-mobile-hosted",
+    user_id: "user-1",
+    org_id: "org-1",
+    name: "mobile_hosted_test",
+    role: "Engineer",
+    personality: "Helpful",
+    system_prompt: "Build carefully.",
+    skills: [],
+    icon: null,
+    machine_type: "local",
+    adapter_type: "aura_harness",
+    environment: "local_host",
+    auth_source: "aura_managed",
+    created_at: "2026-03-17T01:00:00.000Z",
+    updated_at: "2026-03-17T01:00:00.000Z",
+  };
+  const hostedInstance = {
+    agent_instance_id: "agent-inst-mobile-hosted",
+    project_id: "proj-1",
+    agent_id: hostedAgent.agent_id,
+    name: hostedAgent.name,
+    role: hostedAgent.role,
+    personality: hostedAgent.personality,
+    system_prompt: hostedAgent.system_prompt,
+    skills: [],
+    icon: null,
+    machine_type: "local",
+    workspace_path: null,
+    status: "idle",
+    current_task_id: null,
+    current_session_id: null,
+    total_input_tokens: 0,
+    total_output_tokens: 0,
+    created_at: "2026-03-17T01:00:00.000Z",
+    updated_at: "2026-03-17T01:00:00.000Z",
+  };
+
+  await mockAuthenticatedApp(page, {
+    agents: [hostedAgent],
+    agentInstances: [],
+    hostedLocalHarness: true,
+  });
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "Capacitor", {
+      configurable: true,
+      value: { isNativePlatform: () => true, getPlatform: () => "android" },
+    });
+  });
+
+  let createPayload: Record<string, unknown> | null = null;
+  let promptPayload: Record<string, unknown> | null = null;
+  let remoteProvisioningRequests = 0;
+  await page.route("**/api/agents/*/remote_agent/**", async (route) => {
+    remoteProvisioningRequests += 1;
+    await route.fallback();
+  });
+  await page.route("**/api/agents", async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    createPayload = JSON.parse(route.request().postData() || "{}");
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(hostedAgent) });
+  });
+  await page.route("**/api/projects/proj-1/agents", async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(hostedInstance) });
+  });
+  await page.route("**/api/projects/proj-1/agents/agent-inst-mobile-hosted**", async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    if (pathname.endsWith("/events/stream") && route.request().method() === "POST") {
+      promptPayload = route.request().postDataJSON() as Record<string, unknown>;
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: "event: done\ndata: {}\n\n",
+      });
+      return;
+    }
+    const isCollection = /\/(messages|events|sessions)$/.test(pathname);
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(isCollection ? [] : hostedInstance),
+    });
+  });
+
+  // Agents created on web use the same hosted Harness runtime. Android must
+  // show and attach them without trying to provision a confidential VM.
+  await page.goto("/projects/proj-1/agents/attach");
+  await page.getByRole("button", { name: new RegExp(hostedAgent.name) }).click();
+  await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/agent-inst-mobile-hosted$/);
+  const chatInput = page.getByRole("textbox", { name: "Message agent" });
+  await chatInput.fill("Reply with Android hosted runtime ready");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect.poll(() => promptPayload).toMatchObject({
+    content: "Reply with Android hosted runtime ready",
+  });
+
+  await page.goto("/projects/proj-1/agents/create");
+  const hostedButton = page.getByRole("button", { name: "Hosted", exact: true });
+  await expect(hostedButton).toBeVisible();
+  await expect(hostedButton).toHaveClass(/envOptionActive/);
+  await expect(page.getByText("Runs on AURA's server. No desktop connection required.")).toBeVisible();
+
+  await page.getByLabel("Name", { exact: true }).fill(hostedAgent.name);
+  await page.getByRole("button", { name: "Create Agent", exact: true }).click();
+
+  await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/agent-inst-mobile-hosted$/);
+  await expect(page.getByRole("textbox", { name: "Message agent" })).toBeEnabled();
+  expect(createPayload).toMatchObject({
+    machine_type: "local",
+    environment: "local_host",
+    adapter_type: "aura_harness",
+  });
+  expect(remoteProvisioningRequests).toBe(0);
+});
