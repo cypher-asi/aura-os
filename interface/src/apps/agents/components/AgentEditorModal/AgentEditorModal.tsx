@@ -1,4 +1,4 @@
-import { Modal, Drawer, Button, Spinner } from "@cypher-asi/zui";
+import { Modal, Drawer, Button, Spinner, Text } from "@cypher-asi/zui";
 import type { FocusEvent } from "react";
 import type { Agent } from "../../../../shared/types";
 import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
@@ -36,9 +36,14 @@ export function AgentEditorModal({
   mobilePresentation = "sheet",
   showCloseAction = true,
 }: AgentEditorModalProps) {
-  const { isMobileLayout } = useAuraCapabilities();
+  const {
+    hasDesktopBridge,
+    isMobileLayout,
+    runtimeCapabilitiesResolved = true,
+  } = useAuraCapabilities();
   const form = useAgentEditorForm(isOpen, agent, onClose, onSaved, closeOnSave, forceRemoteOnlyCreate);
   const isEditing = !!agent;
+  const isRuntimePending = isOpen && !isEditing && !hasDesktopBridge && !runtimeCapabilitiesResolved;
   const isInlineMobile = isMobileLayout && mobilePresentation === "inline";
   const handleInlineFocus = (event: FocusEvent<HTMLDivElement>) => {
     const scrollContainer = event.currentTarget;
@@ -70,8 +75,13 @@ export function AgentEditorModal({
   const title = titleOverride ?? (isEditing ? "Edit Agent" : "Create Agent");
   const submitLabel = submitLabelOverride ?? (isEditing ? "Save Changes" : "Create Agent");
   const closeLabel = closeLabelOverride ?? "Cancel";
-  const isPending = form.saving || isTransitioning;
-  const formFields = (
+  const isPending = form.saving || isTransitioning || isRuntimePending;
+  const formFields = isRuntimePending ? (
+    <div className={styles.runtimeLoading} role="status" aria-live="polite">
+      <Spinner size="sm" />
+      <Text size="sm" variant="muted">Checking the connected agent runtime…</Text>
+    </div>
+  ) : (
     <AgentEditorForm
       name={form.name}
       setName={form.setName}

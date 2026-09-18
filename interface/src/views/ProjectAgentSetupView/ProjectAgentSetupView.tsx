@@ -79,7 +79,13 @@ type ProjectAgentSetupViewMode = "create" | "existing";
 export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgentSetupViewMode }) {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { isMobileLayout, isNativeApp, remoteOnly } = useAuraCapabilities();
+  const {
+    hasDesktopBridge,
+    isMobileLayout,
+    isNativeApp,
+    remoteOnly,
+    runtimeCapabilitiesResolved = true,
+  } = useAuraCapabilities();
   const { setAgentsByProject } = useProjectsList();
   const { activeOrg, orgsError, orgsLoading } = useOrgStore(
     useShallow((state) => ({
@@ -112,6 +118,19 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
     if (mode !== "existing") {
       setLoadingAgents(false);
       setHasLoadedExistingAgents(true);
+      setAgentsError(null);
+      setAvailableAgents([]);
+      return;
+    }
+
+    // Native/mobile clients start fail-closed as remote-only until the
+    // connected Aura host answers its capability probe. Waiting here avoids
+    // briefly hiding hosted agents (and showing an incorrect empty state)
+    // while that request is still in flight. Desktop has its own bridge and
+    // does not depend on this probe to know that local execution is present.
+    if (!hasDesktopBridge && !runtimeCapabilitiesResolved) {
+      setLoadingAgents(true);
+      setHasLoadedExistingAgents(false);
       setAgentsError(null);
       setAvailableAgents([]);
       return;
@@ -166,7 +185,17 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
     return () => {
       cancelled = true;
     };
-  }, [activeOrg?.org_id, assignedAgentIds, mode, orgsError, orgsLoading, projectId, remoteOnly]);
+  }, [
+    activeOrg?.org_id,
+    assignedAgentIds,
+    hasDesktopBridge,
+    mode,
+    orgsError,
+    orgsLoading,
+    projectId,
+    remoteOnly,
+    runtimeCapabilitiesResolved,
+  ]);
 
   const finishAttach = useCallback((instance: AgentInstance) => {
     upsertProjectAgent(instance, setAgentsByProject);
@@ -301,7 +330,12 @@ function ProjectAgentCreateSurface({
   finishAttach: (instance: AgentInstance) => void;
 }) {
   const navigate = useNavigate();
-  const { remoteOnly, hostedLocalHarness, hasDesktopBridge } = useAuraCapabilities();
+  const {
+    remoteOnly,
+    hostedLocalHarness,
+    hasDesktopBridge,
+    runtimeCapabilitiesResolved = true,
+  } = useAuraCapabilities();
   const isHosted = hostedLocalHarness && !hasDesktopBridge && !remoteOnly;
   const [editorOpen, setEditorOpen] = useState(true);
   const [pendingCreatedAgent, setPendingCreatedAgent] = useState<Agent | null>(null);
@@ -320,6 +354,17 @@ function ProjectAgentCreateSurface({
     setPendingCreatedAgent(null);
     finishAttach(instance);
   }, [finishAttach, projectId]);
+
+  if (!hasDesktopBridge && !runtimeCapabilitiesResolved) {
+    return (
+      <div className={styles.root} data-agent-setup-scroll-root="true">
+        <div className={styles.loadingState} role="status" aria-live="polite">
+          <Spinner size="sm" />
+          <Text size="sm" variant="muted">Checking the connected agent runtime…</Text>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.root} data-agent-setup-scroll-root="true">
