@@ -2,20 +2,20 @@
   "schemaVersion": 1,
   "title": "AURA Observability",
   "description": "Feature health backed by AURA-owned live eval probes.",
-  "generatedAt": "2026-09-19T00:57:29.741Z",
+  "generatedAt": "2026-09-19T12:36:53.512Z",
   "environment": "production",
   "source": "github-actions",
   "overall": "major_outage",
   "totals": {
     "features": 19,
-    "operational": 12,
-    "degraded": 1,
+    "operational": 13,
+    "degraded": 0,
     "partialOutage": 1,
     "majorOutage": 5,
     "unknown": 0,
     "maintenance": 0,
     "runtimeEnvironments": 2,
-    "investigations": 5
+    "investigations": 4
   },
   "runtimeEnvironments": [
     {
@@ -38,12 +38,12 @@
       "description": "AURA OS API reachability, authenticated session reads, and runtime environment metadata.",
       "publicSummary": "Core API routes and environment metadata are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-09-19T00:56:33.603Z",
+      "lastCheckedAt": "2026-09-19T12:31:50.742Z",
       "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 115,
+      "latencyP95Ms": 206,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -56,11 +56,11 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:32.803Z",
-          "latencyMs": 92,
+          "checkedAt": "2026-09-19T12:31:50.177Z",
+          "latencyMs": 206,
           "evidence": {
             "status": "ok",
-            "timestamp": "2026-09-19T00:56:32.764389586+00:00"
+            "timestamp": "2026-09-19T12:31:50.145413032+00:00"
           }
         },
         {
@@ -73,8 +73,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:32.910Z",
-          "latencyMs": 107,
+          "checkedAt": "2026-09-19T12:31:50.263Z",
+          "latencyMs": 86,
           "evidence": {
             "userPresent": true,
             "keys": [
@@ -105,8 +105,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:33.603Z",
-          "latencyMs": 115,
+          "checkedAt": "2026-09-19T12:31:50.742Z",
+          "latencyMs": 105,
           "evidence": {
             "keys": [
               "os",
@@ -127,12 +127,12 @@
       "description": "Session validation, current user profile sync, and organization membership lookup.",
       "publicSummary": "Signed-in users can validate identity and resolve their organizations.",
       "status": "operational",
-      "lastCheckedAt": "2026-09-19T00:56:33.924Z",
+      "lastCheckedAt": "2026-09-19T12:31:50.975Z",
       "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 579,
+      "latencyP95Ms": 373,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -145,8 +145,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:33.489Z",
-          "latencyMs": 579,
+          "checkedAt": "2026-09-19T12:31:50.636Z",
+          "latencyMs": 373,
           "evidence": {
             "userIdPresent": true
           }
@@ -161,8 +161,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:33.767Z",
-          "latencyMs": 163,
+          "checkedAt": "2026-09-19T12:31:50.863Z",
+          "latencyMs": 121,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "orgCount": 1
@@ -178,8 +178,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:33.924Z",
-          "latencyMs": 157,
+          "checkedAt": "2026-09-19T12:31:50.975Z",
+          "latencyMs": 112,
           "evidence": {
             "userIdPresent": true,
             "keys": [
@@ -205,14 +205,14 @@
       "priority": 18,
       "description": "Anonymous guest setup, public chat streaming, and public content APIs.",
       "publicSummary": "Logged-out visitors can access public chat and public content APIs.",
-      "status": "degraded",
-      "lastCheckedAt": "2026-09-19T00:57:24.594Z",
-      "checksPassed": 6,
+      "status": "operational",
+      "lastCheckedAt": "2026-09-19T12:32:39.230Z",
+      "checksPassed": 7,
       "checksTotal": 7,
-      "checksFailed": 1,
+      "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 749,
-      "message": "POST /api/public/chat/stream failed with 502: {\"error\":\"public demo agent failed to start a session\",\"code\":\"bad_gateway\",\"details\":null}",
+      "latencyP95Ms": 1148,
+      "message": "All required checks are passing.",
       "checks": [
         {
           "id": "public-setup",
@@ -224,8 +224,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:57:22.717Z",
-          "latencyMs": 96,
+          "checkedAt": "2026-09-19T12:32:37.031Z",
+          "latencyMs": 73,
           "evidence": {
             "tokenPresent": true,
             "turnCount": 0,
@@ -239,48 +239,19 @@
           "runtimeLabel": "Production API",
           "statusImpact": "feature",
           "required": false,
-          "status": "fail",
-          "featureStatus": "degraded",
-          "message": "POST /api/public/chat/stream failed with 502: {\"error\":\"public demo agent failed to start a session\",\"code\":\"bad_gateway\",\"details\":null}",
-          "checkedAt": "2026-09-19T00:57:23.278Z",
-          "latencyMs": 561,
-          "evidence": {},
-          "investigation": {
-            "schemaVersion": 1,
-            "kind": "llm-investigation",
-            "id": "public-experience:production-api:public-chat-stream:09157412da54",
-            "featureId": "public-experience",
-            "featureLabel": "Public Chat and APIs",
-            "checkId": "public-chat-stream",
-            "runtimeEnvironment": "production-api",
-            "title": "Investigator failed",
-            "status": "failed",
-            "checkStatus": "fail",
-            "featureStatus": "degraded",
-            "generatedAt": "2026-09-19T00:57:26.409Z",
-            "environment": "production",
-            "source": "github-actions",
-            "provider": "anthropic",
-            "model": "claude-sonnet-4-6",
-            "confidence": "low",
-            "summary": "The investigator model did not return a usable report.",
-            "rootCause": "Investigator execution failed before a diagnosis could be produced.",
-            "proof": [],
-            "possibleCauses": [],
-            "reproductionSteps": [],
-            "affectedAreas": [],
-            "recommendedNextActions": [
-              "Rerun the observability investigation with model/provider logs enabled."
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-09-19T12:32:38.179Z",
+          "latencyMs": 1148,
+          "evidence": {
+            "frameTypes": [
+              "text_delta",
+              "text_delta",
+              "limit",
+              "message"
             ],
-            "recommendedVerifierProbes": [],
-            "whatWouldDisproveThis": [],
-            "followUpEvals": [],
-            "evidenceDigest": {
-              "message": "POST /api/public/chat/stream failed with 502: {\"error\":\"public demo agent failed to start a session\",\"code\":\"bad_gateway\",\"details\":null}",
-              "latencyMs": 561,
-              "evidence": {}
-            },
-            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfBtZH4dMGXQUiKBtg1Rv\"}"
+            "textSample": "aura public ok"
           }
         },
         {
@@ -293,8 +264,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:57:23.527Z",
-          "latencyMs": 249,
+          "checkedAt": "2026-09-19T12:32:38.376Z",
+          "latencyMs": 197,
           "evidence": {
             "count": 100
           }
@@ -309,8 +280,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:57:23.663Z",
-          "latencyMs": 136,
+          "checkedAt": "2026-09-19T12:32:38.476Z",
+          "latencyMs": 100,
           "evidence": {
             "count": 7
           }
@@ -325,8 +296,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:57:24.412Z",
-          "latencyMs": 749,
+          "checkedAt": "2026-09-19T12:32:39.074Z",
+          "latencyMs": 598,
           "evidence": {
             "blogCount": 7,
             "blogDetailChecked": true,
@@ -353,8 +324,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:57:24.501Z",
-          "latencyMs": 89,
+          "checkedAt": "2026-09-19T12:32:39.151Z",
+          "latencyMs": 77,
           "evidence": {
             "object": "list",
             "modelCount": 1
@@ -370,8 +341,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:57:24.594Z",
-          "latencyMs": 93,
+          "checkedAt": "2026-09-19T12:32:39.230Z",
+          "latencyMs": 79,
           "evidence": {
             "status": 402,
             "payToPresent": true,
@@ -788,12 +759,12 @@
       "description": "Swarm-backed remote agent creation, VM readiness, lifecycle state, and chat readiness.",
       "publicSummary": "Remote agents can be provisioned and reached through their runtime.",
       "status": "major_outage",
-      "lastCheckedAt": "2026-09-19T00:57:22.621Z",
+      "lastCheckedAt": "2026-09-19T12:32:36.958Z",
       "checksPassed": 0,
       "checksTotal": 3,
       "checksFailed": 3,
       "checksUnknown": 0,
-      "latencyP95Ms": 11437,
+      "latencyP95Ms": 11370,
       "message": "POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
       "checks": [
         {
@@ -806,45 +777,135 @@
           "status": "fail",
           "featureStatus": "partial_outage",
           "message": "POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
-          "checkedAt": "2026-09-19T00:57:00.290Z",
-          "latencyMs": 11437,
+          "checkedAt": "2026-09-19T12:32:14.686Z",
+          "latencyMs": 11370,
           "evidence": {},
           "investigation": {
             "schemaVersion": 1,
             "kind": "llm-investigation",
-            "id": "remote-agents:production-api:remote-agent-create:09bfbf1cdbea",
+            "id": "remote-agents:production-api:remote-agent-create:055ce856c15c",
             "featureId": "remote-agents",
             "featureLabel": "Remote Agents",
             "checkId": "remote-agent-create",
             "runtimeEnvironment": "production-api",
-            "title": "Investigator failed",
-            "status": "failed",
+            "title": "Remote Agents: Swarm Gateway 502 Blocking All Agent Provisioning Evals",
+            "status": "ready",
             "checkStatus": "fail",
             "featureStatus": "partial_outage",
-            "generatedAt": "2026-09-19T00:57:26.409Z",
+            "generatedAt": "2026-09-19T12:32:40.725Z",
             "environment": "production",
             "source": "github-actions",
             "provider": "anthropic",
             "model": "claude-sonnet-4-6",
-            "confidence": "low",
-            "summary": "The investigator model did not return a usable report.",
-            "rootCause": "Investigator execution failed before a diagnosis could be produced.",
-            "proof": [],
-            "possibleCauses": [],
-            "reproductionSteps": [],
-            "affectedAreas": [],
-            "recommendedNextActions": [
-              "Rerun the observability investigation with model/provider logs enabled."
+            "confidence": "high",
+            "summary": "All three remote-agents checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed at 2026-09-19T12:32 with an identical 502 bad_gateway error indicating the swarm gateway ELB endpoint at /v1/agents was unreachable during agent provisioning. Because the failure occurs at the POST /api/agents boundary before any agent identity or VM data is returned, all four required evidence fields (orgId, agentId, vmIdPresent, remoteState) are absent and every contract assertion is unverifiable.",
+            "rootCause": "The swarm gateway — the AWS ELB-backed upstream service reached via POST to /v1/agents — was unreachable at the time of the eval run. The production-api layer returned HTTP 502 with code \"bad_gateway\" and the message \"error sending request for url (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents)\", meaning the connection to the ELB either timed out or was refused before any agent provisioning could begin. This is an infrastructure-layer failure localized to the swarm gateway dependency, not to the eval runner logic itself. No user-traffic or incident signals are present in the supplied evidence, so impact is confirmed only at the eval observability layer.",
+            "proof": [
+              "failed-check.message: POST /api/agents returned HTTP 502 with error 'swarm gateway unreachable during agent provisioning: error sending request for url (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents)' and code 'bad_gateway'.",
+              "failed-check.timing: check status=fail, latencyMs=11370, endedAt=2026-09-19T12:32:14.686Z — the failure resolved quickly (~11s), consistent with a connection refusal or immediate gateway error rather than a timeout.",
+              "sibling.remote-agent-state: identical 502 message, latencyMs=11199, endedAt=2026-09-19T12:32:25.885Z.",
+              "sibling.remote-agent-runtime: identical 502 message, latencyMs=11073, endedAt=2026-09-19T12:32:36.958Z.",
+              "expected-output.missing-required-evidence: all four required evidence fields (orgId, agentId, vmIdPresent, remoteState) are absent because the 502 prevented any provisioning response from being received.",
+              "verifierContext.siblingCorrelation.likelySharedDependencyFailure=true: all failing sibling check IDs share the exact same error message, confirming a single shared upstream dependency as the failure point.",
+              "source-context.infra/evals/status/run-status-probes.mjs:1884-1885: the runner calls requireOrgId then createAgent with machineType='remote', meaning the swarm gateway is the first external call in the probe chain; a 502 there aborts all subsequent evidence collection.",
+              "source-context.infra/evals/status/check-expectations.json:254-258: the contract requires vmIdPresent=true and remoteState in [running, idle, ready], neither of which can be asserted when provisioning never completes."
             ],
-            "recommendedVerifierProbes": [],
-            "whatWouldDisproveThis": [],
-            "followUpEvals": [],
+            "possibleCauses": [
+              "Primary: The swarm gateway ELB (us-east-2) was down, misconfigured, or had no healthy targets at the time of the eval run, causing the production-api to receive a connection error and surface it as a 502 bad_gateway.",
+              "Secondary: A network-level routing or security-group change between the production-api and the swarm ELB blocked outbound connections to the /v1/agents endpoint, producing the same 502 symptom.",
+              "Tertiary: The swarm gateway service itself was in a crash loop or was being redeployed at the time of the eval run, causing transient unavailability that resolved before or after the ~34-second window spanning all three checks.",
+              "Lower probability: The ELB DNS name was changed or deregistered, causing DNS resolution to fail or route to an unreachable address, which the production-api surfaces as a bad_gateway error."
+            ],
+            "reproductionSteps": [
+              {
+                "label": "Re-run the remote-agent-create eval in isolation against production-api",
+                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create npm run status:probes",
+                "details": "Use the same environment variables as the scheduled observability workflow to confirm whether the 502 persists or has resolved."
+              },
+              {
+                "label": "Re-run all three remote-agents checks together to confirm shared dependency behavior",
+                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
+                "details": "If all three still fail with the same message, the swarm gateway remains unreachable. If they pass, the failure was transient."
+              },
+              {
+                "label": "Inspect the swarm gateway ELB health in AWS us-east-2",
+                "details": "Check the target group health for the ELB referenced in the 502 error. Look for unhealthy targets, recent deregistrations, or security-group rule changes around 2026-09-19T12:32Z."
+              },
+              {
+                "label": "Check production-api logs for outbound connection errors to the swarm ELB around 2026-09-19T12:32Z",
+                "details": "Filter for 'bad_gateway', 'swarm gateway unreachable', or the ELB hostname to determine whether the failure was isolated to the eval window or broader."
+              }
+            ],
+            "affectedAreas": [
+              {
+                "label": "Swarm gateway ELB endpoint (/v1/agents, us-east-2)",
+                "reason": "The 502 error message explicitly names this as the unreachable upstream: 'error sending request for url (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents)'. All three checks fail at this boundary (evidence: failed-check.message, sibling.remote-agent-state, sibling.remote-agent-runtime)."
+              },
+              {
+                "label": "Remote agent provisioning path in production-api (POST /api/agents)",
+                "reason": "The production-api endpoint POST /api/agents is the entry point that proxies to the swarm gateway. It returned the 502 to the eval runner, meaning the failure is localized to this route and its upstream dependency, not to the broader API surface (evidence: failed-check.message)."
+              },
+              {
+                "label": "Eval runner branch: remote-agent-create in infra/evals/status/run-status-probes.mjs",
+                "path": "infra/evals/status/run-status-probes.mjs",
+                "reason": "The runner branch at line 1880-1885 calls createAgent with machineType='remote', which is the first call that reaches the swarm gateway. A 502 here prevents all evidence collection for orgId, agentId, vmIdPresent, and remoteState (evidence: source-context.infra/evals/status/run-status-probes.mjs:1877-1885, expected-output.missing-required-evidence)."
+              },
+              {
+                "label": "Remote Agents feature observability (remote-agents, production-api)",
+                "path": "infra/evals/status/features.json",
+                "reason": "All three checks registered under the remote-agents feature (remote-agent-create required, remote-agent-state required, remote-agent-runtime optional) failed. Per the registry, degradedAfterFailures=1, so the feature is in a degraded state in the eval system (evidence: source-context.infra/evals/status/features.json:179-187)."
+              }
+            ],
+            "recommendedNextActions": [
+              "Check the AWS ELB target group health for the swarm gateway in us-east-2 around 2026-09-19T12:32Z to determine if targets were unhealthy or deregistered.",
+              "Query production-api application logs for 'bad_gateway' or 'swarm gateway unreachable' errors in the 12:30–12:35Z window to establish whether the failure was isolated to the eval or affected real provisioning traffic.",
+              "Re-run the remote-agent-create eval immediately to determine if the failure is ongoing or was transient.",
+              "If the failure is confirmed as transient, add a retry or back-off to the eval runner's createAgent call so a single brief gateway hiccup does not immediately fail all three checks.",
+              "If the failure is confirmed as ongoing, escalate to the team responsible for the swarm gateway ELB in us-east-2 with the 502 error details and the timestamp 2026-09-19T12:32Z."
+            ],
+            "recommendedVerifierProbes": [
+              {
+                "label": "Re-run remote-agent-create eval to confirm current gateway reachability",
+                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create npm run status:probes",
+                "reason": "Determines whether the 502 persists (ongoing outage) or has resolved (transient failure). This is the fastest signal to triage severity (evidence: verifierContext.recommendedVerifierProbes)."
+              },
+              {
+                "label": "Re-run all three remote-agents sibling checks together",
+                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
+                "reason": "Confirms whether the shared dependency failure pattern persists across all three checks simultaneously, which would indicate the swarm gateway is still unreachable (evidence: verifierContext.siblingCorrelation.likelySharedDependencyFailure=true)."
+              },
+              {
+                "label": "Inspect swarm gateway ELB target group health in AWS us-east-2",
+                "reason": "Directly verifies whether the ELB had unhealthy or deregistered targets at 2026-09-19T12:32Z, which is the most direct proof of the root cause (evidence: failed-check.message naming the ELB URL)."
+              },
+              {
+                "label": "Query production-api logs for 'swarm gateway unreachable' or 'bad_gateway' around 2026-09-19T12:32Z",
+                "reason": "Determines the blast radius: if only the eval runner's requests failed, the issue may be scoped to the eval environment; if real provisioning requests also failed, the swarm gateway was broadly unavailable (evidence: failed-check.message, failed-check.timing)."
+              },
+              {
+                "label": "Review recent commits touching implicated eval source paths",
+                "command": "git log --oneline infra/evals/status/features.json infra/evals/status/check-expectations.json infra/evals/status/run-status-probes.mjs",
+                "reason": "The most recent known commit to all three files is e0ffa35. Reviewing the diff would confirm whether any eval runner or contract change could have altered how the swarm gateway URL is constructed or how errors are handled (evidence: recent-change.infra/evals/status/features.json, recent-change.infra/evals/status/check-expectations.json, recent-change.infra/evals/status/run-status-probes.mjs)."
+              }
+            ],
+            "whatWouldDisproveThis": [
+              "A successful POST /api/agents response (2xx) with a valid vmId and remoteState from the swarm gateway at or near 2026-09-19T12:32Z would disprove that the gateway was down.",
+              "Production-api logs showing the outbound request to the swarm ELB succeeded but the eval runner misinterpreted the response would shift the root cause to the runner or contract layer.",
+              "A passing re-run of remote-agent-create immediately after the failure window would indicate the outage was transient and not a persistent infrastructure problem.",
+              "Evidence that only the eval runner's network path to the production-api was blocked (e.g., a firewall rule affecting the CI environment) while real traffic succeeded would localize the failure to the eval infrastructure rather than the swarm gateway itself.",
+              "AWS CloudWatch or ELB access logs showing healthy target responses during the 12:32Z window would disprove the ELB-down hypothesis."
+            ],
+            "followUpEvals": [
+              "Add a dedicated swarm-gateway-health eval that directly probes the swarm ELB health endpoint (if one exists) independently of agent provisioning, so gateway-layer failures are detected before the full remote-agent-create flow is attempted.",
+              "Add a connectivity pre-check eval that verifies the production-api can reach the swarm gateway before running remote-agent-create, remote-agent-state, and remote-agent-runtime, enabling faster root-cause isolation when the gateway is down.",
+              "Add a historical pass/fail trend eval for remote-agent-create so that verifierContext.history.previousRunCount > 0 and currentlyRegressedFromPass can be populated, enabling regression detection on future failures.",
+              "Add a latency-band eval for the swarm gateway response time to distinguish between a full outage (immediate 502) and a degraded-but-reachable gateway (slow 5xx), since the current ~11s latency pattern suggests a fast connection failure rather than a timeout."
+            ],
             "evidenceDigest": {
               "message": "POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
-              "latencyMs": 11437,
+              "latencyMs": 11370,
               "evidence": {}
-            },
-            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfBtZChSsU3mQcY8LE9iH\"}"
+            }
           }
         },
         {
@@ -857,45 +918,138 @@
           "status": "fail",
           "featureStatus": "partial_outage",
           "message": "POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
-          "checkedAt": "2026-09-19T00:57:11.536Z",
-          "latencyMs": 11246,
+          "checkedAt": "2026-09-19T12:32:25.885Z",
+          "latencyMs": 11199,
           "evidence": {},
           "investigation": {
             "schemaVersion": 1,
             "kind": "llm-investigation",
-            "id": "remote-agents:production-api:remote-agent-state:39159ee4c99e",
+            "id": "remote-agents:production-api:remote-agent-state:9395a8c95962",
             "featureId": "remote-agents",
             "featureLabel": "Remote Agents",
             "checkId": "remote-agent-state",
             "runtimeEnvironment": "production-api",
-            "title": "Investigator failed",
-            "status": "failed",
+            "title": "Swarm Gateway 502 Blocks All Remote Agent Checks (remote-agent-state, remote-agent-create, remote-agent-runtime)",
+            "status": "ready",
             "checkStatus": "fail",
             "featureStatus": "partial_outage",
-            "generatedAt": "2026-09-19T00:57:26.409Z",
+            "generatedAt": "2026-09-19T12:32:40.725Z",
             "environment": "production",
             "source": "github-actions",
             "provider": "anthropic",
             "model": "claude-sonnet-4-6",
-            "confidence": "low",
-            "summary": "The investigator model did not return a usable report.",
-            "rootCause": "Investigator execution failed before a diagnosis could be produced.",
-            "proof": [],
-            "possibleCauses": [],
-            "reproductionSteps": [],
-            "affectedAreas": [],
-            "recommendedNextActions": [
-              "Rerun the observability investigation with model/provider logs enabled."
+            "confidence": "high",
+            "summary": "All three remote-agents feature checks (remote-agent-state, remote-agent-create, remote-agent-runtime) failed at 2026-09-19T12:32 with an identical 502 bad_gateway error indicating the swarm gateway ELB at /v1/agents was unreachable during agent provisioning. Because the failure occurs at the POST /api/agents call — before any agent identity, state, or readiness data can be returned — the expected-output contract evidence fields (orgId, agentId, readyState, state) are entirely absent.",
+            "rootCause": "The swarm gateway (an AWS ELB in us-east-2 fronting /v1/agents) was unreachable at the time of the eval run. Every remote-agents check depends on a successful POST /api/agents call that proxies through this gateway to provision a remote agent VM. Because the gateway returned a connection error before any agent was created, no agent identity or state data was produced, causing all three sibling checks to fail with the same message and leaving the expected-output contract completely unsatisfied. This is an eval-observed infrastructure availability failure localized to the swarm gateway dependency; no user-traffic or incident signals are present in the supplied evidence to confirm a broader production outage.",
+            "proof": [
+              "failed-check.message: POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
+              "sibling.remote-agent-create: identical 502 bad_gateway message, latencyMs=11370, endedAt=2026-09-19T12:32:14.686Z",
+              "sibling.remote-agent-runtime: identical 502 bad_gateway message, latencyMs=11073, endedAt=2026-09-19T12:32:36.958Z",
+              "expected-output.missing-required-evidence: all four required fields (orgId, agentId, readyState, state) are absent — consistent with the agent never being created",
+              "failed-check.evidence: evidence object is empty ({}), confirming no agent data was returned",
+              "failed-check.timing: latencyMs=11199 — the check timed out waiting on the gateway, not on a downstream state-polling step",
+              "source-context.infra/evals/status/run-status-probes.mjs:1897-1905: runner calls createAgent(args, track, \"remote\", null, orgId) immediately after acquiring orgId; a gateway failure at this call would prevent all subsequent evidence collection",
+              "source-context.infra/evals/status/features.json:180-188: remote-agent-state is marked required=true; degradedAfterFailures=1 means a single failure triggers a degraded signal for the remote-agents feature"
             ],
-            "recommendedVerifierProbes": [],
-            "whatWouldDisproveThis": [],
-            "followUpEvals": [],
+            "possibleCauses": [
+              "Primary — Swarm gateway ELB in us-east-2 was down or unhealthy at the time of the eval run: all three sibling checks share the exact same error message referencing the same ELB endpoint, and the verifier context flags likelySharedDependencyFailure=true (sibling.remote-agent-create, sibling.remote-agent-runtime).",
+              "Secondary — Transient network partition or DNS resolution failure between the production-api runtime and the ELB: the ~11-second latency on all three checks is consistent with a TCP connection timeout rather than an immediate rejection, suggesting the ELB was unreachable rather than actively refusing connections.",
+              "Tertiary — ELB target group had no healthy instances (all backend swarm nodes deregistered or failing health checks): the gateway itself may have been reachable but returned 502 because it had no healthy targets to forward to.",
+              "Lower confidence — Eval runner credential or routing misconfiguration causing requests to reach the wrong or a decommissioned ELB endpoint: no history data is available (previousRunCount=0, lastPassingAt=null) to distinguish a new regression from a never-passing configuration."
+            ],
+            "reproductionSteps": [
+              {
+                "label": "Run only the remote-agent-state eval against production-api",
+                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-state npm run status:probes",
+                "details": "Use the same environment variables as the scheduled observability workflow to reproduce the 502 response."
+              },
+              {
+                "label": "Run all three remote-agents sibling checks together to confirm shared gateway failure",
+                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
+                "details": "If all three fail with the same 502 message, the swarm gateway is the shared upstream dependency."
+              },
+              {
+                "label": "Inspect the swarm gateway ELB health in us-east-2",
+                "details": "Check the AWS ELB target group health for the endpoint referenced in the error (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents) to determine whether targets were healthy at 2026-09-19T12:32."
+              },
+              {
+                "label": "Review swarm gateway service logs around 2026-09-19T12:32 UTC",
+                "details": "Look for connection errors, target deregistration events, or deployment activity on the swarm backend that services /v1/agents at the time of the eval run."
+              }
+            ],
+            "affectedAreas": [
+              {
+                "label": "Swarm gateway ELB — /v1/agents endpoint (us-east-2)",
+                "reason": "The 502 error message explicitly names the ELB URL and the /v1/agents path as the point of failure for all three failing checks (failed-check.message, sibling.remote-agent-create, sibling.remote-agent-runtime)."
+              },
+              {
+                "label": "POST /api/agents — production-api route",
+                "reason": "The production-api surface that proxies agent creation requests to the swarm gateway; all three checks fail at this call before any agent data is produced."
+              },
+              {
+                "label": "Remote Agents feature — all three checks (remote-agent-create, remote-agent-state, remote-agent-runtime)",
+                "path": "infra/evals/status/features.json",
+                "reason": "All checks under the remote-agents feature (features.json line 183-185) share the swarm gateway as a required upstream dependency; a gateway failure causes total feature check failure."
+              },
+              {
+                "label": "Eval runner — createAgent call in remote-agent-state branch",
+                "path": "infra/evals/status/run-status-probes.mjs",
+                "reason": "The runner at line 1905 calls createAgent immediately after requireOrgId; a gateway failure at this step prevents all evidence collection, explaining why all four required evidence fields are missing."
+              },
+              {
+                "label": "Expected-output contract — remote-agent-state",
+                "path": "infra/evals/status/check-expectations.json",
+                "reason": "Contract at line 262-264 requires orgId, agentId, readyState, and state; none can be populated if agent creation fails at the gateway."
+              }
+            ],
+            "recommendedNextActions": [
+              "Verify current swarm gateway ELB health in us-east-2 and confirm whether the /v1/agents endpoint is now reachable; re-run the eval suite to establish a current baseline.",
+              "Pull ELB access logs and CloudWatch metrics for the swarm gateway around 2026-09-19T12:32 UTC to determine the duration and scope of the gateway disruption.",
+              "Check swarm backend target group registration and health check status at the time of the failure to determine if the 502 was caused by zero healthy targets.",
+              "Establish eval run history for the remote-agents feature checks (previousRunCount=0, lastPassingAt=null); determine whether these checks have ever passed in this environment to rule out a persistent misconfiguration.",
+              "Review the ELB endpoint URL embedded in the eval runner configuration to confirm it matches the current active swarm gateway and has not been superseded by a newer deployment."
+            ],
+            "recommendedVerifierProbes": [
+              {
+                "label": "Re-run remote-agent-state eval to check if the gateway has recovered",
+                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-state npm run status:probes",
+                "reason": "Determines whether the 502 is ongoing or was a transient gateway disruption at 2026-09-19T12:32."
+              },
+              {
+                "label": "Run all remote-agents sibling checks to confirm shared upstream failure scope",
+                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
+                "reason": "If all three still fail with the same 502 message, the swarm gateway remains the shared point of failure; if only one fails, the diagnosis should be narrowed to that check's logic."
+              },
+              {
+                "label": "Investigate the shared swarm gateway upstream before individual check code",
+                "reason": "Sibling checks remote-agent-create and remote-agent-runtime failed with the identical message; the gateway is the earliest violated boundary and should be confirmed healthy before investigating per-check runner logic."
+              },
+              {
+                "label": "Check AWS ELB target group health for the swarm gateway in us-east-2",
+                "reason": "Confirms whether the ELB had healthy targets at the time of the failure and whether the issue was a full gateway outage or a partial target group degradation."
+              },
+              {
+                "label": "Inspect swarm gateway and production-api logs at 2026-09-19T12:32 UTC",
+                "reason": "Server-side logs would show whether the ELB received the request and whether the error originated at the load balancer, the backend swarm nodes, or the production-api proxy layer."
+              }
+            ],
+            "whatWouldDisproveThis": [
+              "A successful POST /api/agents response (2xx) from the same ELB endpoint at or near 2026-09-19T12:32 UTC would indicate the gateway was healthy and the failure was caused by something else (e.g., eval runner misconfiguration or auth failure).",
+              "ELB access logs showing no inbound requests from the eval runner at 2026-09-19T12:32 would suggest the failure occurred before the request reached the gateway (e.g., DNS resolution failure or wrong endpoint configured in the eval runner).",
+              "A passing run of remote-agent-create, remote-agent-state, or remote-agent-runtime immediately after the failure window would indicate a transient blip rather than a sustained gateway outage.",
+              "Evidence that the ELB endpoint URL in the error message is a decommissioned or incorrect address (not the current swarm gateway) would shift the diagnosis toward an eval runner misconfiguration.",
+              "No history data is available (previousRunCount=0); if prior runs are found to have been consistently failing, this would suggest a configuration problem rather than a new regression."
+            ],
+            "followUpEvals": [
+              "Add a dedicated swarm-gateway-health eval that directly probes the ELB /v1/agents endpoint with a lightweight health-check request (e.g., OPTIONS or a no-op POST) before the full agent-creation checks run, so gateway availability failures are surfaced as a distinct signal rather than being absorbed into all three remote-agents checks.",
+              "Add a gateway-reachability pre-flight check that runs before remote-agent-create, remote-agent-state, and remote-agent-runtime; if the pre-flight fails, skip the downstream checks and report a single shared-dependency failure rather than three separate failures with the same message.",
+              "Add eval history retention so that lastPassingAt and previousStatuses are populated; this would allow the verifier to distinguish a new regression from a never-passing configuration on the first observed failure."
+            ],
             "evidenceDigest": {
               "message": "POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
-              "latencyMs": 11246,
+              "latencyMs": 11199,
               "evidence": {}
-            },
-            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfBtZE6Y9Eh8TEACPXKVG\"}"
+            }
           }
         },
         {
@@ -908,45 +1062,132 @@
           "status": "fail",
           "featureStatus": "degraded",
           "message": "POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
-          "checkedAt": "2026-09-19T00:57:22.621Z",
-          "latencyMs": 11085,
+          "checkedAt": "2026-09-19T12:32:36.958Z",
+          "latencyMs": 11073,
           "evidence": {},
           "investigation": {
             "schemaVersion": 1,
             "kind": "llm-investigation",
-            "id": "remote-agents:production-api:remote-agent-runtime:fd973b58a45c",
+            "id": "remote-agents:production-api:remote-agent-runtime:93477b12bb1b",
             "featureId": "remote-agents",
             "featureLabel": "Remote Agents",
             "checkId": "remote-agent-runtime",
             "runtimeEnvironment": "production-api",
-            "title": "Investigator failed",
-            "status": "failed",
+            "title": "Remote Agents: Swarm Gateway 502 Blocking All Agent Provisioning Evals (production-api)",
+            "status": "ready",
             "checkStatus": "fail",
             "featureStatus": "degraded",
-            "generatedAt": "2026-09-19T00:57:26.409Z",
+            "generatedAt": "2026-09-19T12:32:40.725Z",
             "environment": "production",
             "source": "github-actions",
             "provider": "anthropic",
             "model": "claude-sonnet-4-6",
-            "confidence": "low",
-            "summary": "The investigator model did not return a usable report.",
-            "rootCause": "Investigator execution failed before a diagnosis could be produced.",
-            "proof": [],
-            "possibleCauses": [],
-            "reproductionSteps": [],
-            "affectedAreas": [],
-            "recommendedNextActions": [
-              "Rerun the observability investigation with model/provider logs enabled."
+            "confidence": "high",
+            "summary": "All three remote-agents evals (remote-agent-runtime, remote-agent-create, remote-agent-state) failed at 2026-09-19T12:32 with an identical 502 bad_gateway error — \"swarm gateway unreachable during agent provisioning\" — when attempting POST /api/agents, which proxies to an AWS ELB endpoint at /v1/agents. Because the failure occurs at the very first step of agent creation, no evidence fields (orgId, agentId, model, provider, message) were ever populated, and the expected-output contract is entirely unmet.",
+            "rootCause": "The swarm gateway — the AWS ELB-backed upstream that the production-api proxies agent provisioning requests to — was unreachable at the time of the eval run. Every remote-agents check calls POST /api/agents as its first step (evidenced by run-status-probes.mjs line 1918: `createAgent(args, track, \"remote\", null, orgId)`), and all three checks received the same 502 bad_gateway response with error code \"swarm gateway unreachable during agent provisioning.\" The failure is localized to the swarm gateway / ELB upstream dependency, not to the eval runner, the expected-output contract definitions, or the production-api application layer itself. No user-traffic or incident signals are present in the evidence, so impact is scoped to this observability eval run.",
+            "proof": [
+              "failed-check.message: POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
+              "sibling.remote-agent-create: identical 502 bad_gateway message, endedAt 2026-09-19T12:32:14.686Z, latencyMs 11370",
+              "sibling.remote-agent-state: identical 502 bad_gateway message, endedAt 2026-09-19T12:32:25.885Z, latencyMs 11199",
+              "failed-check.timing: status=fail latencyMs=11073 endedAt=2026-09-19T12:32:36.958Z — all three checks completed within a ~22-second window with ~11s latency each, consistent with a connection timeout to the ELB rather than a fast rejection",
+              "expected-output.missing-required-evidence: all 5 required evidence fields (orgId, agentId, model, provider, message) are absent because agent creation never succeeded",
+              "failed-check.evidence: evidence object is empty — no partial response was captured, confirming the failure occurred before any agent provisioning response was returned",
+              "source-context.infra/evals/status/run-status-probes.mjs:1910-1918: runner calls createAgent(args, track, \"remote\", null, orgId) as the first substantive operation, meaning the 502 is the direct result of that upstream call",
+              "verifierContext.siblingCorrelation.likelySharedDependencyFailure: true — all failing sibling IDs share the same message, confirming a shared upstream dependency failure rather than per-check logic errors"
             ],
-            "recommendedVerifierProbes": [],
-            "whatWouldDisproveThis": [],
-            "followUpEvals": [],
+            "possibleCauses": [
+              "Primary: The swarm gateway ELB (us-east-2) was down, misconfigured, or had no healthy targets at the time of the eval run, causing the production-api to return 502 for all POST /api/agents requests.",
+              "Secondary: A transient network partition or DNS resolution failure between the production-api and the ELB endpoint caused the connection to fail after ~11 seconds, which is consistent with a TCP connect timeout rather than an application-level error.",
+              "Tertiary: The ELB target group had zero healthy instances (e.g., swarm worker fleet scaled to zero, crashed, or was mid-deployment) at the time of the eval run, causing the ELB itself to return 502 to the production-api.",
+              "Lower probability: A misconfigured or expired security group rule, VPC routing change, or ELB listener rule change blocked traffic from the production-api to the swarm gateway ELB specifically in us-east-2."
+            ],
+            "reproductionSteps": [
+              {
+                "label": "Re-run the remote-agent-runtime eval in isolation against production-api",
+                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-runtime npm run status:probes",
+                "details": "Use the same environment variables as the scheduled observability workflow to confirm whether the 502 persists or has resolved."
+              },
+              {
+                "label": "Re-run all three remote-agents sibling checks together to confirm shared dependency failure",
+                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
+                "details": "If all three still fail with the same 502 message, the swarm gateway ELB is still unreachable. If only one fails, the failure may have shifted to a per-check concern."
+              },
+              {
+                "label": "Inspect the swarm gateway ELB health in AWS us-east-2",
+                "details": "Check the target group health for the ELB referenced in the error URL (us-east-2). Look for zero healthy targets, recent deregistrations, or auto-scaling events around 2026-09-19T12:32Z."
+              },
+              {
+                "label": "Check production-api logs for POST /api/agents at 2026-09-19T12:32Z",
+                "details": "Confirm whether the 502 originated at the production-api-to-ELB hop or was returned by the ELB itself. Look for upstream connect errors or timeout logs."
+              }
+            ],
+            "affectedAreas": [
+              {
+                "label": "Swarm Gateway ELB (us-east-2)",
+                "reason": "The error message explicitly names the ELB endpoint (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents) as unreachable. All three remote-agents checks failed at this boundary."
+              },
+              {
+                "label": "POST /api/agents — Remote Agent Provisioning Endpoint",
+                "reason": "The production-api route POST /api/agents proxies to the swarm gateway and returned 502 for all three eval checks. This is the first call in the remote-agent eval runner branch (run-status-probes.mjs line 1918)."
+              },
+              {
+                "label": "Remote Agents feature — all three checks (remote-agent-create, remote-agent-state, remote-agent-runtime)",
+                "path": "infra/evals/status/features.json",
+                "reason": "All three checks under the remote-agents feature (lines 183-185) failed with the identical message, confirming the entire feature's eval surface is blocked by the shared swarm gateway dependency."
+              },
+              {
+                "label": "Eval runner branch for remote-agent-runtime",
+                "path": "infra/evals/status/run-status-probes.mjs",
+                "reason": "The runner branch is correctly structured but cannot proceed past agent creation while the swarm gateway is unreachable.",
+                "details": "Lines 1913-1918 show the runner calls createAgent with type 'remote' as its first step, which is the call that triggers the failing POST /api/agents."
+              }
+            ],
+            "recommendedNextActions": [
+              "Check the AWS ELB target group health for the swarm gateway (us-east-2) around 2026-09-19T12:32Z to determine if the fleet had zero healthy targets or was mid-deployment.",
+              "Review production-api upstream proxy logs for POST /api/agents at the time of the failure to confirm whether the 502 originated at the ELB hop or within the production-api itself.",
+              "Re-run all three remote-agents evals immediately to determine if the failure was transient or is ongoing.",
+              "If the failure is ongoing, escalate to the team responsible for the swarm gateway / agent provisioning infrastructure in us-east-2.",
+              "If the failure was transient, add a retry or backoff mechanism to the eval runner's createAgent call so that brief ELB blips do not cause all remote-agents checks to fail simultaneously.",
+              "Consider adding an explicit swarm-gateway-health check to the remote-agents feature registry that probes the ELB directly, so future failures can be attributed to the gateway layer without requiring all three downstream checks to fail first."
+            ],
+            "recommendedVerifierProbes": [
+              {
+                "label": "Re-run remote-agent-runtime eval to check if 502 persists",
+                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-runtime npm run status:probes",
+                "reason": "Determines whether the swarm gateway is still unreachable or if the failure was transient at 2026-09-19T12:32Z."
+              },
+              {
+                "label": "Re-run all remote-agents sibling checks together",
+                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
+                "reason": "Confirms whether the shared dependency failure pattern persists across all three checks or has resolved for some but not others."
+              },
+              {
+                "label": "Inspect AWS ELB target group health for the swarm gateway in us-east-2",
+                "reason": "Directly verifies whether the ELB had healthy targets around 2026-09-19T12:32Z. Zero healthy targets would confirm the primary cause."
+              },
+              {
+                "label": "Query production-api logs for POST /api/agents upstream errors around 2026-09-19T12:32Z",
+                "reason": "Distinguishes between a production-api proxy misconfiguration and a true ELB/swarm-worker unavailability. Look for upstream connect timeout or connection refused errors."
+              }
+            ],
+            "whatWouldDisproveThis": [
+              "If a direct POST to the production-api's /api/agents endpoint (outside the eval runner) succeeds and returns a valid agent response at the same time the eval failed, the failure would be localized to the eval runner's network path or credentials rather than the swarm gateway itself.",
+              "If the swarm gateway ELB shows healthy targets and no errors in AWS CloudWatch around 2026-09-19T12:32Z, the 502 may have originated from a misconfiguration in the production-api's proxy layer rather than the ELB being unreachable.",
+              "If only one of the three sibling checks had failed (rather than all three with the same message), the root cause would more likely be a per-check logic or configuration issue rather than a shared upstream dependency failure.",
+              "If the eval runner's access token was invalid or expired, the runner would have returned a SKIP status (as guarded at run-status-probes.mjs line 1915) rather than a 502, so an auth failure would disprove this diagnosis.",
+              "If a subsequent eval run at a different time also fails with a different error code (e.g., 401, 404), the swarm gateway reachability hypothesis would need to be revised."
+            ],
+            "followUpEvals": [
+              "Add a dedicated swarm-gateway-reachability eval that probes the ELB /v1/agents endpoint directly (e.g., with a lightweight health or ping request) so gateway-layer failures are surfaced independently of agent provisioning logic.",
+              "Add a swarm-worker-fleet-health eval that checks the ELB target group's healthy instance count in us-east-2, alerting when it drops to zero before agent provisioning evals are attempted.",
+              "Add a remote-agent-create-retry eval variant that retries the POST /api/agents call up to 2 times with a short backoff, to distinguish transient ELB blips from sustained outages.",
+              "Add a cross-region remote-agent eval (if a secondary region is available) to determine whether a 502 is region-specific or affects all swarm gateway deployments."
+            ],
             "evidenceDigest": {
               "message": "POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
-              "latencyMs": 11085,
+              "latencyMs": 11073,
               "evidence": {}
-            },
-            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfBtZF3qTsddet24vJLWM\"}"
+            }
           }
         }
       ]
@@ -959,12 +1200,12 @@
       "description": "Project creation, spec persistence, task persistence, project stats, and dev-loop status reads.",
       "publicSummary": "Project workspaces can persist specs and tasks and report automation status.",
       "status": "operational",
-      "lastCheckedAt": "2026-09-19T00:56:40.524Z",
+      "lastCheckedAt": "2026-09-19T12:31:56.140Z",
       "checksPassed": 4,
       "checksTotal": 4,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 1773,
+      "latencyP95Ms": 1279,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -977,13 +1218,13 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:37.390Z",
-          "latencyMs": 1211,
+          "checkedAt": "2026-09-19T12:31:53.799Z",
+          "latencyMs": 1062,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "125b7df3-a4cf-4197-aabc-c16e1854b746",
+            "projectId": "6e2661e4-47c9-4fb3-957e-052645752730",
             "listed": true,
-            "projectName": "AURA Status Project 1789779396327"
+            "projectName": "AURA Status Project 1789821112856"
           }
         },
         {
@@ -996,13 +1237,13 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:39.163Z",
-          "latencyMs": 1773,
+          "checkedAt": "2026-09-19T12:31:55.078Z",
+          "latencyMs": 1279,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "322d26ef-94ed-4b1f-b650-2990c64a1d51",
-            "specId": "eae531fc-8434-4d71-b9bf-ab003c0d13a7",
-            "taskId": "9e595752-5cac-4017-b5b9-3be1e7485d3e",
+            "projectId": "829443fb-a10c-4e57-afa2-dc83e42efc50",
+            "specId": "d0b4e750-8cfd-49c7-bb23-6f635c7888fd",
+            "taskId": "24e0d17e-7ea8-4375-81cb-98d92f86eee0",
             "specHashPresent": true,
             "taskCount": 1
           }
@@ -1017,10 +1258,10 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:39.901Z",
-          "latencyMs": 738,
+          "checkedAt": "2026-09-19T12:31:55.666Z",
+          "latencyMs": 588,
           "evidence": {
-            "projectId": "0ace451a-8edc-4c3a-a2f5-1bfab363c71a",
+            "projectId": "c6c098ce-c12d-4f72-8a5e-896886c351ea",
             "keys": [
               "total_tasks",
               "pending_tasks",
@@ -1052,10 +1293,10 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:40.524Z",
-          "latencyMs": 623,
+          "checkedAt": "2026-09-19T12:31:56.140Z",
+          "latencyMs": 474,
           "evidence": {
-            "projectId": "b0f105b3-5b45-4f59-8c11-4de9565438d0",
+            "projectId": "ab674252-0f98-429e-8985-7bab4250cc4e",
             "status": null,
             "keys": [
               "running",
@@ -1077,12 +1318,12 @@
       "description": "Storage-backed note folder, note, transition, comment, and project tree roundtrips.",
       "publicSummary": "Project notes can be created, updated, commented on, and listed.",
       "status": "operational",
-      "lastCheckedAt": "2026-09-19T00:56:42.571Z",
+      "lastCheckedAt": "2026-09-19T12:31:57.827Z",
       "checksPassed": 1,
       "checksTotal": 1,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 2047,
+      "latencyP95Ms": 1687,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1095,14 +1336,14 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:42.571Z",
-          "latencyMs": 2047,
+          "checkedAt": "2026-09-19T12:31:57.827Z",
+          "latencyMs": 1687,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "1ba771fc-631e-4a3e-930f-b46455ecb65b",
-            "folderId": "22d04907-9c46-450b-bfbb-16064eab1156",
-            "noteId": "afd8acd9-c8c4-47db-aa51-c276bff02650",
-            "commentId": "62735e9a-06bc-4fb2-a97a-0870fa7311c3",
+            "projectId": "b7c84add-c444-4eea-91a5-423fdd58408e",
+            "folderId": "74f42f33-880e-4f36-829c-dcd1799432a3",
+            "noteId": "6f4096d2-a841-4d61-85cd-b41c9324e986",
+            "commentId": "1becef59-28da-4f69-9c80-ac4d55e80425",
             "folderLinked": true,
             "titleUpdated": true,
             "transitionStatus": "draft",
@@ -1121,7 +1362,7 @@
       "description": "Process workflow lists, process creation, default ignition node creation, desktop release trigger/run lifecycle, and cleanup.",
       "publicSummary": "Process workflows can be listed, created, and triggered in the desktop release.",
       "status": "operational",
-      "lastCheckedAt": "2026-09-19T00:56:44.319Z",
+      "lastCheckedAt": "2026-09-19T12:31:59.185Z",
       "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
@@ -1139,8 +1380,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:43.080Z",
-          "latencyMs": 509,
+          "checkedAt": "2026-09-19T12:31:58.073Z",
+          "latencyMs": 246,
           "evidence": {
             "processes": 0,
             "folders": 0
@@ -1156,11 +1397,11 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:44.319Z",
-          "latencyMs": 1239,
+          "checkedAt": "2026-09-19T12:31:59.185Z",
+          "latencyMs": 1112,
           "evidence": {
-            "projectId": "376688be-8ab3-4908-8efb-a6c746557b21",
-            "processId": "1cf2a0bd-090a-499b-bbbb-7ed5cb796327",
+            "projectId": "524a860d-c501-4a8c-8347-f2edf78b1b63",
+            "processId": "a21bede5-d167-45b6-819e-a728508bae38",
             "nodeCount": 1
           }
         },
@@ -1336,12 +1577,12 @@
       "description": "Marketplace agent catalog and harness bootstrap health.",
       "publicSummary": "Marketplace and bootstrap services are reachable.",
       "status": "operational",
-      "lastCheckedAt": "2026-09-19T00:56:47.504Z",
+      "lastCheckedAt": "2026-09-19T12:32:02.149Z",
       "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 2927,
+      "latencyP95Ms": 2732,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1354,8 +1595,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:47.246Z",
-          "latencyMs": 2927,
+          "checkedAt": "2026-09-19T12:32:01.917Z",
+          "latencyMs": 2732,
           "evidence": {
             "count": 17
           }
@@ -1370,12 +1611,12 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:47.504Z",
-          "latencyMs": 258,
+          "checkedAt": "2026-09-19T12:32:02.149Z",
+          "latencyMs": 233,
           "evidence": {
             "reachable": true,
             "url": "https://aura-harness-latest.onrender.com",
-            "latencyMs": 55,
+            "latencyMs": 71,
             "status": 200
           }
         }
@@ -1389,12 +1630,12 @@
       "description": "Org integrations, tool action catalog, subscription status, and credits balance.",
       "publicSummary": "Integrations and billing surfaces are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-09-19T00:56:36.179Z",
+      "lastCheckedAt": "2026-09-19T12:31:52.736Z",
       "checksPassed": 6,
       "checksTotal": 6,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 525,
+      "latencyP95Ms": 421,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1407,8 +1648,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:34.449Z",
-          "latencyMs": 525,
+          "checkedAt": "2026-09-19T12:31:51.366Z",
+          "latencyMs": 391,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "count": 0
@@ -1424,8 +1665,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:34.808Z",
-          "latencyMs": 359,
+          "checkedAt": "2026-09-19T12:31:51.631Z",
+          "latencyMs": 265,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "count": 6
@@ -1441,8 +1682,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:35.210Z",
-          "latencyMs": 402,
+          "checkedAt": "2026-09-19T12:31:51.896Z",
+          "latencyMs": 265,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "toolCount": 6,
@@ -1467,8 +1708,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:35.387Z",
-          "latencyMs": 177,
+          "checkedAt": "2026-09-19T12:31:52.059Z",
+          "latencyMs": 163,
           "evidence": {
             "keys": [
               "plan",
@@ -1490,8 +1731,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:35.771Z",
-          "latencyMs": 385,
+          "checkedAt": "2026-09-19T12:31:52.315Z",
+          "latencyMs": 256,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "keys": [
@@ -1511,8 +1752,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:36.179Z",
-          "latencyMs": 407,
+          "checkedAt": "2026-09-19T12:31:52.736Z",
+          "latencyMs": 421,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "accountKeys": [
@@ -1541,12 +1782,12 @@
       "description": "Feedback board, bug report list, feed, leaderboard, and platform stats.",
       "publicSummary": "Community and feedback data surfaces are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-09-19T00:56:48.853Z",
+      "lastCheckedAt": "2026-09-19T12:32:03.315Z",
       "checksPassed": 5,
       "checksTotal": 5,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 332,
+      "latencyP95Ms": 309,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1559,8 +1800,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:47.965Z",
-          "latencyMs": 262,
+          "checkedAt": "2026-09-19T12:32:02.631Z",
+          "latencyMs": 309,
           "evidence": {
             "count": 50
           }
@@ -1575,8 +1816,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:48.070Z",
-          "latencyMs": 105,
+          "checkedAt": "2026-09-19T12:32:02.708Z",
+          "latencyMs": 77,
           "evidence": {
             "count": 0
           }
@@ -1591,8 +1832,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:48.375Z",
-          "latencyMs": 305,
+          "checkedAt": "2026-09-19T12:32:02.968Z",
+          "latencyMs": 260,
           "evidence": {
             "count": 50
           }
@@ -1607,8 +1848,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:48.707Z",
-          "latencyMs": 332,
+          "checkedAt": "2026-09-19T12:32:03.195Z",
+          "latencyMs": 227,
           "evidence": {
             "count": 50
           }
@@ -1623,8 +1864,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:48.853Z",
-          "latencyMs": 146,
+          "checkedAt": "2026-09-19T12:32:03.315Z",
+          "latencyMs": 120,
           "evidence": {
             "present": true,
             "keys": [
@@ -1721,12 +1962,12 @@
       "description": "Stream reattachment registry and debug run index.",
       "publicSummary": "Stream and debug inspection endpoints are reachable.",
       "status": "operational",
-      "lastCheckedAt": "2026-09-19T00:56:47.703Z",
+      "lastCheckedAt": "2026-09-19T12:32:02.322Z",
       "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 102,
+      "latencyP95Ms": 89,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1739,8 +1980,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:47.606Z",
-          "latencyMs": 102,
+          "checkedAt": "2026-09-19T12:32:02.233Z",
+          "latencyMs": 83,
           "evidence": {
             "count": 0
           }
@@ -1755,8 +1996,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:56:47.703Z",
-          "latencyMs": 97,
+          "checkedAt": "2026-09-19T12:32:02.322Z",
+          "latencyMs": 89,
           "evidence": {
             "keys": [
               "projects"
@@ -1773,12 +2014,12 @@
       "description": "Existing Playwright and benchmark eval summaries produced by AURA's eval lanes.",
       "publicSummary": "AURA eval artifacts are being produced and retained.",
       "status": "operational",
-      "lastCheckedAt": "2026-09-19T00:57:26.241Z",
+      "lastCheckedAt": "2026-09-19T12:32:40.560Z",
       "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 4,
+      "latencyP95Ms": 1,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1791,8 +2032,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "3/4 eval summary artifacts found",
-          "checkedAt": "2026-09-19T00:57:26.237Z",
-          "latencyMs": 0,
+          "checkedAt": "2026-09-19T12:32:40.560Z",
+          "latencyMs": 1,
           "evidence": {
             "files": [
               {
@@ -1802,19 +2043,19 @@
               {
                 "file": "infra/evals/reports/baselines/smoke-summary.json",
                 "exists": true,
-                "mtime": "2026-09-19T00:56:26.031Z",
+                "mtime": "2026-09-19T12:31:43.355Z",
                 "size": 2796
               },
               {
                 "file": "infra/evals/reports/baselines/chat-core-summary.json",
                 "exists": true,
-                "mtime": "2026-09-19T00:56:26.031Z",
+                "mtime": "2026-09-19T12:31:43.355Z",
                 "size": 11513
               },
               {
                 "file": "infra/evals/reports/baselines/workflow-summary.json",
                 "exists": true,
-                "mtime": "2026-09-19T00:56:26.031Z",
+                "mtime": "2026-09-19T12:31:43.355Z",
                 "size": 2219
               }
             ],
@@ -1832,8 +2073,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:57:26.241Z",
-          "latencyMs": 4,
+          "checkedAt": "2026-09-19T12:32:40.560Z",
+          "latencyMs": 0,
           "evidence": {
             "registryPresent": true,
             "eventCount": 53,
@@ -1857,12 +2098,12 @@
       "description": "Public AURA pages, observability snapshot JSON, and marketing routes.",
       "publicSummary": "AURA's public web surfaces are reachable.",
       "status": "operational",
-      "lastCheckedAt": "2026-09-19T00:57:26.237Z",
+      "lastCheckedAt": "2026-09-19T12:32:40.559Z",
       "checksPassed": 3,
       "checksTotal": 4,
       "checksFailed": 1,
       "checksUnknown": 0,
-      "latencyP95Ms": 1069,
+      "latencyP95Ms": 874,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1874,9 +2115,9 @@
           "required": false,
           "status": "fail",
           "featureStatus": "operational",
-          "message": "Published observability snapshot is missing live workflow data or is stale; Expected evidence assertion failed: snapshotAgeMinutes expected <= 300 but got 742",
-          "checkedAt": "2026-09-19T00:57:24.979Z",
-          "latencyMs": 74,
+          "message": "Published observability snapshot is missing live workflow data or is stale; Expected evidence assertion failed: snapshotAgeMinutes expected <= 300 but got 695",
+          "checkedAt": "2026-09-19T12:32:39.533Z",
+          "latencyMs": 88,
           "evidence": {
             "schemaVersion": 1,
             "overall": "major_outage",
@@ -1885,7 +2126,7 @@
             "featureCount": 19,
             "totalsFeatures": 19,
             "unknownFeatureCount": 0,
-            "snapshotAgeMinutes": 742,
+            "snapshotAgeMinutes": 695,
             "hasLiveSource": true,
             "hasNonUnknownFeatureData": true,
             "snapshotUrl": "https://cypher-asi.github.io/aura-os/observability/status.json",
@@ -1894,36 +2135,135 @@
           "investigation": {
             "schemaVersion": 1,
             "kind": "llm-investigation",
-            "id": "public-website:production-api:published-observability-snapshot:71c29b8d2ed3",
+            "id": "public-website:production-api:published-observability-snapshot:9faa48ee1e5a",
             "featureId": "public-website",
             "featureLabel": "Public Website",
             "checkId": "published-observability-snapshot",
             "runtimeEnvironment": "production-api",
-            "title": "Investigator failed",
-            "status": "failed",
+            "title": "published-observability-snapshot Eval Failure: Stale GitHub Actions Snapshot (snapshotAgeMinutes=695, max=300)",
+            "status": "ready",
             "checkStatus": "fail",
             "featureStatus": "operational",
-            "generatedAt": "2026-09-19T00:57:26.409Z",
+            "generatedAt": "2026-09-19T12:32:40.725Z",
             "environment": "production",
             "source": "github-actions",
             "provider": "anthropic",
             "model": "claude-sonnet-4-6",
-            "confidence": "low",
-            "summary": "The investigator model did not return a usable report.",
-            "rootCause": "Investigator execution failed before a diagnosis could be produced.",
-            "proof": [],
-            "possibleCauses": [],
-            "reproductionSteps": [],
-            "affectedAreas": [],
-            "recommendedNextActions": [
-              "Rerun the observability investigation with model/provider logs enabled."
+            "confidence": "high",
+            "summary": "The AURA observability eval for the published-observability-snapshot check failed because the snapshot at https://cypher-asi.github.io/aura-os/observability/status.json was 695 minutes old at eval time, exceeding the contract maximum of 300 minutes. This is an eval-layer failure scoped to the freshness assertion of the published snapshot; all sibling public-website checks (public-observability-page, public-models-page, public-marketing-pages) passed, confirming the public web surface itself is reachable and this failure is isolated to the snapshot publication pipeline.",
+            "rootCause": "The GitHub Actions workflow responsible for regenerating and publishing the observability snapshot to https://cypher-asi.github.io/aura-os/observability/status.json did not run successfully within the required 300-minute window. The snapshot retrieved at eval time (2026-09-19T12:32:39.533Z) was 695 minutes old — approximately 11.6 hours stale — meaning the last successful workflow publication occurred roughly 11.6 hours before the eval ran. The eval contract at infra/evals/status/check-expectations.json line 482 asserts snapshotAgeMinutes max 300; the live evidence value of 695 directly violated this assertion. The check is marked required=false with statusImpact=informational in the feature registry (infra/evals/status/features.json line 383), so this is an eval-layer informational failure, not a user-facing outage.",
+            "proof": [
+              "failed-check.message: 'snapshotAgeMinutes expected <= 300 but got 695' — the single violated assertion that caused the eval to fail.",
+              "failed-check.evidence: snapshotAgeMinutes=695, maxAgeMinutes=300, source='github-actions', hasLiveSource=true, generatedAtPresent=true — the snapshot exists and was generated by GitHub Actions but is 395 minutes beyond the freshness threshold.",
+              "expected-output.contract: infra/evals/status/check-expectations.json line 482 asserts { path: 'snapshotAgeMinutes', max: 300 } — the contract boundary that was breached.",
+              "source.infra/evals/status/features.json:383: check config shows required=false, statusImpact=informational — confirms this is an informational eval failure, not a required check.",
+              "sibling.public-observability-page, sibling.public-models-page, sibling.public-marketing-pages: all three sibling checks passed with HTTP 200 responses — isolates the failure to the snapshot publication pipeline, not the public web surface.",
+              "source-context.infra/evals/status/run-status-probes.mjs:2168-2173: the runner fetches the snapshot via publicJsonUrl(args.publishedSnapshotUrl) and derives snapshotAgeMinutes from statusSnapshotEvidence(payload) — confirming the age is computed from the live-fetched snapshot content, not a cached eval artifact."
             ],
-            "recommendedVerifierProbes": [],
-            "whatWouldDisproveThis": [],
-            "followUpEvals": [],
+            "possibleCauses": [
+              "Most likely: The GitHub Actions workflow that publishes the observability snapshot to the GitHub Pages URL failed, was skipped, or was not triggered for approximately 11.6 hours prior to the eval run at 2026-09-19T12:32:39Z. The evidence shows source='github-actions' and hasLiveSource=true, meaning the snapshot file is reachable but its embedded timestamp is stale.",
+              "Second: The GitHub Actions workflow ran but encountered an error during the snapshot generation or GitHub Pages publish step, causing the previously published (stale) file to remain at the URL without being overwritten.",
+              "Third: A workflow schedule change, branch protection rule, or Actions quota/billing limit caused the scheduled snapshot workflow to stop firing on its normal cadence, leaving the last successfully published snapshot in place."
+            ],
+            "reproductionSteps": [
+              {
+                "label": "Re-run the failing eval in isolation against production",
+                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=published-observability-snapshot npm run status:probes",
+                "details": "Use the same environment variables as the scheduled observability workflow to reproduce the snapshotAgeMinutes assertion failure."
+              },
+              {
+                "label": "Fetch the published snapshot directly and inspect its embedded timestamp",
+                "command": "curl -s https://cypher-asi.github.io/aura-os/observability/status.json | jq '{generatedAt: .generatedAt, snapshotAge: .snapshotAgeMinutes}'",
+                "details": "Confirms whether the snapshot file at the published URL is still stale or has since been refreshed by a subsequent workflow run."
+              },
+              {
+                "label": "Check GitHub Actions workflow run history for the snapshot-publishing workflow",
+                "details": "Navigate to the Actions tab of the cypher-asi/aura-os repository and filter for the workflow responsible for publishing status.json to GitHub Pages. Identify the last successful run and compare its completion time to the eval timestamp of 2026-09-19T12:32:39Z."
+              },
+              {
+                "label": "Inspect the GitHub Pages deployment log for the observability snapshot",
+                "details": "Confirm whether the GitHub Pages deployment step succeeded or was skipped/failed in the most recent workflow runs preceding the eval failure."
+              },
+              {
+                "label": "Review the feature registry check config for threshold alignment",
+                "command": "grep -n 'staleAfterMinutes\\|maxAgeMinutes\\|snapshotAgeMinutes' infra/evals/status/features.json infra/evals/status/check-expectations.json",
+                "details": "The registry config at infra/evals/status/features.json line 383 sets staleAfterMinutes=360, while the eval contract at infra/evals/status/check-expectations.json line 482 enforces max=300. Verify whether this 60-minute discrepancy between the two thresholds is intentional."
+              }
+            ],
+            "affectedAreas": [
+              {
+                "label": "GitHub Actions snapshot publication workflow",
+                "reason": "The snapshot at the published URL is 695 minutes old, indicating the GitHub Actions workflow that regenerates and publishes status.json to GitHub Pages did not complete successfully within the 300-minute contract window."
+              },
+              {
+                "label": "Published observability snapshot endpoint",
+                "reason": "This is the URL fetched by the eval runner (infra/evals/status/run-status-probes.mjs line 2170) and the source of the stale snapshotAgeMinutes=695 value."
+              },
+              {
+                "label": "Eval check: published-observability-snapshot (public-website feature)",
+                "path": "infra/evals/status/features.json",
+                "reason": "The check is registered at line 383 as required=false, statusImpact=informational. The eval failure is scoped to this informational check only and does not affect required checks."
+              },
+              {
+                "label": "Expected-output contract: snapshotAgeMinutes assertion",
+                "path": "infra/evals/status/check-expectations.json",
+                "reason": "Line 482 defines the max=300 assertion that was violated. A secondary observation is that the registry staleAfterMinutes=360 (features.json line 383) differs from the contract max=300 (check-expectations.json line 482), which may warrant alignment review."
+              },
+              {
+                "label": "Eval runner branch for published-observability-snapshot",
+                "path": "infra/evals/status/run-status-probes.mjs",
+                "reason": "Lines 2168-2173 contain the runner logic that fetches the snapshot and derives the snapshotAgeMinutes evidence value used in the assertion."
+              }
+            ],
+            "recommendedNextActions": [
+              "Investigate the GitHub Actions workflow run history for the cypher-asi/aura-os repository to identify why the snapshot-publishing workflow did not produce a fresh status.json within the 300-minute window before 2026-09-19T12:32:39Z. Look for failed runs, skipped triggers, or quota/billing issues.",
+              "Fetch the live snapshot URL (https://cypher-asi.github.io/aura-os/observability/status.json) and check its current generatedAt timestamp to determine whether the workflow has since recovered or is still stale.",
+              "Reconcile the threshold discrepancy: the feature registry sets staleAfterMinutes=360 (infra/evals/status/features.json line 383) while the eval contract enforces snapshotAgeMinutes max=300 (infra/evals/status/check-expectations.json line 482). Align these values or document the intentional difference to avoid ambiguity.",
+              "If the workflow is confirmed broken, trigger a manual re-run of the snapshot-publishing GitHub Actions workflow to restore freshness and verify the eval passes afterward.",
+              "Add a GitHub Actions workflow health monitor or alert (e.g., a workflow_run event trigger or an external uptime check) that fires when the snapshot-publishing workflow has not completed successfully within the maxAgeMinutes window, providing earlier detection than the eval alone.",
+              "Review whether the check's statusImpact=informational classification in infra/evals/status/features.json line 383 is still appropriate given that a stale snapshot means the /observability page may be displaying outdated status data to users."
+            ],
+            "recommendedVerifierProbes": [
+              {
+                "label": "Re-run the failing eval in isolation",
+                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=published-observability-snapshot npm run status:probes",
+                "reason": "Confirms whether the snapshot is still stale or has been refreshed since the failing eval run at 2026-09-19T12:32:39Z. A passing result would indicate the workflow has since recovered."
+              },
+              {
+                "label": "Fetch the live snapshot and inspect its timestamp",
+                "command": "curl -s https://cypher-asi.github.io/aura-os/observability/status.json | jq '{generatedAt: .generatedAt}'",
+                "reason": "Directly verifies the embedded generation timestamp in the published file, confirming whether the staleness is real and how far behind the snapshot currently is."
+              },
+              {
+                "label": "Inspect GitHub Actions workflow run history for the snapshot publisher",
+                "reason": "Identifies the last successful run of the workflow that publishes status.json to GitHub Pages, and whether any runs failed or were skipped in the ~11.6 hours before the eval ran."
+              },
+              {
+                "label": "Check for threshold misalignment between staleAfterMinutes and contract max",
+                "command": "grep -n 'staleAfterMinutes\\|maxAgeMinutes\\|snapshotAgeMinutes\\|max.*300\\|max.*360' infra/evals/status/features.json infra/evals/status/check-expectations.json",
+                "reason": "The registry sets staleAfterMinutes=360 (features.json line 383) while the contract enforces max=300 (check-expectations.json line 482). Verifying whether this 60-minute gap is intentional may reveal a configuration inconsistency that causes premature eval failures even when the workflow runs on its normal cadence."
+              },
+              {
+                "label": "Inspect the statusSnapshotEvidence function for age computation logic",
+                "command": "grep -n 'statusSnapshotEvidence\\|snapshotAgeMinutes' infra/evals/status/run-status-probes.mjs",
+                "reason": "Confirms how snapshotAgeMinutes is derived from the fetched payload, ruling out clock skew or incorrect timestamp parsing as a contributing factor."
+              }
+            ],
+            "whatWouldDisproveThis": [
+              "If the GitHub Actions workflow run history shows a successful snapshot publication within 300 minutes of the eval run at 2026-09-19T12:32:39Z, the staleness would not be caused by a workflow failure and another cause (e.g., incorrect timestamp computation in statusSnapshotEvidence, clock skew, or CDN caching of an old file) would need to be investigated.",
+              "If a subsequent eval run shows snapshotAgeMinutes <= 300 without any workflow changes, it would suggest the failure was a transient scheduling gap rather than a persistent workflow breakage.",
+              "If the snapshot URL returns a 404 or non-JSON response, the root cause would shift from staleness to a publication or hosting failure rather than a missed workflow run.",
+              "If the snapshotAgeMinutes value computed by statusSnapshotEvidence is shown to be derived from a field other than the snapshot's actual generation timestamp (e.g., a cached or default value), the staleness signal would be unreliable and the diagnosis would need revision."
+            ],
+            "followUpEvals": [
+              "Add an eval that directly checks the GitHub Actions workflow last-successful-run timestamp via the GitHub API and asserts it is within maxAgeMinutes, providing a workflow-layer signal independent of the published file's embedded timestamp.",
+              "Add an eval that monitors the snapshotAgeMinutes trend across consecutive runs to detect gradual drift before the 300-minute threshold is breached.",
+              "Add an eval that asserts the staleAfterMinutes value in infra/evals/status/features.json equals the max value in the snapshotAgeMinutes assertion in infra/evals/status/check-expectations.json, catching future threshold misalignment at the config layer.",
+              "Add a regression eval that fires when snapshotAgeMinutes exceeds a warning threshold (e.g., 150 minutes, half of max) to provide earlier warning before the hard failure threshold is reached."
+            ],
             "evidenceDigest": {
-              "message": "Published observability snapshot is missing live workflow data or is stale; Expected evidence assertion failed: snapshotAgeMinutes expected <= 300 but got 742",
-              "latencyMs": 74,
+              "message": "Published observability snapshot is missing live workflow data or is stale; Expected evidence assertion failed: snapshotAgeMinutes expected <= 300 but got 695",
+              "latencyMs": 88,
               "evidence": {
                 "schemaVersion": 1,
                 "overall": "major_outage",
@@ -1932,14 +2272,13 @@
                 "featureCount": 19,
                 "totalsFeatures": 19,
                 "unknownFeatureCount": 0,
-                "snapshotAgeMinutes": 742,
+                "snapshotAgeMinutes": 695,
                 "hasLiveSource": true,
                 "hasNonUnknownFeatureData": true,
                 "snapshotUrl": "https://cypher-asi.github.io/aura-os/observability/status.json",
                 "maxAgeMinutes": 300
               }
-            },
-            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfBtZJ3uzbBqpNoeiQbPZ\"}"
+            }
           }
         },
         {
@@ -1952,8 +2291,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:57:24.905Z",
-          "latencyMs": 311,
+          "checkedAt": "2026-09-19T12:32:39.444Z",
+          "latencyMs": 215,
           "evidence": {
             "status": 200,
             "hasAppShell": true,
@@ -1970,8 +2309,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:57:25.168Z",
-          "latencyMs": 188,
+          "checkedAt": "2026-09-19T12:32:39.685Z",
+          "latencyMs": 152,
           "evidence": {
             "status": 200,
             "hasAppShell": true,
@@ -1988,8 +2327,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-09-19T00:57:26.237Z",
-          "latencyMs": 1069,
+          "checkedAt": "2026-09-19T12:32:40.559Z",
+          "latencyMs": 874,
           "evidence": {
             "allRoutesOk": true,
             "routeCount": 8,
@@ -2046,184 +2385,516 @@
     {
       "schemaVersion": 1,
       "kind": "llm-investigation",
-      "id": "remote-agents:production-api:remote-agent-create:09bfbf1cdbea",
+      "id": "remote-agents:production-api:remote-agent-create:055ce856c15c",
       "featureId": "remote-agents",
       "featureLabel": "Remote Agents",
       "checkId": "remote-agent-create",
       "runtimeEnvironment": "production-api",
-      "title": "Investigator failed",
-      "status": "failed",
+      "title": "Remote Agents: Swarm Gateway 502 Blocking All Agent Provisioning Evals",
+      "status": "ready",
       "checkStatus": "fail",
       "featureStatus": "partial_outage",
-      "generatedAt": "2026-09-19T00:57:26.409Z",
+      "generatedAt": "2026-09-19T12:32:40.725Z",
       "environment": "production",
       "source": "github-actions",
       "provider": "anthropic",
       "model": "claude-sonnet-4-6",
-      "confidence": "low",
-      "summary": "The investigator model did not return a usable report.",
-      "rootCause": "Investigator execution failed before a diagnosis could be produced.",
-      "proof": [],
-      "possibleCauses": [],
-      "reproductionSteps": [],
-      "affectedAreas": [],
-      "recommendedNextActions": [
-        "Rerun the observability investigation with model/provider logs enabled."
+      "confidence": "high",
+      "summary": "All three remote-agents checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed at 2026-09-19T12:32 with an identical 502 bad_gateway error indicating the swarm gateway ELB endpoint at /v1/agents was unreachable during agent provisioning. Because the failure occurs at the POST /api/agents boundary before any agent identity or VM data is returned, all four required evidence fields (orgId, agentId, vmIdPresent, remoteState) are absent and every contract assertion is unverifiable.",
+      "rootCause": "The swarm gateway — the AWS ELB-backed upstream service reached via POST to /v1/agents — was unreachable at the time of the eval run. The production-api layer returned HTTP 502 with code \"bad_gateway\" and the message \"error sending request for url (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents)\", meaning the connection to the ELB either timed out or was refused before any agent provisioning could begin. This is an infrastructure-layer failure localized to the swarm gateway dependency, not to the eval runner logic itself. No user-traffic or incident signals are present in the supplied evidence, so impact is confirmed only at the eval observability layer.",
+      "proof": [
+        "failed-check.message: POST /api/agents returned HTTP 502 with error 'swarm gateway unreachable during agent provisioning: error sending request for url (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents)' and code 'bad_gateway'.",
+        "failed-check.timing: check status=fail, latencyMs=11370, endedAt=2026-09-19T12:32:14.686Z — the failure resolved quickly (~11s), consistent with a connection refusal or immediate gateway error rather than a timeout.",
+        "sibling.remote-agent-state: identical 502 message, latencyMs=11199, endedAt=2026-09-19T12:32:25.885Z.",
+        "sibling.remote-agent-runtime: identical 502 message, latencyMs=11073, endedAt=2026-09-19T12:32:36.958Z.",
+        "expected-output.missing-required-evidence: all four required evidence fields (orgId, agentId, vmIdPresent, remoteState) are absent because the 502 prevented any provisioning response from being received.",
+        "verifierContext.siblingCorrelation.likelySharedDependencyFailure=true: all failing sibling check IDs share the exact same error message, confirming a single shared upstream dependency as the failure point.",
+        "source-context.infra/evals/status/run-status-probes.mjs:1884-1885: the runner calls requireOrgId then createAgent with machineType='remote', meaning the swarm gateway is the first external call in the probe chain; a 502 there aborts all subsequent evidence collection.",
+        "source-context.infra/evals/status/check-expectations.json:254-258: the contract requires vmIdPresent=true and remoteState in [running, idle, ready], neither of which can be asserted when provisioning never completes."
       ],
-      "recommendedVerifierProbes": [],
-      "whatWouldDisproveThis": [],
-      "followUpEvals": [],
+      "possibleCauses": [
+        "Primary: The swarm gateway ELB (us-east-2) was down, misconfigured, or had no healthy targets at the time of the eval run, causing the production-api to receive a connection error and surface it as a 502 bad_gateway.",
+        "Secondary: A network-level routing or security-group change between the production-api and the swarm ELB blocked outbound connections to the /v1/agents endpoint, producing the same 502 symptom.",
+        "Tertiary: The swarm gateway service itself was in a crash loop or was being redeployed at the time of the eval run, causing transient unavailability that resolved before or after the ~34-second window spanning all three checks.",
+        "Lower probability: The ELB DNS name was changed or deregistered, causing DNS resolution to fail or route to an unreachable address, which the production-api surfaces as a bad_gateway error."
+      ],
+      "reproductionSteps": [
+        {
+          "label": "Re-run the remote-agent-create eval in isolation against production-api",
+          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create npm run status:probes",
+          "details": "Use the same environment variables as the scheduled observability workflow to confirm whether the 502 persists or has resolved."
+        },
+        {
+          "label": "Re-run all three remote-agents checks together to confirm shared dependency behavior",
+          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
+          "details": "If all three still fail with the same message, the swarm gateway remains unreachable. If they pass, the failure was transient."
+        },
+        {
+          "label": "Inspect the swarm gateway ELB health in AWS us-east-2",
+          "details": "Check the target group health for the ELB referenced in the 502 error. Look for unhealthy targets, recent deregistrations, or security-group rule changes around 2026-09-19T12:32Z."
+        },
+        {
+          "label": "Check production-api logs for outbound connection errors to the swarm ELB around 2026-09-19T12:32Z",
+          "details": "Filter for 'bad_gateway', 'swarm gateway unreachable', or the ELB hostname to determine whether the failure was isolated to the eval window or broader."
+        }
+      ],
+      "affectedAreas": [
+        {
+          "label": "Swarm gateway ELB endpoint (/v1/agents, us-east-2)",
+          "reason": "The 502 error message explicitly names this as the unreachable upstream: 'error sending request for url (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents)'. All three checks fail at this boundary (evidence: failed-check.message, sibling.remote-agent-state, sibling.remote-agent-runtime)."
+        },
+        {
+          "label": "Remote agent provisioning path in production-api (POST /api/agents)",
+          "reason": "The production-api endpoint POST /api/agents is the entry point that proxies to the swarm gateway. It returned the 502 to the eval runner, meaning the failure is localized to this route and its upstream dependency, not to the broader API surface (evidence: failed-check.message)."
+        },
+        {
+          "label": "Eval runner branch: remote-agent-create in infra/evals/status/run-status-probes.mjs",
+          "path": "infra/evals/status/run-status-probes.mjs",
+          "reason": "The runner branch at line 1880-1885 calls createAgent with machineType='remote', which is the first call that reaches the swarm gateway. A 502 here prevents all evidence collection for orgId, agentId, vmIdPresent, and remoteState (evidence: source-context.infra/evals/status/run-status-probes.mjs:1877-1885, expected-output.missing-required-evidence)."
+        },
+        {
+          "label": "Remote Agents feature observability (remote-agents, production-api)",
+          "path": "infra/evals/status/features.json",
+          "reason": "All three checks registered under the remote-agents feature (remote-agent-create required, remote-agent-state required, remote-agent-runtime optional) failed. Per the registry, degradedAfterFailures=1, so the feature is in a degraded state in the eval system (evidence: source-context.infra/evals/status/features.json:179-187)."
+        }
+      ],
+      "recommendedNextActions": [
+        "Check the AWS ELB target group health for the swarm gateway in us-east-2 around 2026-09-19T12:32Z to determine if targets were unhealthy or deregistered.",
+        "Query production-api application logs for 'bad_gateway' or 'swarm gateway unreachable' errors in the 12:30–12:35Z window to establish whether the failure was isolated to the eval or affected real provisioning traffic.",
+        "Re-run the remote-agent-create eval immediately to determine if the failure is ongoing or was transient.",
+        "If the failure is confirmed as transient, add a retry or back-off to the eval runner's createAgent call so a single brief gateway hiccup does not immediately fail all three checks.",
+        "If the failure is confirmed as ongoing, escalate to the team responsible for the swarm gateway ELB in us-east-2 with the 502 error details and the timestamp 2026-09-19T12:32Z."
+      ],
+      "recommendedVerifierProbes": [
+        {
+          "label": "Re-run remote-agent-create eval to confirm current gateway reachability",
+          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create npm run status:probes",
+          "reason": "Determines whether the 502 persists (ongoing outage) or has resolved (transient failure). This is the fastest signal to triage severity (evidence: verifierContext.recommendedVerifierProbes)."
+        },
+        {
+          "label": "Re-run all three remote-agents sibling checks together",
+          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
+          "reason": "Confirms whether the shared dependency failure pattern persists across all three checks simultaneously, which would indicate the swarm gateway is still unreachable (evidence: verifierContext.siblingCorrelation.likelySharedDependencyFailure=true)."
+        },
+        {
+          "label": "Inspect swarm gateway ELB target group health in AWS us-east-2",
+          "reason": "Directly verifies whether the ELB had unhealthy or deregistered targets at 2026-09-19T12:32Z, which is the most direct proof of the root cause (evidence: failed-check.message naming the ELB URL)."
+        },
+        {
+          "label": "Query production-api logs for 'swarm gateway unreachable' or 'bad_gateway' around 2026-09-19T12:32Z",
+          "reason": "Determines the blast radius: if only the eval runner's requests failed, the issue may be scoped to the eval environment; if real provisioning requests also failed, the swarm gateway was broadly unavailable (evidence: failed-check.message, failed-check.timing)."
+        },
+        {
+          "label": "Review recent commits touching implicated eval source paths",
+          "command": "git log --oneline infra/evals/status/features.json infra/evals/status/check-expectations.json infra/evals/status/run-status-probes.mjs",
+          "reason": "The most recent known commit to all three files is e0ffa35. Reviewing the diff would confirm whether any eval runner or contract change could have altered how the swarm gateway URL is constructed or how errors are handled (evidence: recent-change.infra/evals/status/features.json, recent-change.infra/evals/status/check-expectations.json, recent-change.infra/evals/status/run-status-probes.mjs)."
+        }
+      ],
+      "whatWouldDisproveThis": [
+        "A successful POST /api/agents response (2xx) with a valid vmId and remoteState from the swarm gateway at or near 2026-09-19T12:32Z would disprove that the gateway was down.",
+        "Production-api logs showing the outbound request to the swarm ELB succeeded but the eval runner misinterpreted the response would shift the root cause to the runner or contract layer.",
+        "A passing re-run of remote-agent-create immediately after the failure window would indicate the outage was transient and not a persistent infrastructure problem.",
+        "Evidence that only the eval runner's network path to the production-api was blocked (e.g., a firewall rule affecting the CI environment) while real traffic succeeded would localize the failure to the eval infrastructure rather than the swarm gateway itself.",
+        "AWS CloudWatch or ELB access logs showing healthy target responses during the 12:32Z window would disprove the ELB-down hypothesis."
+      ],
+      "followUpEvals": [
+        "Add a dedicated swarm-gateway-health eval that directly probes the swarm ELB health endpoint (if one exists) independently of agent provisioning, so gateway-layer failures are detected before the full remote-agent-create flow is attempted.",
+        "Add a connectivity pre-check eval that verifies the production-api can reach the swarm gateway before running remote-agent-create, remote-agent-state, and remote-agent-runtime, enabling faster root-cause isolation when the gateway is down.",
+        "Add a historical pass/fail trend eval for remote-agent-create so that verifierContext.history.previousRunCount > 0 and currentlyRegressedFromPass can be populated, enabling regression detection on future failures.",
+        "Add a latency-band eval for the swarm gateway response time to distinguish between a full outage (immediate 502) and a degraded-but-reachable gateway (slow 5xx), since the current ~11s latency pattern suggests a fast connection failure rather than a timeout."
+      ],
       "evidenceDigest": {
         "message": "POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
-        "latencyMs": 11437,
+        "latencyMs": 11370,
         "evidence": {}
-      },
-      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfBtZChSsU3mQcY8LE9iH\"}"
+      }
     },
     {
       "schemaVersion": 1,
       "kind": "llm-investigation",
-      "id": "remote-agents:production-api:remote-agent-state:39159ee4c99e",
+      "id": "remote-agents:production-api:remote-agent-state:9395a8c95962",
       "featureId": "remote-agents",
       "featureLabel": "Remote Agents",
       "checkId": "remote-agent-state",
       "runtimeEnvironment": "production-api",
-      "title": "Investigator failed",
-      "status": "failed",
+      "title": "Swarm Gateway 502 Blocks All Remote Agent Checks (remote-agent-state, remote-agent-create, remote-agent-runtime)",
+      "status": "ready",
       "checkStatus": "fail",
       "featureStatus": "partial_outage",
-      "generatedAt": "2026-09-19T00:57:26.409Z",
+      "generatedAt": "2026-09-19T12:32:40.725Z",
       "environment": "production",
       "source": "github-actions",
       "provider": "anthropic",
       "model": "claude-sonnet-4-6",
-      "confidence": "low",
-      "summary": "The investigator model did not return a usable report.",
-      "rootCause": "Investigator execution failed before a diagnosis could be produced.",
-      "proof": [],
-      "possibleCauses": [],
-      "reproductionSteps": [],
-      "affectedAreas": [],
-      "recommendedNextActions": [
-        "Rerun the observability investigation with model/provider logs enabled."
+      "confidence": "high",
+      "summary": "All three remote-agents feature checks (remote-agent-state, remote-agent-create, remote-agent-runtime) failed at 2026-09-19T12:32 with an identical 502 bad_gateway error indicating the swarm gateway ELB at /v1/agents was unreachable during agent provisioning. Because the failure occurs at the POST /api/agents call — before any agent identity, state, or readiness data can be returned — the expected-output contract evidence fields (orgId, agentId, readyState, state) are entirely absent.",
+      "rootCause": "The swarm gateway (an AWS ELB in us-east-2 fronting /v1/agents) was unreachable at the time of the eval run. Every remote-agents check depends on a successful POST /api/agents call that proxies through this gateway to provision a remote agent VM. Because the gateway returned a connection error before any agent was created, no agent identity or state data was produced, causing all three sibling checks to fail with the same message and leaving the expected-output contract completely unsatisfied. This is an eval-observed infrastructure availability failure localized to the swarm gateway dependency; no user-traffic or incident signals are present in the supplied evidence to confirm a broader production outage.",
+      "proof": [
+        "failed-check.message: POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
+        "sibling.remote-agent-create: identical 502 bad_gateway message, latencyMs=11370, endedAt=2026-09-19T12:32:14.686Z",
+        "sibling.remote-agent-runtime: identical 502 bad_gateway message, latencyMs=11073, endedAt=2026-09-19T12:32:36.958Z",
+        "expected-output.missing-required-evidence: all four required fields (orgId, agentId, readyState, state) are absent — consistent with the agent never being created",
+        "failed-check.evidence: evidence object is empty ({}), confirming no agent data was returned",
+        "failed-check.timing: latencyMs=11199 — the check timed out waiting on the gateway, not on a downstream state-polling step",
+        "source-context.infra/evals/status/run-status-probes.mjs:1897-1905: runner calls createAgent(args, track, \"remote\", null, orgId) immediately after acquiring orgId; a gateway failure at this call would prevent all subsequent evidence collection",
+        "source-context.infra/evals/status/features.json:180-188: remote-agent-state is marked required=true; degradedAfterFailures=1 means a single failure triggers a degraded signal for the remote-agents feature"
       ],
-      "recommendedVerifierProbes": [],
-      "whatWouldDisproveThis": [],
-      "followUpEvals": [],
+      "possibleCauses": [
+        "Primary — Swarm gateway ELB in us-east-2 was down or unhealthy at the time of the eval run: all three sibling checks share the exact same error message referencing the same ELB endpoint, and the verifier context flags likelySharedDependencyFailure=true (sibling.remote-agent-create, sibling.remote-agent-runtime).",
+        "Secondary — Transient network partition or DNS resolution failure between the production-api runtime and the ELB: the ~11-second latency on all three checks is consistent with a TCP connection timeout rather than an immediate rejection, suggesting the ELB was unreachable rather than actively refusing connections.",
+        "Tertiary — ELB target group had no healthy instances (all backend swarm nodes deregistered or failing health checks): the gateway itself may have been reachable but returned 502 because it had no healthy targets to forward to.",
+        "Lower confidence — Eval runner credential or routing misconfiguration causing requests to reach the wrong or a decommissioned ELB endpoint: no history data is available (previousRunCount=0, lastPassingAt=null) to distinguish a new regression from a never-passing configuration."
+      ],
+      "reproductionSteps": [
+        {
+          "label": "Run only the remote-agent-state eval against production-api",
+          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-state npm run status:probes",
+          "details": "Use the same environment variables as the scheduled observability workflow to reproduce the 502 response."
+        },
+        {
+          "label": "Run all three remote-agents sibling checks together to confirm shared gateway failure",
+          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
+          "details": "If all three fail with the same 502 message, the swarm gateway is the shared upstream dependency."
+        },
+        {
+          "label": "Inspect the swarm gateway ELB health in us-east-2",
+          "details": "Check the AWS ELB target group health for the endpoint referenced in the error (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents) to determine whether targets were healthy at 2026-09-19T12:32."
+        },
+        {
+          "label": "Review swarm gateway service logs around 2026-09-19T12:32 UTC",
+          "details": "Look for connection errors, target deregistration events, or deployment activity on the swarm backend that services /v1/agents at the time of the eval run."
+        }
+      ],
+      "affectedAreas": [
+        {
+          "label": "Swarm gateway ELB — /v1/agents endpoint (us-east-2)",
+          "reason": "The 502 error message explicitly names the ELB URL and the /v1/agents path as the point of failure for all three failing checks (failed-check.message, sibling.remote-agent-create, sibling.remote-agent-runtime)."
+        },
+        {
+          "label": "POST /api/agents — production-api route",
+          "reason": "The production-api surface that proxies agent creation requests to the swarm gateway; all three checks fail at this call before any agent data is produced."
+        },
+        {
+          "label": "Remote Agents feature — all three checks (remote-agent-create, remote-agent-state, remote-agent-runtime)",
+          "path": "infra/evals/status/features.json",
+          "reason": "All checks under the remote-agents feature (features.json line 183-185) share the swarm gateway as a required upstream dependency; a gateway failure causes total feature check failure."
+        },
+        {
+          "label": "Eval runner — createAgent call in remote-agent-state branch",
+          "path": "infra/evals/status/run-status-probes.mjs",
+          "reason": "The runner at line 1905 calls createAgent immediately after requireOrgId; a gateway failure at this step prevents all evidence collection, explaining why all four required evidence fields are missing."
+        },
+        {
+          "label": "Expected-output contract — remote-agent-state",
+          "path": "infra/evals/status/check-expectations.json",
+          "reason": "Contract at line 262-264 requires orgId, agentId, readyState, and state; none can be populated if agent creation fails at the gateway."
+        }
+      ],
+      "recommendedNextActions": [
+        "Verify current swarm gateway ELB health in us-east-2 and confirm whether the /v1/agents endpoint is now reachable; re-run the eval suite to establish a current baseline.",
+        "Pull ELB access logs and CloudWatch metrics for the swarm gateway around 2026-09-19T12:32 UTC to determine the duration and scope of the gateway disruption.",
+        "Check swarm backend target group registration and health check status at the time of the failure to determine if the 502 was caused by zero healthy targets.",
+        "Establish eval run history for the remote-agents feature checks (previousRunCount=0, lastPassingAt=null); determine whether these checks have ever passed in this environment to rule out a persistent misconfiguration.",
+        "Review the ELB endpoint URL embedded in the eval runner configuration to confirm it matches the current active swarm gateway and has not been superseded by a newer deployment."
+      ],
+      "recommendedVerifierProbes": [
+        {
+          "label": "Re-run remote-agent-state eval to check if the gateway has recovered",
+          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-state npm run status:probes",
+          "reason": "Determines whether the 502 is ongoing or was a transient gateway disruption at 2026-09-19T12:32."
+        },
+        {
+          "label": "Run all remote-agents sibling checks to confirm shared upstream failure scope",
+          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
+          "reason": "If all three still fail with the same 502 message, the swarm gateway remains the shared point of failure; if only one fails, the diagnosis should be narrowed to that check's logic."
+        },
+        {
+          "label": "Investigate the shared swarm gateway upstream before individual check code",
+          "reason": "Sibling checks remote-agent-create and remote-agent-runtime failed with the identical message; the gateway is the earliest violated boundary and should be confirmed healthy before investigating per-check runner logic."
+        },
+        {
+          "label": "Check AWS ELB target group health for the swarm gateway in us-east-2",
+          "reason": "Confirms whether the ELB had healthy targets at the time of the failure and whether the issue was a full gateway outage or a partial target group degradation."
+        },
+        {
+          "label": "Inspect swarm gateway and production-api logs at 2026-09-19T12:32 UTC",
+          "reason": "Server-side logs would show whether the ELB received the request and whether the error originated at the load balancer, the backend swarm nodes, or the production-api proxy layer."
+        }
+      ],
+      "whatWouldDisproveThis": [
+        "A successful POST /api/agents response (2xx) from the same ELB endpoint at or near 2026-09-19T12:32 UTC would indicate the gateway was healthy and the failure was caused by something else (e.g., eval runner misconfiguration or auth failure).",
+        "ELB access logs showing no inbound requests from the eval runner at 2026-09-19T12:32 would suggest the failure occurred before the request reached the gateway (e.g., DNS resolution failure or wrong endpoint configured in the eval runner).",
+        "A passing run of remote-agent-create, remote-agent-state, or remote-agent-runtime immediately after the failure window would indicate a transient blip rather than a sustained gateway outage.",
+        "Evidence that the ELB endpoint URL in the error message is a decommissioned or incorrect address (not the current swarm gateway) would shift the diagnosis toward an eval runner misconfiguration.",
+        "No history data is available (previousRunCount=0); if prior runs are found to have been consistently failing, this would suggest a configuration problem rather than a new regression."
+      ],
+      "followUpEvals": [
+        "Add a dedicated swarm-gateway-health eval that directly probes the ELB /v1/agents endpoint with a lightweight health-check request (e.g., OPTIONS or a no-op POST) before the full agent-creation checks run, so gateway availability failures are surfaced as a distinct signal rather than being absorbed into all three remote-agents checks.",
+        "Add a gateway-reachability pre-flight check that runs before remote-agent-create, remote-agent-state, and remote-agent-runtime; if the pre-flight fails, skip the downstream checks and report a single shared-dependency failure rather than three separate failures with the same message.",
+        "Add eval history retention so that lastPassingAt and previousStatuses are populated; this would allow the verifier to distinguish a new regression from a never-passing configuration on the first observed failure."
+      ],
       "evidenceDigest": {
         "message": "POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
-        "latencyMs": 11246,
+        "latencyMs": 11199,
         "evidence": {}
-      },
-      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfBtZE6Y9Eh8TEACPXKVG\"}"
+      }
     },
     {
       "schemaVersion": 1,
       "kind": "llm-investigation",
-      "id": "public-experience:production-api:public-chat-stream:09157412da54",
-      "featureId": "public-experience",
-      "featureLabel": "Public Chat and APIs",
-      "checkId": "public-chat-stream",
-      "runtimeEnvironment": "production-api",
-      "title": "Investigator failed",
-      "status": "failed",
-      "checkStatus": "fail",
-      "featureStatus": "degraded",
-      "generatedAt": "2026-09-19T00:57:26.409Z",
-      "environment": "production",
-      "source": "github-actions",
-      "provider": "anthropic",
-      "model": "claude-sonnet-4-6",
-      "confidence": "low",
-      "summary": "The investigator model did not return a usable report.",
-      "rootCause": "Investigator execution failed before a diagnosis could be produced.",
-      "proof": [],
-      "possibleCauses": [],
-      "reproductionSteps": [],
-      "affectedAreas": [],
-      "recommendedNextActions": [
-        "Rerun the observability investigation with model/provider logs enabled."
-      ],
-      "recommendedVerifierProbes": [],
-      "whatWouldDisproveThis": [],
-      "followUpEvals": [],
-      "evidenceDigest": {
-        "message": "POST /api/public/chat/stream failed with 502: {\"error\":\"public demo agent failed to start a session\",\"code\":\"bad_gateway\",\"details\":null}",
-        "latencyMs": 561,
-        "evidence": {}
-      },
-      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfBtZH4dMGXQUiKBtg1Rv\"}"
-    },
-    {
-      "schemaVersion": 1,
-      "kind": "llm-investigation",
-      "id": "remote-agents:production-api:remote-agent-runtime:fd973b58a45c",
+      "id": "remote-agents:production-api:remote-agent-runtime:93477b12bb1b",
       "featureId": "remote-agents",
       "featureLabel": "Remote Agents",
       "checkId": "remote-agent-runtime",
       "runtimeEnvironment": "production-api",
-      "title": "Investigator failed",
-      "status": "failed",
+      "title": "Remote Agents: Swarm Gateway 502 Blocking All Agent Provisioning Evals (production-api)",
+      "status": "ready",
       "checkStatus": "fail",
       "featureStatus": "degraded",
-      "generatedAt": "2026-09-19T00:57:26.409Z",
+      "generatedAt": "2026-09-19T12:32:40.725Z",
       "environment": "production",
       "source": "github-actions",
       "provider": "anthropic",
       "model": "claude-sonnet-4-6",
-      "confidence": "low",
-      "summary": "The investigator model did not return a usable report.",
-      "rootCause": "Investigator execution failed before a diagnosis could be produced.",
-      "proof": [],
-      "possibleCauses": [],
-      "reproductionSteps": [],
-      "affectedAreas": [],
-      "recommendedNextActions": [
-        "Rerun the observability investigation with model/provider logs enabled."
+      "confidence": "high",
+      "summary": "All three remote-agents evals (remote-agent-runtime, remote-agent-create, remote-agent-state) failed at 2026-09-19T12:32 with an identical 502 bad_gateway error — \"swarm gateway unreachable during agent provisioning\" — when attempting POST /api/agents, which proxies to an AWS ELB endpoint at /v1/agents. Because the failure occurs at the very first step of agent creation, no evidence fields (orgId, agentId, model, provider, message) were ever populated, and the expected-output contract is entirely unmet.",
+      "rootCause": "The swarm gateway — the AWS ELB-backed upstream that the production-api proxies agent provisioning requests to — was unreachable at the time of the eval run. Every remote-agents check calls POST /api/agents as its first step (evidenced by run-status-probes.mjs line 1918: `createAgent(args, track, \"remote\", null, orgId)`), and all three checks received the same 502 bad_gateway response with error code \"swarm gateway unreachable during agent provisioning.\" The failure is localized to the swarm gateway / ELB upstream dependency, not to the eval runner, the expected-output contract definitions, or the production-api application layer itself. No user-traffic or incident signals are present in the evidence, so impact is scoped to this observability eval run.",
+      "proof": [
+        "failed-check.message: POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
+        "sibling.remote-agent-create: identical 502 bad_gateway message, endedAt 2026-09-19T12:32:14.686Z, latencyMs 11370",
+        "sibling.remote-agent-state: identical 502 bad_gateway message, endedAt 2026-09-19T12:32:25.885Z, latencyMs 11199",
+        "failed-check.timing: status=fail latencyMs=11073 endedAt=2026-09-19T12:32:36.958Z — all three checks completed within a ~22-second window with ~11s latency each, consistent with a connection timeout to the ELB rather than a fast rejection",
+        "expected-output.missing-required-evidence: all 5 required evidence fields (orgId, agentId, model, provider, message) are absent because agent creation never succeeded",
+        "failed-check.evidence: evidence object is empty — no partial response was captured, confirming the failure occurred before any agent provisioning response was returned",
+        "source-context.infra/evals/status/run-status-probes.mjs:1910-1918: runner calls createAgent(args, track, \"remote\", null, orgId) as the first substantive operation, meaning the 502 is the direct result of that upstream call",
+        "verifierContext.siblingCorrelation.likelySharedDependencyFailure: true — all failing sibling IDs share the same message, confirming a shared upstream dependency failure rather than per-check logic errors"
       ],
-      "recommendedVerifierProbes": [],
-      "whatWouldDisproveThis": [],
-      "followUpEvals": [],
+      "possibleCauses": [
+        "Primary: The swarm gateway ELB (us-east-2) was down, misconfigured, or had no healthy targets at the time of the eval run, causing the production-api to return 502 for all POST /api/agents requests.",
+        "Secondary: A transient network partition or DNS resolution failure between the production-api and the ELB endpoint caused the connection to fail after ~11 seconds, which is consistent with a TCP connect timeout rather than an application-level error.",
+        "Tertiary: The ELB target group had zero healthy instances (e.g., swarm worker fleet scaled to zero, crashed, or was mid-deployment) at the time of the eval run, causing the ELB itself to return 502 to the production-api.",
+        "Lower probability: A misconfigured or expired security group rule, VPC routing change, or ELB listener rule change blocked traffic from the production-api to the swarm gateway ELB specifically in us-east-2."
+      ],
+      "reproductionSteps": [
+        {
+          "label": "Re-run the remote-agent-runtime eval in isolation against production-api",
+          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-runtime npm run status:probes",
+          "details": "Use the same environment variables as the scheduled observability workflow to confirm whether the 502 persists or has resolved."
+        },
+        {
+          "label": "Re-run all three remote-agents sibling checks together to confirm shared dependency failure",
+          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
+          "details": "If all three still fail with the same 502 message, the swarm gateway ELB is still unreachable. If only one fails, the failure may have shifted to a per-check concern."
+        },
+        {
+          "label": "Inspect the swarm gateway ELB health in AWS us-east-2",
+          "details": "Check the target group health for the ELB referenced in the error URL (us-east-2). Look for zero healthy targets, recent deregistrations, or auto-scaling events around 2026-09-19T12:32Z."
+        },
+        {
+          "label": "Check production-api logs for POST /api/agents at 2026-09-19T12:32Z",
+          "details": "Confirm whether the 502 originated at the production-api-to-ELB hop or was returned by the ELB itself. Look for upstream connect errors or timeout logs."
+        }
+      ],
+      "affectedAreas": [
+        {
+          "label": "Swarm Gateway ELB (us-east-2)",
+          "reason": "The error message explicitly names the ELB endpoint (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents) as unreachable. All three remote-agents checks failed at this boundary."
+        },
+        {
+          "label": "POST /api/agents — Remote Agent Provisioning Endpoint",
+          "reason": "The production-api route POST /api/agents proxies to the swarm gateway and returned 502 for all three eval checks. This is the first call in the remote-agent eval runner branch (run-status-probes.mjs line 1918)."
+        },
+        {
+          "label": "Remote Agents feature — all three checks (remote-agent-create, remote-agent-state, remote-agent-runtime)",
+          "path": "infra/evals/status/features.json",
+          "reason": "All three checks under the remote-agents feature (lines 183-185) failed with the identical message, confirming the entire feature's eval surface is blocked by the shared swarm gateway dependency."
+        },
+        {
+          "label": "Eval runner branch for remote-agent-runtime",
+          "path": "infra/evals/status/run-status-probes.mjs",
+          "reason": "The runner branch is correctly structured but cannot proceed past agent creation while the swarm gateway is unreachable.",
+          "details": "Lines 1913-1918 show the runner calls createAgent with type 'remote' as its first step, which is the call that triggers the failing POST /api/agents."
+        }
+      ],
+      "recommendedNextActions": [
+        "Check the AWS ELB target group health for the swarm gateway (us-east-2) around 2026-09-19T12:32Z to determine if the fleet had zero healthy targets or was mid-deployment.",
+        "Review production-api upstream proxy logs for POST /api/agents at the time of the failure to confirm whether the 502 originated at the ELB hop or within the production-api itself.",
+        "Re-run all three remote-agents evals immediately to determine if the failure was transient or is ongoing.",
+        "If the failure is ongoing, escalate to the team responsible for the swarm gateway / agent provisioning infrastructure in us-east-2.",
+        "If the failure was transient, add a retry or backoff mechanism to the eval runner's createAgent call so that brief ELB blips do not cause all remote-agents checks to fail simultaneously.",
+        "Consider adding an explicit swarm-gateway-health check to the remote-agents feature registry that probes the ELB directly, so future failures can be attributed to the gateway layer without requiring all three downstream checks to fail first."
+      ],
+      "recommendedVerifierProbes": [
+        {
+          "label": "Re-run remote-agent-runtime eval to check if 502 persists",
+          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-runtime npm run status:probes",
+          "reason": "Determines whether the swarm gateway is still unreachable or if the failure was transient at 2026-09-19T12:32Z."
+        },
+        {
+          "label": "Re-run all remote-agents sibling checks together",
+          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
+          "reason": "Confirms whether the shared dependency failure pattern persists across all three checks or has resolved for some but not others."
+        },
+        {
+          "label": "Inspect AWS ELB target group health for the swarm gateway in us-east-2",
+          "reason": "Directly verifies whether the ELB had healthy targets around 2026-09-19T12:32Z. Zero healthy targets would confirm the primary cause."
+        },
+        {
+          "label": "Query production-api logs for POST /api/agents upstream errors around 2026-09-19T12:32Z",
+          "reason": "Distinguishes between a production-api proxy misconfiguration and a true ELB/swarm-worker unavailability. Look for upstream connect timeout or connection refused errors."
+        }
+      ],
+      "whatWouldDisproveThis": [
+        "If a direct POST to the production-api's /api/agents endpoint (outside the eval runner) succeeds and returns a valid agent response at the same time the eval failed, the failure would be localized to the eval runner's network path or credentials rather than the swarm gateway itself.",
+        "If the swarm gateway ELB shows healthy targets and no errors in AWS CloudWatch around 2026-09-19T12:32Z, the 502 may have originated from a misconfiguration in the production-api's proxy layer rather than the ELB being unreachable.",
+        "If only one of the three sibling checks had failed (rather than all three with the same message), the root cause would more likely be a per-check logic or configuration issue rather than a shared upstream dependency failure.",
+        "If the eval runner's access token was invalid or expired, the runner would have returned a SKIP status (as guarded at run-status-probes.mjs line 1915) rather than a 502, so an auth failure would disprove this diagnosis.",
+        "If a subsequent eval run at a different time also fails with a different error code (e.g., 401, 404), the swarm gateway reachability hypothesis would need to be revised."
+      ],
+      "followUpEvals": [
+        "Add a dedicated swarm-gateway-reachability eval that probes the ELB /v1/agents endpoint directly (e.g., with a lightweight health or ping request) so gateway-layer failures are surfaced independently of agent provisioning logic.",
+        "Add a swarm-worker-fleet-health eval that checks the ELB target group's healthy instance count in us-east-2, alerting when it drops to zero before agent provisioning evals are attempted.",
+        "Add a remote-agent-create-retry eval variant that retries the POST /api/agents call up to 2 times with a short backoff, to distinguish transient ELB blips from sustained outages.",
+        "Add a cross-region remote-agent eval (if a secondary region is available) to determine whether a 502 is region-specific or affects all swarm gateway deployments."
+      ],
       "evidenceDigest": {
         "message": "POST /api/agents failed with 502: {\"error\":\"swarm gateway unreachable during agent provisioning: error sending request for url (http://[REDACTED].elb.us-east-2.amazonaws.com/v1/agents)\",\"code\":\"bad_gateway\",\"details\":null}",
-        "latencyMs": 11085,
+        "latencyMs": 11073,
         "evidence": {}
-      },
-      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfBtZF3qTsddet24vJLWM\"}"
+      }
     },
     {
       "schemaVersion": 1,
       "kind": "llm-investigation",
-      "id": "public-website:production-api:published-observability-snapshot:71c29b8d2ed3",
+      "id": "public-website:production-api:published-observability-snapshot:9faa48ee1e5a",
       "featureId": "public-website",
       "featureLabel": "Public Website",
       "checkId": "published-observability-snapshot",
       "runtimeEnvironment": "production-api",
-      "title": "Investigator failed",
-      "status": "failed",
+      "title": "published-observability-snapshot Eval Failure: Stale GitHub Actions Snapshot (snapshotAgeMinutes=695, max=300)",
+      "status": "ready",
       "checkStatus": "fail",
       "featureStatus": "operational",
-      "generatedAt": "2026-09-19T00:57:26.409Z",
+      "generatedAt": "2026-09-19T12:32:40.725Z",
       "environment": "production",
       "source": "github-actions",
       "provider": "anthropic",
       "model": "claude-sonnet-4-6",
-      "confidence": "low",
-      "summary": "The investigator model did not return a usable report.",
-      "rootCause": "Investigator execution failed before a diagnosis could be produced.",
-      "proof": [],
-      "possibleCauses": [],
-      "reproductionSteps": [],
-      "affectedAreas": [],
-      "recommendedNextActions": [
-        "Rerun the observability investigation with model/provider logs enabled."
+      "confidence": "high",
+      "summary": "The AURA observability eval for the published-observability-snapshot check failed because the snapshot at https://cypher-asi.github.io/aura-os/observability/status.json was 695 minutes old at eval time, exceeding the contract maximum of 300 minutes. This is an eval-layer failure scoped to the freshness assertion of the published snapshot; all sibling public-website checks (public-observability-page, public-models-page, public-marketing-pages) passed, confirming the public web surface itself is reachable and this failure is isolated to the snapshot publication pipeline.",
+      "rootCause": "The GitHub Actions workflow responsible for regenerating and publishing the observability snapshot to https://cypher-asi.github.io/aura-os/observability/status.json did not run successfully within the required 300-minute window. The snapshot retrieved at eval time (2026-09-19T12:32:39.533Z) was 695 minutes old — approximately 11.6 hours stale — meaning the last successful workflow publication occurred roughly 11.6 hours before the eval ran. The eval contract at infra/evals/status/check-expectations.json line 482 asserts snapshotAgeMinutes max 300; the live evidence value of 695 directly violated this assertion. The check is marked required=false with statusImpact=informational in the feature registry (infra/evals/status/features.json line 383), so this is an eval-layer informational failure, not a user-facing outage.",
+      "proof": [
+        "failed-check.message: 'snapshotAgeMinutes expected <= 300 but got 695' — the single violated assertion that caused the eval to fail.",
+        "failed-check.evidence: snapshotAgeMinutes=695, maxAgeMinutes=300, source='github-actions', hasLiveSource=true, generatedAtPresent=true — the snapshot exists and was generated by GitHub Actions but is 395 minutes beyond the freshness threshold.",
+        "expected-output.contract: infra/evals/status/check-expectations.json line 482 asserts { path: 'snapshotAgeMinutes', max: 300 } — the contract boundary that was breached.",
+        "source.infra/evals/status/features.json:383: check config shows required=false, statusImpact=informational — confirms this is an informational eval failure, not a required check.",
+        "sibling.public-observability-page, sibling.public-models-page, sibling.public-marketing-pages: all three sibling checks passed with HTTP 200 responses — isolates the failure to the snapshot publication pipeline, not the public web surface.",
+        "source-context.infra/evals/status/run-status-probes.mjs:2168-2173: the runner fetches the snapshot via publicJsonUrl(args.publishedSnapshotUrl) and derives snapshotAgeMinutes from statusSnapshotEvidence(payload) — confirming the age is computed from the live-fetched snapshot content, not a cached eval artifact."
       ],
-      "recommendedVerifierProbes": [],
-      "whatWouldDisproveThis": [],
-      "followUpEvals": [],
+      "possibleCauses": [
+        "Most likely: The GitHub Actions workflow that publishes the observability snapshot to the GitHub Pages URL failed, was skipped, or was not triggered for approximately 11.6 hours prior to the eval run at 2026-09-19T12:32:39Z. The evidence shows source='github-actions' and hasLiveSource=true, meaning the snapshot file is reachable but its embedded timestamp is stale.",
+        "Second: The GitHub Actions workflow ran but encountered an error during the snapshot generation or GitHub Pages publish step, causing the previously published (stale) file to remain at the URL without being overwritten.",
+        "Third: A workflow schedule change, branch protection rule, or Actions quota/billing limit caused the scheduled snapshot workflow to stop firing on its normal cadence, leaving the last successfully published snapshot in place."
+      ],
+      "reproductionSteps": [
+        {
+          "label": "Re-run the failing eval in isolation against production",
+          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=published-observability-snapshot npm run status:probes",
+          "details": "Use the same environment variables as the scheduled observability workflow to reproduce the snapshotAgeMinutes assertion failure."
+        },
+        {
+          "label": "Fetch the published snapshot directly and inspect its embedded timestamp",
+          "command": "curl -s https://cypher-asi.github.io/aura-os/observability/status.json | jq '{generatedAt: .generatedAt, snapshotAge: .snapshotAgeMinutes}'",
+          "details": "Confirms whether the snapshot file at the published URL is still stale or has since been refreshed by a subsequent workflow run."
+        },
+        {
+          "label": "Check GitHub Actions workflow run history for the snapshot-publishing workflow",
+          "details": "Navigate to the Actions tab of the cypher-asi/aura-os repository and filter for the workflow responsible for publishing status.json to GitHub Pages. Identify the last successful run and compare its completion time to the eval timestamp of 2026-09-19T12:32:39Z."
+        },
+        {
+          "label": "Inspect the GitHub Pages deployment log for the observability snapshot",
+          "details": "Confirm whether the GitHub Pages deployment step succeeded or was skipped/failed in the most recent workflow runs preceding the eval failure."
+        },
+        {
+          "label": "Review the feature registry check config for threshold alignment",
+          "command": "grep -n 'staleAfterMinutes\\|maxAgeMinutes\\|snapshotAgeMinutes' infra/evals/status/features.json infra/evals/status/check-expectations.json",
+          "details": "The registry config at infra/evals/status/features.json line 383 sets staleAfterMinutes=360, while the eval contract at infra/evals/status/check-expectations.json line 482 enforces max=300. Verify whether this 60-minute discrepancy between the two thresholds is intentional."
+        }
+      ],
+      "affectedAreas": [
+        {
+          "label": "GitHub Actions snapshot publication workflow",
+          "reason": "The snapshot at the published URL is 695 minutes old, indicating the GitHub Actions workflow that regenerates and publishes status.json to GitHub Pages did not complete successfully within the 300-minute contract window."
+        },
+        {
+          "label": "Published observability snapshot endpoint",
+          "reason": "This is the URL fetched by the eval runner (infra/evals/status/run-status-probes.mjs line 2170) and the source of the stale snapshotAgeMinutes=695 value."
+        },
+        {
+          "label": "Eval check: published-observability-snapshot (public-website feature)",
+          "path": "infra/evals/status/features.json",
+          "reason": "The check is registered at line 383 as required=false, statusImpact=informational. The eval failure is scoped to this informational check only and does not affect required checks."
+        },
+        {
+          "label": "Expected-output contract: snapshotAgeMinutes assertion",
+          "path": "infra/evals/status/check-expectations.json",
+          "reason": "Line 482 defines the max=300 assertion that was violated. A secondary observation is that the registry staleAfterMinutes=360 (features.json line 383) differs from the contract max=300 (check-expectations.json line 482), which may warrant alignment review."
+        },
+        {
+          "label": "Eval runner branch for published-observability-snapshot",
+          "path": "infra/evals/status/run-status-probes.mjs",
+          "reason": "Lines 2168-2173 contain the runner logic that fetches the snapshot and derives the snapshotAgeMinutes evidence value used in the assertion."
+        }
+      ],
+      "recommendedNextActions": [
+        "Investigate the GitHub Actions workflow run history for the cypher-asi/aura-os repository to identify why the snapshot-publishing workflow did not produce a fresh status.json within the 300-minute window before 2026-09-19T12:32:39Z. Look for failed runs, skipped triggers, or quota/billing issues.",
+        "Fetch the live snapshot URL (https://cypher-asi.github.io/aura-os/observability/status.json) and check its current generatedAt timestamp to determine whether the workflow has since recovered or is still stale.",
+        "Reconcile the threshold discrepancy: the feature registry sets staleAfterMinutes=360 (infra/evals/status/features.json line 383) while the eval contract enforces snapshotAgeMinutes max=300 (infra/evals/status/check-expectations.json line 482). Align these values or document the intentional difference to avoid ambiguity.",
+        "If the workflow is confirmed broken, trigger a manual re-run of the snapshot-publishing GitHub Actions workflow to restore freshness and verify the eval passes afterward.",
+        "Add a GitHub Actions workflow health monitor or alert (e.g., a workflow_run event trigger or an external uptime check) that fires when the snapshot-publishing workflow has not completed successfully within the maxAgeMinutes window, providing earlier detection than the eval alone.",
+        "Review whether the check's statusImpact=informational classification in infra/evals/status/features.json line 383 is still appropriate given that a stale snapshot means the /observability page may be displaying outdated status data to users."
+      ],
+      "recommendedVerifierProbes": [
+        {
+          "label": "Re-run the failing eval in isolation",
+          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=published-observability-snapshot npm run status:probes",
+          "reason": "Confirms whether the snapshot is still stale or has been refreshed since the failing eval run at 2026-09-19T12:32:39Z. A passing result would indicate the workflow has since recovered."
+        },
+        {
+          "label": "Fetch the live snapshot and inspect its timestamp",
+          "command": "curl -s https://cypher-asi.github.io/aura-os/observability/status.json | jq '{generatedAt: .generatedAt}'",
+          "reason": "Directly verifies the embedded generation timestamp in the published file, confirming whether the staleness is real and how far behind the snapshot currently is."
+        },
+        {
+          "label": "Inspect GitHub Actions workflow run history for the snapshot publisher",
+          "reason": "Identifies the last successful run of the workflow that publishes status.json to GitHub Pages, and whether any runs failed or were skipped in the ~11.6 hours before the eval ran."
+        },
+        {
+          "label": "Check for threshold misalignment between staleAfterMinutes and contract max",
+          "command": "grep -n 'staleAfterMinutes\\|maxAgeMinutes\\|snapshotAgeMinutes\\|max.*300\\|max.*360' infra/evals/status/features.json infra/evals/status/check-expectations.json",
+          "reason": "The registry sets staleAfterMinutes=360 (features.json line 383) while the contract enforces max=300 (check-expectations.json line 482). Verifying whether this 60-minute gap is intentional may reveal a configuration inconsistency that causes premature eval failures even when the workflow runs on its normal cadence."
+        },
+        {
+          "label": "Inspect the statusSnapshotEvidence function for age computation logic",
+          "command": "grep -n 'statusSnapshotEvidence\\|snapshotAgeMinutes' infra/evals/status/run-status-probes.mjs",
+          "reason": "Confirms how snapshotAgeMinutes is derived from the fetched payload, ruling out clock skew or incorrect timestamp parsing as a contributing factor."
+        }
+      ],
+      "whatWouldDisproveThis": [
+        "If the GitHub Actions workflow run history shows a successful snapshot publication within 300 minutes of the eval run at 2026-09-19T12:32:39Z, the staleness would not be caused by a workflow failure and another cause (e.g., incorrect timestamp computation in statusSnapshotEvidence, clock skew, or CDN caching of an old file) would need to be investigated.",
+        "If a subsequent eval run shows snapshotAgeMinutes <= 300 without any workflow changes, it would suggest the failure was a transient scheduling gap rather than a persistent workflow breakage.",
+        "If the snapshot URL returns a 404 or non-JSON response, the root cause would shift from staleness to a publication or hosting failure rather than a missed workflow run.",
+        "If the snapshotAgeMinutes value computed by statusSnapshotEvidence is shown to be derived from a field other than the snapshot's actual generation timestamp (e.g., a cached or default value), the staleness signal would be unreliable and the diagnosis would need revision."
+      ],
+      "followUpEvals": [
+        "Add an eval that directly checks the GitHub Actions workflow last-successful-run timestamp via the GitHub API and asserts it is within maxAgeMinutes, providing a workflow-layer signal independent of the published file's embedded timestamp.",
+        "Add an eval that monitors the snapshotAgeMinutes trend across consecutive runs to detect gradual drift before the 300-minute threshold is breached.",
+        "Add an eval that asserts the staleAfterMinutes value in infra/evals/status/features.json equals the max value in the snapshotAgeMinutes assertion in infra/evals/status/check-expectations.json, catching future threshold misalignment at the config layer.",
+        "Add a regression eval that fires when snapshotAgeMinutes exceeds a warning threshold (e.g., 150 minutes, half of max) to provide earlier warning before the hard failure threshold is reached."
+      ],
       "evidenceDigest": {
-        "message": "Published observability snapshot is missing live workflow data or is stale; Expected evidence assertion failed: snapshotAgeMinutes expected <= 300 but got 742",
-        "latencyMs": 74,
+        "message": "Published observability snapshot is missing live workflow data or is stale; Expected evidence assertion failed: snapshotAgeMinutes expected <= 300 but got 695",
+        "latencyMs": 88,
         "evidence": {
           "schemaVersion": 1,
           "overall": "major_outage",
@@ -2232,14 +2903,13 @@
           "featureCount": 19,
           "totalsFeatures": 19,
           "unknownFeatureCount": 0,
-          "snapshotAgeMinutes": 742,
+          "snapshotAgeMinutes": 695,
           "hasLiveSource": true,
           "hasNonUnknownFeatureData": true,
           "snapshotUrl": "https://cypher-asi.github.io/aura-os/observability/status.json",
           "maxAgeMinutes": 300
         }
-      },
-      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CfBtZJ3uzbBqpNoeiQbPZ\"}"
+      }
     }
   ]
 }
