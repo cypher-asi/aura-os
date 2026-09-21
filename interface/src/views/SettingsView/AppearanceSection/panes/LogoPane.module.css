@@ -1,0 +1,162 @@
+/* Aura logo (desktop titlebar wordmark) pane. Ported from the pre-pane
+   AppearanceSection "Aura Logo" section — same class names, same visual
+   treatment — now scoped to its own pane module. */
+
+.logoColorRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.logoColorInput {
+  width: 36px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.logoHexInput {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family-mono, monospace);
+}
+
+.logoHexInput:focus {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.logoResetButton {
+  font-size: var(--font-size-xs);
+  padding: 2px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.logoResetButton:hover:not(:disabled) {
+  background: var(--color-overlay-light);
+  color: var(--color-text-primary);
+}
+
+.logoResetButton:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.logoPreview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+}
+
+.logoPreviewMark {
+  height: 14px;
+  aspect-ratio: 3322 / 421;
+  display: block;
+  mask-image: url('/AURA_logo_text_mark.svg');
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-image: url('/AURA_logo_text_mark.svg');
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+}
+
+/* Pulse toggle */
+.pulseToggleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pulseCheckbox {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+  accent-color: var(--color-accent);
+}
+
+.pulseLabel {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Pulse settings panel */
+.pulseSettings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+}
+
+/* Mode buttons */
+.pulseModeRow {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.pulseModeButton {
+  flex: 1;
+  font-size: var(--font-size-xs);
+  padding: 3px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.pulseModeButton:hover:not(.pulseModeButtonActive) {
+  background: var(--color-overlay-light);
+  color: var(--color-text-primary);
+}
+
+.pulseModeButtonActive {
+  background: var(--color-accent);
+  color: var(--color-on-accent, white);
+  border-color: var(--color-accent);
+}
+
+/* Speed slider */
+.pulseSpeedRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pulseSpeedSlider {
+  flex: 1;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.pulseSpeedValue {
+  min-width: 2.5rem;
+  text-align: right;
+  font-family: var(--font-family-mono, monospace);
+}
