@@ -178,5 +178,7 @@ function descriptionForKind(kind: NotificationKind): string {
       return "Repeated push failures for a project.";
     case NotificationKind.ApprovalRequired:
       return "Agent runs waiting for your permission.";
+    case NotificationKind.UserInputRequired:
+      return "Agent runs waiting for an answer.";
   }
 }

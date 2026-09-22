@@ -85,6 +85,8 @@ export const EVENT_LABELS: Record<EventType, string> = {
   [EventType.ToolUseStart]: "Tool",
   [EventType.ToolApprovalPrompt]: "Approval",
   [EventType.ToolApprovalResolved]: "Approval resolved",
+  [EventType.AgentUserInputRequested]: "Question",
+  [EventType.AgentUserInputResolved]: "Question answered",
   [EventType.GenerationStart]: "Generation",
   [EventType.GenerationProgress]: "Generation",
   [EventType.GenerationPartialImage]: "Generation",

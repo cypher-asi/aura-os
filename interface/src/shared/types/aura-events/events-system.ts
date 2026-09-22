@@ -9,6 +9,7 @@ import type {
   SubagentStatus as HarnessSubagentStatus,
 } from "../harness-protocol";
 import type { EventType } from "./event-types";
+import type { UserInputQuestion } from "../../api/streams";
 
 /**
  * Per-domain variants of `AuraEvent` covering build/test verification,
@@ -140,6 +141,18 @@ export type SystemEventVariant =
   | { type: typeof EventType.ToolUseStart; content: HarnessToolUseStart }
   | { type: typeof EventType.ToolApprovalPrompt; content: HarnessToolApprovalPrompt }
   | { type: typeof EventType.ToolApprovalResolved; content: { request_id: string } }
+  | { type: typeof EventType.AgentUserInputRequested; content: {
+      request_id: string;
+      questions: UserInputQuestion[];
+      agent_id: string;
+      project_id?: string | null;
+      agent_instance_id?: string | null;
+      session_id?: string | null;
+    } }
+  | { type: typeof EventType.AgentUserInputResolved; content: {
+      request_id: string;
+      outcome?: "answered" | "expired" | "abandoned";
+    } }
   | { type: typeof EventType.AssistantTurnProgress; content: {
       message_id?: string;
       project_id?: string;

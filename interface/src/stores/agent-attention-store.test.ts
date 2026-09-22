@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { listPendingToolApprovals, listActiveStreams } = vi.hoisted(() => ({
+const { listPendingToolApprovals, listPendingUserInputs, listActiveStreams } = vi.hoisted(() => ({
   listPendingToolApprovals: vi.fn(),
+  listPendingUserInputs: vi.fn(),
   listActiveStreams: vi.fn(),
 }));
 
 vi.mock("../shared/api/streams", () => ({
-  streamsApi: { listPendingToolApprovals, listActiveStreams },
+  streamsApi: { listPendingToolApprovals, listPendingUserInputs, listActiveStreams },
 }));
 
 import {
@@ -37,6 +38,7 @@ describe("agent-attention-store", () => {
   beforeEach(() => {
     clearAgentAttention();
     listPendingToolApprovals.mockReset();
+    listPendingUserInputs.mockReset().mockResolvedValue({ requests: [] });
     listActiveStreams.mockReset().mockResolvedValue({ streams: [] });
   });
 
@@ -80,6 +82,39 @@ describe("agent-attention-store", () => {
     expect(useAgentAttentionStore.getState().hydrated).toBe(true);
     expect(useAgentAttentionStore.getState().pendingApprovals["approval-2"]?.route)
       .toBe("/agents/agent-2?session=session-2");
+  });
+
+  it("hydrates and resolves typed input from another client", async () => {
+    listPendingToolApprovals.mockResolvedValue({ approvals: [] });
+    listPendingUserInputs.mockResolvedValue({
+      requests: [{
+        request_id: "input-1",
+        questions: [{
+          id: "strategy",
+          header: "Strategy",
+          question: "Which path should I take?",
+          options: [
+            { label: "Safe", description: "Minimize change" },
+            { label: "Fast", description: "Optimize delivery" },
+          ],
+          multi_select: false,
+        }],
+        agent_id: "agent-2",
+        project_id: "project-1",
+        agent_instance_id: "instance-2",
+        session_id: "session-2",
+        started_at_ms: 42,
+      }],
+    });
+
+    await hydrateAgentAttention();
+    expect(useAgentAttentionStore.getState().pendingInputs["input-1"]?.route)
+      .toBe("/projects/project-1/agents/instance-2?session=session-2");
+
+    applyAgentAttentionEvent(event(EventType.AgentUserInputResolved, {
+      request_id: "input-1",
+    }));
+    expect(useAgentAttentionStore.getState().pendingInputs["input-1"]).toBeUndefined();
   });
 
   it("hydrates and follows a desktop-started active run", async () => {

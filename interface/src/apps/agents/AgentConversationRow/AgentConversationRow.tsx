@@ -1,5 +1,5 @@
 import { memo, useEffect } from "react";
-import { Activity, Pin, ShieldAlert } from "lucide-react";
+import { Activity, CircleHelp, Pin, ShieldAlert } from "lucide-react";
 import { formatChatTime } from "../../../shared/utils/format";
 import { stripEmojis } from "../../../shared/utils/text-normalize";
 import type { Agent } from "../../../shared/types";
@@ -38,9 +38,9 @@ interface AgentConversationRowProps {
   loopActivity?: LoopActivityPayload | null;
   isPinned?: boolean;
   attention?: {
-    kind: "approval";
+    kind: "approval" | "input";
     count: number;
-    toolName: string;
+    label: string;
     route?: string;
   };
   activeRun?: {
@@ -75,7 +75,7 @@ function AgentConversationRowBase({
     : "";
   const fallback = agentRole || "Open this agent";
   const preview = attention
-    ? `${attention.count > 1 ? `${attention.count} approvals` : "Approval needed"} · ${attention.toolName.replaceAll("_", " ")}`
+    ? `${attention.count > 1 ? `${attention.count} requests` : attention.kind === "input" ? "Answer needed" : "Approval needed"} · ${attention.label}`
     : activeRun
       ? "Agent is working · Tap to follow"
       : showMetadataOnly
@@ -130,7 +130,11 @@ function AgentConversationRowBase({
             )}
             {attention ? (
               <span className={styles.attentionBadge}>
-                <ShieldAlert size={11} aria-hidden="true" />
+                {attention.kind === "input" ? (
+                  <CircleHelp size={11} aria-hidden="true" />
+                ) : (
+                  <ShieldAlert size={11} aria-hidden="true" />
+                )}
                 Needs you
               </span>
             ) : activeRun ? (

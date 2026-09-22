@@ -26,6 +26,11 @@
   background: color-mix(in srgb, var(--color-warning) 10%, var(--color-bg-surface));
 }
 
+.root[data-kind="input"] {
+  border-color: color-mix(in srgb, var(--color-primary) 46%, var(--color-border-subtle));
+  background: color-mix(in srgb, var(--color-primary) 13%, var(--color-bg-surface));
+}
+
 .root[data-kind="outbox"] {
   border-style: dashed;
 }
