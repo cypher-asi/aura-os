@@ -119,6 +119,10 @@ The first Aura slice now implements that boundary:
   labels the persistent agent as `Working`, and routes a tap to the exact running session. Live
   user-message and assistant-end events keep the state current; approval state takes precedence
   over running state, matching T3's operator-oriented agent-awareness hierarchy.
+- On mobile, that projection is now a compact work inbox rather than passive decoration: agents
+  that need approval rise above actively working agents, which rise above idle profiles, while a
+  summary reports how many agents need the user and how many are still working. Existing order is
+  preserved inside each tier, so the temporary activity view does not overwrite pin/recent order.
 - Chat lifecycle and approval firehose events are now stamped with the authenticated owner and
   filtered during both replay and live delivery. Legacy unscoped events retain their existing
   behavior, while new account-scoped control signals cannot appear in another user's mobile agent

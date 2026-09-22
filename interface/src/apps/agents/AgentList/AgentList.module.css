@@ -5,6 +5,41 @@
   height: 100%;
 }
 
+.activitySummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: var(--space-2) var(--space-3) var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 10px;
+  background: var(--color-overlay-subtle);
+}
+
+.activitySummaryLabel {
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.activitySummaryCounts {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.attentionCount {
+  color: var(--color-warning-text, var(--color-text-primary));
+}
+
+.workingCount {
+  color: var(--color-accent-text, var(--color-text-primary));
+}
+
 .contextMenuOverlay {
   position: fixed;
   z-index: 9999;

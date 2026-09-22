@@ -441,12 +441,38 @@ export function AgentList({ mode = "default" }: AgentListProps) {
     includePreview: true,
   });
 
+  // Mobile is an operator surface first: agents blocked on the user should
+  // never be buried below a long library, and live work should be easier to
+  // resume than idle profiles. Preserve the user's normal pinned/recent order
+  // within each tier so this remains a temporary activity projection rather
+  // than a second source of truth for library ordering.
+  const displayedAgents = useMemo(() => {
+    if (!isMobileLibrary) return filteredAgents;
+    return [...filteredAgents].sort((a, b) => {
+      const rank = (model: AgentRowModel | undefined) =>
+        model?.attention ? 0 : model?.activeRun ? 1 : 2;
+      return rank(rowModels.get(a.agent_id)) - rank(rowModels.get(b.agent_id));
+    });
+  }, [filteredAgents, isMobileLibrary, rowModels]);
+
+  const mobileActivity = useMemo(() => {
+    if (!isMobileLibrary) return null;
+    let needsYou = 0;
+    let working = 0;
+    for (const agent of displayedAgents) {
+      const model = rowModels.get(agent.agent_id);
+      if (model?.attention) needsYou += 1;
+      else if (model?.activeRun) working += 1;
+    }
+    return needsYou + working > 0 ? { needsYou, working } : null;
+  }, [displayedAgents, isMobileLibrary, rowModels]);
+
   // Map agents to the shared `LeftMenuTree`'s custom-row variant: the tree
   // owns layout, virtualization, the overlay scrollbar, and the reveal
   // cascade, while each row stays the rich `AgentConversationRow`. Built
   // fresh each render (not memoized) so rows pick up new model values; the
   // memoized row bails unless its own props changed.
-  const entries: LeftMenuEntry[] = filteredAgents.map((agent) => ({
+  const entries: LeftMenuEntry[] = displayedAgents.map((agent) => ({
     kind: "custom",
     id: agent.agent_id,
     estimatedHeight: AGENT_ROW_ESTIMATED_HEIGHT,
@@ -526,6 +552,23 @@ export function AgentList({ mode = "default" }: AgentListProps) {
         data-agent-surface="agent-list"
         data-agent-mode={mode}
       >
+        {mobileActivity ? (
+          <div className={styles.activitySummary} role="status" aria-live="polite">
+            <span className={styles.activitySummaryLabel}>Agent activity</span>
+            <span className={styles.activitySummaryCounts}>
+              {mobileActivity.needsYou > 0 ? (
+                <span className={styles.attentionCount}>
+                  {mobileActivity.needsYou} needs you
+                </span>
+              ) : null}
+              {mobileActivity.working > 0 ? (
+                <span className={styles.workingCount}>
+                  {mobileActivity.working} working
+                </span>
+              ) : null}
+            </span>
+          </div>
+        ) : null}
         <LeftMenuTree
           ariaLabel="Agents"
           entries={entries}

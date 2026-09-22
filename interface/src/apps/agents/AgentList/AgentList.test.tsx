@@ -24,6 +24,8 @@ const mocks = vi.hoisted(() => ({
   previewLastMessages: {} as Record<string, unknown>,
   attentionRoute: null as string | null,
   activeRunRoute: null as string | null,
+  attentionRoutes: {} as Record<string, string>,
+  activeRunRoutes: {} as Record<string, string>,
   useChatHistoryStore: Object.assign(
     (selector: (state: {
       entries: Record<string, unknown>;
@@ -298,16 +300,16 @@ vi.mock("./use-agent-row-models", () => ({
         loopActivity: null,
         lastMessage: mocks.previewLastMessages[`agent:${a.agent_id}`],
         isPinned: false,
-        attention: mocks.attentionRoute
+        attention: (mocks.attentionRoutes[a.agent_id] ?? mocks.attentionRoute)
           ? {
               kind: "approval",
               count: 1,
               toolName: "write_file",
-              route: mocks.attentionRoute,
+              route: mocks.attentionRoutes[a.agent_id] ?? mocks.attentionRoute ?? undefined,
             }
           : undefined,
-        activeRun: mocks.activeRunRoute
-          ? { route: mocks.activeRunRoute }
+        activeRun: (mocks.activeRunRoutes[a.agent_id] ?? mocks.activeRunRoute)
+          ? { route: mocks.activeRunRoutes[a.agent_id] ?? mocks.activeRunRoute ?? undefined }
           : undefined,
       });
     }
@@ -346,6 +348,8 @@ describe("AgentList", () => {
     mocks.previewLastMessages = {};
     mocks.attentionRoute = null;
     mocks.activeRunRoute = null;
+    mocks.attentionRoutes = {};
+    mocks.activeRunRoutes = {};
     mocks.sessionsBySurface = {};
     mocks.loadAgentSessions = vi.fn(async () => {});
     mocks.storeFetchAgents = vi.fn();
@@ -423,6 +427,32 @@ describe("AgentList", () => {
     await user.click(screen.getByRole("button", { name: "Builder Bot" }));
 
     expect(mocks.navigate).toHaveBeenCalledWith(mocks.activeRunRoute);
+  });
+
+  it("turns the mobile library into an activity-first work inbox", () => {
+    mocks.useParams.mockReturnValue({ agentId: undefined });
+    mocks.useAgents.mockReturnValue({
+      agents: [agent, secondAgent],
+      status: "ready",
+      fetchAgents: mocks.fetchAgentsMock,
+    });
+    mocks.useSortedAgents.mockReturnValue([agent, secondAgent]);
+    mocks.activeRunRoutes = {
+      "agent-1": "/agents/agent-1?session=running-session",
+    };
+    mocks.attentionRoutes = {
+      "agent-2": "/agents/agent-2?session=approval-session",
+    };
+
+    render(<AgentList mode="mobile-library" />);
+
+    expect(screen.getByText("1 needs you")).toBeInTheDocument();
+    expect(screen.getByText("1 working")).toBeInTheDocument();
+    const approvalAgent = screen.getByRole("button", { name: "Reviewer Bot" });
+    const workingAgent = screen.getByRole("button", { name: "Builder Bot" });
+    expect(
+      approvalAgent.compareDocumentPosition(workingAgent) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("does not navigate when clicking the already selected agent", async () => {
