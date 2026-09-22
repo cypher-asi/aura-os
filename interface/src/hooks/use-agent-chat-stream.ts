@@ -685,7 +685,7 @@ export function useAgentChatStream({
           if (controller.signal.aborted) return;
           if (!_generationMode && !commandAccepted) {
             updateCommandDelivery(
-              shouldReplayChatCommandError(error) ? "queued" : "failed",
+              shouldReplayChatCommandError(error) ? "retrying" : "failed",
             );
             void recordChatCommandFailure(userMsg.clientId ?? userMsg.id, error);
           }
@@ -700,7 +700,7 @@ export function useAgentChatStream({
         onDone: () => {
           if (controller.signal.aborted) return;
           if (!_generationMode && !commandAccepted) {
-            updateCommandDelivery("queued");
+            updateCommandDelivery("retrying");
             void recordChatCommandFailure(
               userMsg.clientId ?? userMsg.id,
               new Error("Agent stream ended before command acknowledgement"),
@@ -994,7 +994,7 @@ export function useAgentChatStream({
         if (err instanceof DOMException && err.name === "AbortError") return;
         if (!_generationMode && !commandAccepted) {
           updateCommandDelivery(
-            shouldReplayChatCommandError(err) ? "queued" : "failed",
+            shouldReplayChatCommandError(err) ? "retrying" : "failed",
           );
           void recordChatCommandFailure(userMsg.clientId ?? userMsg.id, err);
         }

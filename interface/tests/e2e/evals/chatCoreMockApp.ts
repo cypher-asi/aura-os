@@ -400,6 +400,9 @@ export async function installChatCoreMockApp(
     }
     if (pathname === "/api/harness/skills") return json(route, []);
     if (pathname === "/api/streams/active") return json(route, []);
+    if (pathname === "/api/streams/tool-approvals") {
+      return json(route, { approvals: [] });
+    }
 
     const projectAgentEventsPath =
       `/api/projects/${scenario.project.projectId}/agents/${scenario.agent.agentInstanceId}/events`;

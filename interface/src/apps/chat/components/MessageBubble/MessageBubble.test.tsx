@@ -453,7 +453,9 @@ describe("MessageBubble", () => {
 
   it.each([
     ["sending", "Sending…"],
+    ["retrying", "Waiting to resend"],
     ["failed", "Not sent"],
+    ["cancelled", "Canceled"],
   ] as const)("shows %s delivery state for an optimistic prompt", (status, label) => {
     render(
       <MessageBubble
@@ -467,6 +469,28 @@ describe("MessageBubble", () => {
     );
 
     expect(screen.getByRole("status")).toHaveTextContent(label);
+  });
+
+  it("offers explicit controls for a prompt waiting on transport retry", () => {
+    const onRetryPendingDelivery = vi.fn();
+    const onCancelPendingDelivery = vi.fn();
+    render(
+      <MessageBubble
+        message={{
+          id: "temp-retrying",
+          role: "user",
+          content: "hello",
+          deliveryStatus: "retrying",
+        }}
+        onRetryPendingDelivery={onRetryPendingDelivery}
+        onCancelPendingDelivery={onCancelPendingDelivery}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry now" }));
+    fireEvent.click(screen.getByRole("button", { name: "Stop retrying" }));
+    expect(onRetryPendingDelivery).toHaveBeenCalledOnce();
+    expect(onCancelPendingDelivery).toHaveBeenCalledOnce();
   });
 
   it("does not render the badge on assistant messages even when fromAgentId is somehow present", () => {

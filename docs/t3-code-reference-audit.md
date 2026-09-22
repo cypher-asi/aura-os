@@ -123,6 +123,13 @@ The first Aura slice now implements that boundary:
   that need approval rise above actively working agents, which rise above idle profiles, while a
   summary reports how many agents need the user and how many are still working. Existing order is
   preserved inside each tier, so the temporary activity view does not overwrite pin/recent order.
+- The authenticated mobile shell now keeps that awareness visible while the user is in Files,
+  Tasks, Run, or another screen. A compact banner prioritizes approval-required sessions, then
+  unconfirmed outbound prompts, then active runs, and opens the exact canonical conversation. It
+  suppresses the conversation already on screen and snapshots attention independently of a
+  successful WebSocket connection, so a cold mobile open still exposes desktop-started work. This
+  is Aura's in-app counterpart to T3's Live Activity model; OS background delivery remains a
+  separate native concern.
 - Chat lifecycle and approval firehose events are now stamped with the authenticated owner and
   filtered during both replay and live delivery. Legacy unscoped events retain their existing
   behavior, while new account-scoped control signals cannot appear in another user's mobile agent
@@ -147,11 +154,20 @@ The first Aura slice now implements that boundary:
   bounded to 50, expire after 24 hours, and are never mirrored into localStorage. Validation,
   permission, and credit failures are removed instead of surprising the user with a later send.
   Media-generation requests are intentionally outside this first outbox slice.
+- Deferred sends now have a distinct `Waiting to resend` state instead of sharing the ordinary
+  in-turn `Queued` label. Live chat bubbles expose touch-friendly `Retry now` and `Stop retrying`
+  controls; both operate only on the authenticated user's current environment-scoped outbox. A
+  manual retry makes the existing command id eligible immediately, while stopping retry removes
+  future attempts without claiming to cancel work that the server may already have accepted.
+- The mobile agent library now projects that same current-user, current-environment outbox after
+  durable IndexedDB hydration, including while offline. If the originating chat bubble is no
+  longer mounted, users can still see unconfirmed prompts, reopen the exact canonical project or
+  standalone-agent session, retry with the original command id, or remove future replay attempts.
+  A mobile browser test covers this across a full navigation away from the conversation.
 
 Next: formalize `runtimeId`/environment ownership in session metadata, move accepted command
-execution behind a durable status/worker boundary, expose user-facing outbox inspection/cancel
-controls, and add device registration plus background delivery for completion, failure, approval,
-and input-required events. Add the same durable,
+execution behind a durable status/worker boundary, and add device registration plus background
+delivery for completion, failure, approval, and input-required events. Add the same durable,
 cross-client response path for structured agent questions/input requests. T3 models these as typed
 questions (`id`, header, prompt, options, and multi-select) answered through a dedicated
 `thread.user-input.respond` command; Aura still needs the equivalent harness protocol event and

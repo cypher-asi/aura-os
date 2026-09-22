@@ -30,9 +30,12 @@ vi.mock("../api/streams", () => ({
 
 import {
   _resetChatCommandOutboxForTests,
+  cancelChatCommandReplay,
   drainChatCommandOutbox,
   enqueueChatCommand,
   recordChatCommandFailure,
+  retryChatCommandNow,
+  useChatCommandOutboxStore,
 } from "./chat-command-outbox";
 
 describe("chat command outbox", () => {
@@ -68,6 +71,9 @@ describe("chat command outbox", () => {
         content: "fix the tests",
         attempts: 0,
       }),
+    ]);
+    expect(useChatCommandOutboxStore.getState().commands).toEqual([
+      expect.objectContaining({ commandId: "cmd-1" }),
     ]);
   });
 
@@ -121,5 +127,76 @@ describe("chat command outbox", () => {
       }),
     );
     expect(mocks.stored).toEqual([]);
+  });
+
+  it("lets the user stop future retries for a deferred command", async () => {
+    await enqueueChatCommand({
+      surface: "agent",
+      commandId: "cmd-cancel",
+      agentId: "agent-1",
+      content: "wait for a better connection",
+      action: null,
+      originallyStartedNewSession: false,
+    });
+
+    await expect(cancelChatCommandReplay("cmd-cancel")).resolves.toBe(true);
+    expect(mocks.stored).toEqual([]);
+    await expect(cancelChatCommandReplay("cmd-cancel")).resolves.toBe(false);
+  });
+
+  it("makes a deferred command eligible immediately when the user retries", async () => {
+    mocks.sendAgent.mockImplementation(async (...args: unknown[]) => {
+      const handler = args[5] as { onAccepted: (receipt: unknown) => void };
+      handler.onAccepted({
+        commandId: "cmd-retry",
+        sessionId: "session-1",
+        projectId: null,
+        attachId: "attach-1",
+        replayed: true,
+      });
+    });
+    await enqueueChatCommand({
+      surface: "agent",
+      commandId: "cmd-retry",
+      agentId: "agent-1",
+      content: "try this now",
+      action: null,
+      originallyStartedNewSession: false,
+    });
+    await recordChatCommandFailure("cmd-retry", new Error("offline"));
+
+    await expect(retryChatCommandNow("cmd-retry")).resolves.toBe(true);
+
+    expect(mocks.sendAgent).toHaveBeenCalledTimes(1);
+    expect(mocks.stored).toEqual([]);
+  });
+
+  it("hydrates the current environment's pending commands while offline", async () => {
+    Object.defineProperty(navigator, "onLine", {
+      configurable: true,
+      value: false,
+    });
+    mocks.stored = [{
+      surface: "project",
+      commandId: "cmd-offline",
+      ownerId: "user-1",
+      hostOrigin: "https://environment-1.example",
+      projectId: "project-1",
+      agentInstanceId: "instance-1",
+      content: "continue later",
+      action: null,
+      originallyStartedNewSession: false,
+      createdAt: Date.now(),
+      attempts: 1,
+      nextAttemptAt: Date.now() + 10_000,
+    }];
+
+    await drainChatCommandOutbox();
+
+    expect(useChatCommandOutboxStore.getState()).toEqual(expect.objectContaining({
+      hydrated: true,
+      commands: [expect.objectContaining({ commandId: "cmd-offline" })],
+    }));
+    expect(mocks.sendProject).not.toHaveBeenCalled();
   });
 });

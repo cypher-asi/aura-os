@@ -1,3 +1,4 @@
+import { create } from "zustand";
 import type {
   AgentMentionTarget,
   ChatAttachment,
@@ -61,6 +62,17 @@ export interface AgentChatCommand extends ChatCommandBase {
 
 export type PendingChatCommand = ProjectChatCommand | AgentChatCommand;
 
+interface ChatCommandOutboxProjection {
+  /** Current authenticated user's commands for the resolved environment. */
+  commands: PendingChatCommand[];
+  hydrated: boolean;
+}
+
+export const useChatCommandOutboxStore = create<ChatCommandOutboxProjection>(() => ({
+  commands: [],
+  hydrated: false,
+}));
+
 type WithoutOutboxMetadata<T> = T extends PendingChatCommand
   ? Omit<
       T,
@@ -79,6 +91,23 @@ function currentOwnerId(): string | null {
   return getStoredSession()?.user_id ?? null;
 }
 
+function publishCurrentScope(commands: PendingChatCommand[]): void {
+  const ownerId = currentOwnerId();
+  const hostOrigin = getResolvedHostOrigin();
+  const now = Date.now();
+  useChatCommandOutboxStore.setState({
+    commands: ownerId
+      ? commands.filter(
+          (command) =>
+            command.ownerId === ownerId &&
+            command.hostOrigin === hostOrigin &&
+            now - command.createdAt < COMMAND_TTL_MS,
+        )
+      : [],
+    hydrated: true,
+  });
+}
+
 function mutateOutbox(
   mutation: (commands: PendingChatCommand[]) => PendingChatCommand[],
 ): Promise<void> {
@@ -88,11 +117,13 @@ function mutateOutbox(
         BROWSER_DB_STORES.chatCommandOutbox,
         OUTBOX_KEY,
       )) ?? [];
+    const next = mutation(stored);
     await browserDbSet(
       BROWSER_DB_STORES.chatCommandOutbox,
       OUTBOX_KEY,
-      mutation(stored),
+      next,
     );
+    publishCurrentScope(next);
   });
   mutationTail = work.catch(() => {});
   return work;
@@ -139,6 +170,54 @@ export function removeChatCommand(commandId: string): Promise<void> {
   );
   setOptimisticDeliveryStatus(commandId, undefined);
   return removal;
+}
+
+/** Stop future replay attempts for a command that has not been acknowledged. */
+export async function cancelChatCommandReplay(commandId: string): Promise<boolean> {
+  const ownerId = currentOwnerId();
+  if (!ownerId) return false;
+  const hostOrigin = getResolvedHostOrigin();
+  let removed = false;
+  await mutateOutbox((commands) =>
+    commands.filter((command) => {
+      const matches =
+        command.ownerId === ownerId &&
+        command.hostOrigin === hostOrigin &&
+        command.commandId === commandId;
+      removed ||= matches;
+      return !matches;
+    }),
+  );
+  if (removed) setOptimisticDeliveryStatus(commandId, "cancelled");
+  return removed;
+}
+
+/** Make a deferred command eligible immediately and drain its scoped outbox. */
+export async function retryChatCommandNow(commandId: string): Promise<boolean> {
+  const ownerId = currentOwnerId();
+  if (!ownerId) return false;
+  const hostOrigin = getResolvedHostOrigin();
+  let found = false;
+  await mutateOutbox((commands) =>
+    commands.map((command) => {
+      if (
+        command.ownerId !== ownerId ||
+        command.hostOrigin !== hostOrigin ||
+        command.commandId !== commandId
+      ) {
+        return command;
+      }
+      found = true;
+      return { ...command, nextAttemptAt: Date.now() };
+    }),
+  );
+  if (!found) return false;
+  setOptimisticDeliveryStatus(commandId, "retrying");
+  // A drain may already hold an older snapshot that skipped this command.
+  // Running again after it settles guarantees the newly eligible row is seen.
+  await drainChatCommandOutbox();
+  await drainChatCommandOutbox();
+  return true;
 }
 
 export function shouldReplayChatCommandError(error: unknown): boolean {
@@ -195,14 +274,14 @@ export async function recordChatCommandFailure(
   );
   setOptimisticDeliveryStatus(
     commandId,
-    retainedForReplay ? "queued" : "failed",
+    retainedForReplay ? "retrying" : "failed",
   );
   if (retainedForReplay) scheduleReplay(nextDelay + 50);
 }
 
 function setOptimisticDeliveryStatus(
   commandId: string,
-  status: "queued" | "failed" | undefined,
+  status: "sending" | "retrying" | "failed" | "cancelled" | undefined,
 ): void {
   useStreamStore.setState((state) => {
     let changed = false;
@@ -226,6 +305,7 @@ function setOptimisticDeliveryStatus(
 }
 
 async function replayCommand(command: PendingChatCommand): Promise<void> {
+  setOptimisticDeliveryStatus(command.commandId, "sending");
   await new Promise<void>((resolve) => {
     let settled = false;
     const controller = new AbortController();
@@ -303,15 +383,16 @@ export function drainChatCommandOutbox(): Promise<void> {
   if (drainPromise) return drainPromise;
   drainPromise = (async () => {
     await mutationTail;
-    const ownerId = currentOwnerId();
-    const hostOrigin = getResolvedHostOrigin();
-    if (!ownerId || (typeof navigator !== "undefined" && !navigator.onLine)) return;
-    const now = Date.now();
     const commands =
       (await browserDbGet<PendingChatCommand[]>(
         BROWSER_DB_STORES.chatCommandOutbox,
         OUTBOX_KEY,
       )) ?? [];
+    publishCurrentScope(commands);
+    const ownerId = currentOwnerId();
+    const hostOrigin = getResolvedHostOrigin();
+    if (!ownerId || (typeof navigator !== "undefined" && !navigator.onLine)) return;
+    const now = Date.now();
     for (const command of commands) {
       if (currentOwnerId() !== ownerId) break;
       if (command.ownerId !== ownerId || command.hostOrigin !== hostOrigin) continue;
@@ -353,4 +434,5 @@ export function _resetChatCommandOutboxForTests(): void {
   mutationTail = Promise.resolve();
   if (retryTimer !== null) clearTimeout(retryTimer);
   retryTimer = null;
+  useChatCommandOutboxStore.setState({ commands: [], hydrated: false });
 }

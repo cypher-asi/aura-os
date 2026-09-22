@@ -26,6 +26,39 @@ test("mobile navigation keeps all five tabs visible and exposes Process and Stat
   await expect(menu).toHaveCount(0);
 });
 
+test("mobile keeps agent attention visible outside the conversation", async ({ page }) => {
+  await page.route("**/api/streams/tool-approvals", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        approvals: [{
+          request_id: "approval-mobile-1",
+          tool_name: "run_command",
+          agent_id: "agent-1",
+          project_id: "proj-1",
+          agent_instance_id: "agent-inst-1",
+          session_id: "session-mobile-1",
+          started_at_ms: 10,
+        }],
+      }),
+    });
+  });
+  await page.route("**/api/streams/active", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: "{\"streams\":[]}" });
+  });
+
+  await page.goto("/projects/proj-1/files");
+  const activity = page.getByRole("button", {
+    name: "1 approval waiting. Open waiting approval",
+  });
+  await expect(activity).toBeInViewport();
+  await activity.tap();
+  await expect(page).toHaveURL(
+    /\/projects\/proj-1\/agents\/agent-inst-1\?session=session-mobile-1$/,
+  );
+});
+
 test.describe("tablet reporting a desktop user agent", () => {
   test.use({ viewport: { width: 1024, height: 768 }, hasTouch: true, isMobile: false,
     userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15" });
@@ -156,17 +189,10 @@ test("native mobile creates a hosted web agent without provisioning a remote VM"
     const pathname = new URL(route.request().url()).pathname;
     if (pathname.endsWith("/events/stream") && route.request().method() === "POST") {
       promptPayload = route.request().postDataJSON() as Record<string, unknown>;
-      const commandId = String(promptPayload.client_command_id ?? "");
       await route.fulfill({
-        status: 200,
-        contentType: "text/event-stream",
-        headers: {
-          "x-aura-chat-persisted": "true",
-          "x-aura-chat-command-id": commandId,
-          "x-aura-chat-session-id": "session-mobile-hosted",
-          "x-aura-chat-project-id": "proj-1",
-        },
-        body: "event: done\ndata: {}\n\n",
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "temporary connection failure" }),
       });
       return;
     }
@@ -202,6 +228,27 @@ test("native mobile creates a hosted web agent without provisioning a remote VM"
     content: "Reply with Android hosted runtime ready",
     client_command_id: expect.any(String),
   });
+
+  // The same environment-owned agent remains useful on a lossy mobile
+  // connection: an unacknowledged send stays explicit and controllable.
+  const deferredStatus = page.getByRole("status").filter({ hasText: "Waiting to resend" });
+  await expect(deferredStatus).toBeVisible();
+  const retryNow = page.getByRole("button", { name: "Retry now" });
+  const stopRetrying = page.getByRole("button", { name: "Stop retrying" });
+  await expect(retryNow).toBeInViewport();
+  await expect(stopRetrying).toBeInViewport();
+
+  // Leave the conversation entirely. The command must remain inspectable
+  // from the mobile agent library even though its optimistic bubble unmounted.
+  await page.goto("/agents");
+  const pendingSends = page.getByRole("region", { name: "Unconfirmed agent sends" });
+  await expect(pendingSends).toContainText("1 message waiting");
+  const removePending = pendingSends.getByRole("button", {
+    name: "Stop retrying: Reply with Android hosted runtime ready",
+  });
+  await expect(removePending).toBeInViewport();
+  await removePending.tap();
+  await expect(pendingSends).toHaveCount(0);
 
   await page.goto("/projects/proj-1/agents/create");
   const hostedButton = page.getByRole("button", { name: "Hosted", exact: true });
