@@ -216,7 +216,7 @@ pub(super) async fn persist_user_prompt(
     images: Option<&[String]>,
 ) {
     let attachments = data_urls_to_attachments(images);
-    match persist_user_message(ctx, prompt, &attachments).await {
+    match persist_user_message(ctx, prompt, &attachments, None).await {
         Ok(evt) => {
             publish_user_message_event(&state.event_broadcast, ctx, evt.id.as_str());
             info!(

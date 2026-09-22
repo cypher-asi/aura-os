@@ -62,3 +62,4 @@ pub(super) const SESSION_FETCH_BATCH: usize = 4;
 pub(crate) const HEADER_CHAT_PERSISTED: &str = "x-aura-chat-persisted";
 pub(crate) const HEADER_CHAT_SESSION_ID: &str = "x-aura-chat-session-id";
 pub(crate) const HEADER_CHAT_PROJECT_ID: &str = "x-aura-chat-project-id";
+pub(crate) const HEADER_CHAT_COMMAND_ID: &str = "x-aura-chat-command-id";

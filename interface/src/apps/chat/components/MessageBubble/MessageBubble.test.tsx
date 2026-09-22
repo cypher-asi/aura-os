@@ -451,6 +451,24 @@ describe("MessageBubble", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Queued");
   });
 
+  it.each([
+    ["sending", "Sending…"],
+    ["failed", "Not sent"],
+  ] as const)("shows %s delivery state for an optimistic prompt", (status, label) => {
+    render(
+      <MessageBubble
+        message={{
+          id: `temp-${status}`,
+          role: "user",
+          content: "hello",
+          deliveryStatus: status,
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent(label);
+  });
+
   it("does not render the badge on assistant messages even when fromAgentId is somehow present", () => {
     // Defensive pin: the field semantics restrict it to user
     // rows, but we double-gate on `role === "user"` in the

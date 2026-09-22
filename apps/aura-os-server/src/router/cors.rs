@@ -1,5 +1,5 @@
-use axum::http::HeaderValue;
-use tower_http::cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer};
+use axum::http::{HeaderName, HeaderValue};
+use tower_http::cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer, ExposeHeaders};
 
 const LOCAL_CORS_HOSTS: &[&str] = &["localhost", "127.0.0.1"];
 
@@ -50,4 +50,10 @@ pub fn build_local_api_cors_layer() -> CorsLayer {
         .allow_credentials(true)
         .allow_methods(AllowMethods::mirror_request())
         .allow_headers(AllowHeaders::mirror_request())
+        .expose_headers(ExposeHeaders::list([
+            HeaderName::from_static("x-aura-chat-persisted"),
+            HeaderName::from_static("x-aura-chat-session-id"),
+            HeaderName::from_static("x-aura-chat-project-id"),
+            HeaderName::from_static("x-aura-chat-command-id"),
+        ]))
 }

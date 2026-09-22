@@ -70,3 +70,19 @@ export function buildUserChatMessage(
     contentBlocks: buildContentBlocks(trimmed, attachments),
   };
 }
+
+export function updateUserMessageDeliveryStatus(
+  events: DisplaySessionEvent[],
+  clientId: string,
+  deliveryStatus: DisplaySessionEvent["deliveryStatus"],
+): DisplaySessionEvent[] {
+  return events.map((event) => {
+    if (event.clientId !== clientId) return event;
+    if (deliveryStatus === undefined) {
+      const updated = { ...event };
+      delete updated.deliveryStatus;
+      return updated;
+    }
+    return { ...event, deliveryStatus };
+  });
+}

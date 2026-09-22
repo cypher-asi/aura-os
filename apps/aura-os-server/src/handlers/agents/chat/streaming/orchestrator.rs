@@ -44,6 +44,7 @@ pub(in super::super) struct OpenChatStreamArgs {
     pub(in super::super) harness_mode: HarnessMode,
     pub(in super::super) session_config: SessionConfig,
     pub(in super::super) user_content: String,
+    pub(in super::super) client_command_id: Option<String>,
     pub(in super::super) requested_model: Option<String>,
     pub(in super::super) persist_ctx: Option<ChatPersistCtx>,
     pub(in super::super) attachments: Option<Vec<ChatAttachmentDto>>,
@@ -85,6 +86,7 @@ pub(in super::super) async fn open_harness_chat_stream(
         harness_mode,
         mut session_config,
         user_content,
+        client_command_id,
         requested_model,
         persist_ctx,
         attachments,
@@ -138,9 +140,15 @@ pub(in super::super) async fn open_harness_chat_stream(
     // storage rejects the write we must not charge the caller credits
     // for a turn that would never make it into the target agent's chat
     // history, and we must not leave an orphaned harness turn mid-flight.
-    let persisted_user_evt = persist_user_message(&ctx, &user_content, &attachments)
-        .await
-        .map_err(|e| crate::error::map_chat_persist_storage_error(e, err_ctx.clone()))?;
+    let client_command_id = normalize_client_command_id(client_command_id)?;
+    let persisted_user_evt = persist_user_message(
+        &ctx,
+        &user_content,
+        &attachments,
+        client_command_id.as_deref(),
+    )
+    .await
+    .map_err(|e| crate::error::map_chat_persist_storage_error(e, err_ctx.clone()))?;
 
     // Snapshot the persistence identifiers so we can advertise them in
     // SSE response headers for callers (e.g. the CEO's `send_to_agent`)
@@ -387,9 +395,40 @@ pub(in super::super) async fn open_harness_chat_stream(
     let boxed: SseStream = Box::pin(stream);
 
     Ok((
-        sse_response_headers(persist_snapshot.as_ref()),
+        sse_response_headers(persist_snapshot.as_ref(), client_command_id.as_deref()),
         Sse::new(boxed).keep_alive(KeepAlive::default()),
     ))
+}
+
+fn normalize_client_command_id(value: Option<String>) -> ApiResult<Option<String>> {
+    let Some(value) = value else {
+        return Ok(None);
+    };
+    let value = value.trim();
+    if value.is_empty() {
+        return Ok(None);
+    }
+    if value.len() > 128 || !value.is_ascii() || value.bytes().any(|byte| byte.is_ascii_control()) {
+        return Err(ApiError::bad_request(
+            "client_command_id must be at most 128 visible ASCII characters",
+        ));
+    }
+    Ok(Some(value.to_string()))
+}
+
+#[cfg(test)]
+mod command_id_tests {
+    use super::normalize_client_command_id;
+
+    #[test]
+    fn command_id_is_trimmed_and_bounded() {
+        assert_eq!(
+            normalize_client_command_id(Some("  mobile-123  ".to_string())).unwrap(),
+            Some("mobile-123".to_string())
+        );
+        assert!(normalize_client_command_id(Some("x".repeat(129))).is_err());
+        assert!(normalize_client_command_id(Some("bad\nvalue".to_string())).is_err());
+    }
 }
 
 fn require_persist_ctx(

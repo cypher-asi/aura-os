@@ -83,7 +83,7 @@ export interface DisplaySessionEvent {
    * messages live in the transcript immediately, before their turn is
    * dispatched to the stream transport.
    */
-  deliveryStatus?: "queued";
+  deliveryStatus?: "queued" | "sending" | "failed";
   role: "user" | "assistant" | "system";
   content: string;
   displayVariant?:

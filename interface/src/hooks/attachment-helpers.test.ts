@@ -2,6 +2,7 @@ import {
   buildContentBlocks,
   buildAttachmentLabel,
   buildUserChatMessage,
+  updateUserMessageDeliveryStatus,
 } from "./attachment-helpers";
 
 describe("buildContentBlocks", () => {
@@ -164,5 +165,30 @@ describe("buildUserChatMessage", () => {
     const msg = buildUserChatMessage("queued", undefined, undefined, "q-123");
     expect(msg.id).toBe("q-123");
     expect(msg.clientId).toBe("q-123");
+  });
+});
+
+describe("updateUserMessageDeliveryStatus", () => {
+  it("updates only the matching optimistic user message", () => {
+    const events = [
+      buildUserChatMessage("first", undefined, undefined, "command-1"),
+      buildUserChatMessage("second", undefined, undefined, "command-2"),
+    ];
+
+    const updated = updateUserMessageDeliveryStatus(events, "command-2", "failed");
+
+    expect(updated[0].deliveryStatus).toBeUndefined();
+    expect(updated[1].deliveryStatus).toBe("failed");
+  });
+
+  it("clears the transient state once the command is accepted", () => {
+    const event = {
+      ...buildUserChatMessage("hello", undefined, undefined, "command-1"),
+      deliveryStatus: "sending" as const,
+    };
+
+    const [updated] = updateUserMessageDeliveryStatus([event], "command-1", undefined);
+
+    expect(updated.deliveryStatus).toBeUndefined();
   });
 });

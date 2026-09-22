@@ -204,6 +204,48 @@ describe("useAgentChatStream", () => {
     expect(entry.events[0].content).toBe("hello");
   });
 
+  it("clears sending state only after the server accepts the command", async () => {
+    vi.mocked(api.agents.sendEventStream).mockImplementation(
+      async (_id, _content, _action, _model, _attachments, handler) => {
+        handler?.onAccepted?.({
+          commandId: "command-agent-1",
+          sessionId: "session-1",
+          projectId: "project-1",
+        });
+      },
+    );
+    const { result } = renderHook(() => useAgentChatStream({ agentId: "agent-1" }));
+
+    await act(async () => {
+      await result.current.sendMessage(
+        "hello",
+        null,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        "command-agent-1",
+      );
+    });
+
+    const event = useStreamStore.getState().entries[result.current.streamKey].events[0];
+    expect(event.deliveryStatus).toBeUndefined();
+  });
+
+  it("marks a command not sent when no acceptance receipt arrives", async () => {
+    const { result } = renderHook(() => useAgentChatStream({ agentId: "agent-1" }));
+
+    await act(async () => {
+      await result.current.sendMessage("hello");
+    });
+
+    const event = useStreamStore.getState().entries[result.current.streamKey].events[0];
+    expect(event.deliveryStatus).toBe("failed");
+  });
+
   it("promotes a queued prompt without changing its transcript identity", async () => {
     const { result } = renderHook(() =>
       useAgentChatStream({ agentId: "agent-1" }),
@@ -1150,6 +1192,7 @@ describe("useAgentChatStream", () => {
       undefined,
       undefined,
       undefined,
+      expect.any(String),
     );
     expect(api.agents.sendEventStream).toHaveBeenNthCalledWith(
       2,
@@ -1167,6 +1210,7 @@ describe("useAgentChatStream", () => {
       undefined,
       undefined,
       undefined,
+      expect.any(String),
     );
   });
 
@@ -1364,6 +1408,7 @@ describe("useAgentChatStream", () => {
       undefined,
       undefined,
       undefined,
+      expect.any(String),
     );
   });
 
@@ -1414,6 +1459,7 @@ describe("useAgentChatStream", () => {
       undefined,
       undefined,
       undefined,
+      expect.any(String),
     );
   });
 
@@ -1453,6 +1499,7 @@ describe("useAgentChatStream", () => {
       undefined,
       undefined,
       undefined,
+      expect.any(String),
     );
   });
 });
