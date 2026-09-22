@@ -59,6 +59,71 @@ test("mobile keeps agent attention visible outside the conversation", async ({ p
   );
 });
 
+test("mobile answers a question raised by a desktop-started agent", async ({ page }) => {
+  let pending = true;
+  let submittedAnswers: Record<string, unknown> | null = null;
+  await page.route("**/api/streams/user-input", async (route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        requests: pending ? [{
+          request_id: "input-mobile-1",
+          agent_id: "agent-1",
+          project_id: "proj-1",
+          agent_instance_id: "agent-inst-1",
+          session_id: "session-mobile-1",
+          started_at_ms: 10,
+          questions: [{
+            id: "release_scope",
+            header: "Release scope",
+            question: "Should I include the API changes?",
+            options: [
+              { label: "Include API", description: "Ship both client and server changes" },
+              { label: "Client only", description: "Limit this run to the interface" },
+            ],
+            multi_select: false,
+          }],
+        }] : [],
+      }),
+    });
+  });
+  await page.route("**/api/streams/user-input/input-mobile-1/respond", async (route) => {
+    submittedAnswers = route.request().postDataJSON() as Record<string, unknown>;
+    pending = false;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ accepted: true }),
+    });
+  });
+  await page.route("**/api/streams/tool-approvals", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: "{\"approvals\":[]}" });
+  });
+  await page.route("**/api/streams/active", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: "{\"streams\":[]}" });
+  });
+
+  await page.goto("/projects/proj-1/files");
+  const activity = page.getByRole("button", {
+    name: "1 answer needed. Open agent question",
+  });
+  await expect(activity).toBeInViewport();
+  await activity.tap();
+  await expect(page).toHaveURL(
+    /\/projects\/proj-1\/agents\/agent-inst-1\?session=session-mobile-1$/,
+  );
+
+  await expect(page.getByRole("region", { name: "Agent question" })).toBeInViewport();
+  await page.getByRole("radio", { name: /Include API/ }).tap();
+  await page.getByRole("button", { name: "Continue agent" }).tap();
+  await expect.poll(() => submittedAnswers).toEqual({
+    answers: { release_scope: "Include API" },
+  });
+  await expect(page.getByRole("region", { name: "Agent question" })).toHaveCount(0);
+});
+
 test.describe("tablet reporting a desktop user agent", () => {
   test.use({ viewport: { width: 1024, height: 768 }, hasTouch: true, isMobile: false,
     userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15" });

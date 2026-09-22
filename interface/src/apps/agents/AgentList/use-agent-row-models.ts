@@ -30,9 +30,9 @@ export interface AgentRowModel {
   lastMessage?: DisplaySessionEvent;
   isPinned: boolean;
   attention?: {
-    kind: "approval";
+    kind: "approval" | "input";
     count: number;
-    toolName: string;
+    label: string;
     route?: string;
   };
   activeRun?: {
@@ -87,6 +87,7 @@ export function useAgentRowModels(
   const streamingAgentInstanceIds = useSidekickStore((s) => s.streamingAgentInstanceIds);
   const instanceIdsByTemplateId = useProjectsListStore((s) => s.instanceIdsByTemplateId);
   const pendingApprovals = useAgentAttentionStore((s) => s.pendingApprovals);
+  const pendingInputs = useAgentAttentionStore((s) => s.pendingInputs);
   const activeRuns = useAgentAttentionStore((s) => s.activeRuns);
 
   // One pass over the (small) live-loop map groups rows by template agent id so
@@ -117,7 +118,7 @@ export function useAgentRowModels(
         result.set(item.agentId, {
           kind: "approval",
           count: 1,
-          toolName: item.toolName,
+          label: item.toolName.replaceAll("_", " "),
           route: item.route,
           startedAt: item.startedAt,
         });
@@ -125,13 +126,35 @@ export function useAgentRowModels(
       }
       existing.count += 1;
       if (item.startedAt > existing.startedAt) {
-        existing.toolName = item.toolName;
+        existing.label = item.toolName.replaceAll("_", " ");
+        existing.route = item.route;
+        existing.startedAt = item.startedAt;
+      }
+    }
+    for (const item of Object.values(pendingInputs)) {
+      if (!item) continue;
+      const label = item.questions[0]?.header || "Agent question";
+      const existing = result.get(item.agentId);
+      if (!existing) {
+        result.set(item.agentId, {
+          kind: "input",
+          count: 1,
+          label,
+          route: item.route,
+          startedAt: item.startedAt,
+        });
+        continue;
+      }
+      existing.count += 1;
+      if (existing.kind !== "input" || item.startedAt > existing.startedAt) {
+        existing.kind = "input";
+        existing.label = label;
         existing.route = item.route;
         existing.startedAt = item.startedAt;
       }
     }
     return result;
-  }, [pendingApprovals]);
+  }, [pendingApprovals, pendingInputs]);
 
   const activeRunByAgentId = useMemo(() => {
     const result = new Map<string, { route?: string; startedAt: number }>();

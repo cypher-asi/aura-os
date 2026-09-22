@@ -1,6 +1,11 @@
 import { create } from "zustand";
 
-import { streamsApi, type PendingToolApprovalSummary } from "../shared/api/streams";
+import {
+  streamsApi,
+  type PendingToolApprovalSummary,
+  type PendingUserInputSummary,
+  type UserInputQuestion,
+} from "../shared/api/streams";
 import { buildAgentSessionRoute } from "../shared/lib/agent-session-route";
 import { EventType, type AuraEvent } from "../shared/types/aura-events";
 
@@ -25,16 +30,32 @@ export interface AgentActiveRunItem {
   startedAt: number;
 }
 
+export interface AgentUserInputItem {
+  kind: "input";
+  requestId: string;
+  questions: UserInputQuestion[];
+  agentId: string;
+  projectId?: string;
+  agentInstanceId?: string;
+  sessionId?: string;
+  route?: string;
+  startedAt: number;
+}
+
 interface AgentAttentionState {
   pendingApprovals: Record<string, AgentAttentionItem | undefined>;
+  pendingInputs: Record<string, AgentUserInputItem | undefined>;
   activeRuns: Record<string, AgentActiveRunItem | undefined>;
   hydrated: boolean;
   replace: (
     approvals: AgentAttentionItem[],
+    inputs: AgentUserInputItem[],
     activeRuns: AgentActiveRunItem[],
   ) => void;
   upsert: (item: AgentAttentionItem) => void;
   resolve: (requestId: string) => void;
+  upsertInput: (item: AgentUserInputItem) => void;
+  resolveInput: (requestId: string) => void;
   startRun: (key: string, item: AgentActiveRunItem) => void;
   finishRun: (key: string) => void;
   clear: () => void;
@@ -44,18 +65,22 @@ let hydratePromise: Promise<void> | null = null;
 let liveMutationVersion = 0;
 let resetEpoch = 0;
 const resolvedRequestIds = new Set<string>();
+const resolvedInputRequestIds = new Set<string>();
 const finishedRunVersions = new Map<string, number>();
 
 export const useAgentAttentionStore = create<AgentAttentionState>()((set) => ({
   pendingApprovals: {},
+  pendingInputs: {},
   activeRuns: {},
   hydrated: false,
-  replace: (items, runs) => {
+  replace: (items, inputs, runs) => {
     const pendingApprovals: Record<string, AgentAttentionItem> = {};
     for (const item of items) pendingApprovals[item.requestId] = item;
+    const pendingInputs: Record<string, AgentUserInputItem> = {};
+    for (const item of inputs) pendingInputs[item.requestId] = item;
     const activeRuns: Record<string, AgentActiveRunItem> = {};
     for (const item of runs) activeRuns[runKey(item)] = item;
-    set({ pendingApprovals, activeRuns, hydrated: true });
+    set({ pendingApprovals, pendingInputs, activeRuns, hydrated: true });
   },
   upsert: (item) => {
     liveMutationVersion += 1;
@@ -72,6 +97,23 @@ export const useAgentAttentionStore = create<AgentAttentionState>()((set) => ({
       const pendingApprovals = { ...state.pendingApprovals };
       delete pendingApprovals[requestId];
       return { pendingApprovals };
+    });
+  },
+  upsertInput: (item) => {
+    liveMutationVersion += 1;
+    resolvedInputRequestIds.delete(item.requestId);
+    set((state) => ({
+      pendingInputs: { ...state.pendingInputs, [item.requestId]: item },
+    }));
+  },
+  resolveInput: (requestId) => {
+    liveMutationVersion += 1;
+    resolvedInputRequestIds.add(requestId);
+    set((state) => {
+      if (!(requestId in state.pendingInputs)) return state;
+      const pendingInputs = { ...state.pendingInputs };
+      delete pendingInputs[requestId];
+      return { pendingInputs };
     });
   },
   startRun: (key, item) => {
@@ -94,8 +136,9 @@ export const useAgentAttentionStore = create<AgentAttentionState>()((set) => ({
     resetEpoch += 1;
     hydratePromise = null;
     resolvedRequestIds.clear();
+    resolvedInputRequestIds.clear();
     finishedRunVersions.clear();
-    set({ pendingApprovals: {}, activeRuns: {}, hydrated: false });
+    set({ pendingApprovals: {}, pendingInputs: {}, activeRuns: {}, hydrated: false });
   },
 }));
 
@@ -116,6 +159,26 @@ function fromSummary(summary: PendingToolApprovalSummary): AgentAttentionItem | 
     kind: "approval",
     requestId,
     toolName,
+    agentId,
+    projectId,
+    agentInstanceId,
+    sessionId,
+    route: buildAgentSessionRoute({ projectId, agentInstanceId, agentId, sessionId }),
+    startedAt: summary.started_at_ms,
+  };
+}
+
+function inputFromSummary(summary: PendingUserInputSummary): AgentUserInputItem | null {
+  const requestId = clean(summary.request_id);
+  const agentId = clean(summary.agent_id);
+  if (!requestId || !agentId || summary.questions.length === 0) return null;
+  const projectId = clean(summary.project_id);
+  const agentInstanceId = clean(summary.agent_instance_id);
+  const sessionId = clean(summary.session_id);
+  return {
+    kind: "input",
+    requestId,
+    questions: summary.questions,
     agentId,
     projectId,
     agentInstanceId,
@@ -164,15 +227,20 @@ export function hydrateAgentAttention(): Promise<void> {
   const startedAtVersion = liveMutationVersion;
   const startedAtResetEpoch = resetEpoch;
   const hydration = Promise.all([
-    streamsApi.listPendingToolApprovals(),
-    streamsApi.listActiveStreams(),
+    streamsApi.listPendingToolApprovals().catch(() => ({ approvals: [] })),
+    streamsApi.listPendingUserInputs().catch(() => ({ requests: [] })),
+    streamsApi.listActiveStreams().catch(() => ({ streams: [] })),
   ])
-    .then(([{ approvals }, { streams }]) => {
+    .then(([{ approvals }, { requests }, { streams }]) => {
       if (startedAtResetEpoch !== resetEpoch) return;
       const fetched = approvals
         .map(fromSummary)
         .filter((item): item is AgentAttentionItem => item !== null)
         .filter((item) => !resolvedRequestIds.has(item.requestId));
+      const fetchedInputs = requests
+        .map(inputFromSummary)
+        .filter((item): item is AgentUserInputItem => item !== null)
+        .filter((item) => !resolvedInputRequestIds.has(item.requestId));
       const fetchedRuns = streams.flatMap((stream) => {
         if (stream.kind !== "chat_turn") return [];
         const agentId = clean(stream.scope.agent_id);
@@ -197,7 +265,7 @@ export function hydrateAgentAttention(): Promise<void> {
         return finishVersion > startedAtVersion ? [] : [item];
       });
       if (startedAtVersion === liveMutationVersion) {
-        useAgentAttentionStore.getState().replace(fetched, fetchedRuns);
+        useAgentAttentionStore.getState().replace(fetched, fetchedInputs, fetchedRuns);
         return;
       }
       const current = useAgentAttentionStore.getState().pendingApprovals;
@@ -207,6 +275,14 @@ export function hydrateAgentAttention(): Promise<void> {
         if (item && !resolvedRequestIds.has(item.requestId)) merged.set(item.requestId, item);
       }
       const currentRuns = useAgentAttentionStore.getState().activeRuns;
+      const currentInputs = useAgentAttentionStore.getState().pendingInputs;
+      const mergedInputs = new Map<string, AgentUserInputItem>();
+      for (const item of fetchedInputs) mergedInputs.set(item.requestId, item);
+      for (const item of Object.values(currentInputs)) {
+        if (item && !resolvedInputRequestIds.has(item.requestId)) {
+          mergedInputs.set(item.requestId, item);
+        }
+      }
       const mergedRuns = new Map<string, AgentActiveRunItem>();
       for (const item of fetchedRuns) mergedRuns.set(runKey(item), item);
       for (const item of Object.values(currentRuns)) {
@@ -215,9 +291,8 @@ export function hydrateAgentAttention(): Promise<void> {
       }
       useAgentAttentionStore
         .getState()
-        .replace([...merged.values()], [...mergedRuns.values()]);
-    })
-    .catch(() => {});
+        .replace([...merged.values()], [...mergedInputs.values()], [...mergedRuns.values()]);
+    });
   const trackedHydration = hydration.finally(() => {
     if (hydratePromise === trackedHydration) hydratePromise = null;
   });
@@ -239,6 +314,32 @@ export function applyAgentAttentionEvent(event: AuraEvent): void {
   }
   if (event.type === EventType.ToolApprovalResolved) {
     useAgentAttentionStore.getState().resolve(event.content.request_id);
+    return;
+  }
+  if (event.type === EventType.AgentUserInputResolved) {
+    useAgentAttentionStore.getState().resolveInput(event.content.request_id);
+    return;
+  }
+  if (event.type === EventType.AgentUserInputRequested) {
+    const requestId = clean(event.content.request_id);
+    const agentId = clean(event.agent_id || event.content.agent_id);
+    if (!requestId || !agentId || event.content.questions.length === 0) return;
+    const projectId = clean(event.project_id || event.content.project_id);
+    const agentInstanceId = clean(
+      event.project_agent_id || event.content.agent_instance_id,
+    );
+    const sessionId = clean(event.session_id || event.content.session_id);
+    useAgentAttentionStore.getState().upsertInput({
+      kind: "input",
+      requestId,
+      questions: event.content.questions,
+      agentId,
+      projectId,
+      agentInstanceId,
+      sessionId,
+      route: buildAgentSessionRoute({ projectId, agentInstanceId, agentId, sessionId }),
+      startedAt: Date.parse(event.created_at) || Date.now(),
+    });
     return;
   }
   if (event.type !== EventType.ToolApprovalPrompt) return;

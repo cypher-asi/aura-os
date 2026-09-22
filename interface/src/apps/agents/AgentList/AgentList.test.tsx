@@ -304,7 +304,7 @@ vi.mock("./use-agent-row-models", () => ({
           ? {
               kind: "approval",
               count: 1,
-              toolName: "write_file",
+              label: "write file",
               route: mocks.attentionRoutes[a.agent_id] ?? mocks.attentionRoute ?? undefined,
             }
           : undefined,

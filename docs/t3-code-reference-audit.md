@@ -110,6 +110,19 @@ The first Aura slice now implements that boundary:
   session identity. In-app/native notifications deep-link to the exact waiting conversation, and
   approval notifications have their own default-on preference. The live-stream registry remains
   the source of truth for the pending command; the notification is only a routing signal.
+- Aura now contributes an authenticated `request_user_input` tool to every agent session. The
+  environment-owned Harness turn blocks on that tool while the Aura server registers one to three
+  typed questions (`id`, short header, prompt, two or three options, and optional multi-select).
+  Any authenticated client on the same account can discover the pending request from a cold-start
+  snapshot, receive live requested/resolved deltas, and answer by opaque request id. Responses are
+  shape-validated, account-scoped, and idempotent; the original tool call resumes with the answer
+  map without moving execution into the client or cloud relay.
+- Project and standalone chats render the same touch-friendly question card, including a custom
+  answer path. Mobile raises these questions above approvals and generic running state, deep-links
+  into the exact canonical session from the global activity banner, and exposes a default-on
+  high-priority notification category. The registry and blocked HTTP tool call are currently
+  environment-memory-owned, so an Aura server restart can still abandon a waiting question; this
+  is not yet a durable runtime command worker.
 - The agent library now has its own authenticated, reconnectable attention projection. It hydrates
   unresolved protected-tool requests from the environment-owned streams, applies live prompt and
   resolution deltas, labels the affected persistent agent as `Needs you`, and opens the exact
@@ -124,8 +137,9 @@ The first Aura slice now implements that boundary:
   summary reports how many agents need the user and how many are still working. Existing order is
   preserved inside each tier, so the temporary activity view does not overwrite pin/recent order.
 - The authenticated mobile shell now keeps that awareness visible while the user is in Files,
-  Tasks, Run, or another screen. A compact banner prioritizes approval-required sessions, then
-  unconfirmed outbound prompts, then active runs, and opens the exact canonical conversation. It
+  Tasks, Run, or another screen. A compact banner prioritizes input-required sessions, then
+  approval-required sessions, unconfirmed outbound prompts, and active runs, and opens the exact
+  canonical conversation. It
   suppresses the conversation already on screen and snapshots attention independently of a
   successful WebSocket connection, so a cold mobile open still exposes desktop-started work. This
   is Aura's in-app counterpart to T3's Live Activity model; OS background delivery remains a
@@ -167,12 +181,10 @@ The first Aura slice now implements that boundary:
 
 Next: formalize `runtimeId`/environment ownership in session metadata, move accepted command
 execution behind a durable status/worker boundary, and add device registration plus background
-delivery for completion, failure, approval, and input-required events. Add the same durable,
-cross-client response path for structured agent questions/input requests. T3 models these as typed
-questions (`id`, header, prompt, options, and multi-select) answered through a dedicated
-`thread.user-input.respond` command; Aura still needs the equivalent harness protocol event and
-response command before its UI can honestly expose that feature. Do not make the cloud relay an
-execution proxy or present an unacknowledged prompt as accepted work.
+delivery for completion, failure, approval, and input-required events. Persist accepted commands
+and pending question waits so a server restart can reconstruct status or explicitly fail the
+original environment-owned turn instead of relying on an in-memory channel. Do not make the cloud
+relay an execution proxy or present an unacknowledged prompt as accepted work.
 
 ### P0 — finish the safety foundation
 

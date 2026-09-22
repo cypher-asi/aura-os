@@ -72,6 +72,27 @@ export function classifyNotification(event: AuraEvent): AuraNotification | null 
         route: buildAgentSessionRoute({ projectId, agentInstanceId, agentId, sessionId }),
       };
     }
+    case EventType.AgentUserInputRequested: {
+      const projectId = event.project_id || event.content.project_id || undefined;
+      const agentId = event.agent_id || event.content.agent_id || undefined;
+      const agentInstanceId =
+        event.project_agent_id ?? event.content.agent_instance_id ?? undefined;
+      const sessionId = event.session_id || event.content.session_id || undefined;
+      const question = event.content.questions[0];
+      return {
+        id: `user_input:${event.content.request_id}`,
+        kind: NotificationKind.UserInputRequired,
+        priority: 1,
+        title: "Agent needs your answer",
+        body: question?.question || "Answer a question before the agent can continue.",
+        createdAt: Date.parse(event.created_at) || Date.now(),
+        projectId,
+        agentId,
+        agentInstanceId,
+        sessionId,
+        route: buildAgentSessionRoute({ projectId, agentInstanceId, agentId, sessionId }),
+      };
+    }
     default:
       return null;
   }

@@ -37,6 +37,7 @@ import { getPartitionSendControl } from "../../../hooks/use-chat-stream/partitio
 import { recordStreamCloseReason } from "../../../shared/observability/stream-breadcrumbs";
 import { AsideModal } from "./AsideModal";
 import { ToolApprovalPromptCard } from "./ToolApprovalPromptCard";
+import { UserInputPromptCard } from "./UserInputPromptCard";
 import { useErrorReportAgentInfo } from "../../../hooks/use-error-report-agent-info";
 import type { AgentMentionTarget, ChatAttachment } from "../../../api/streams";
 import type { AgentInstance, Project } from "../../../shared/types";
@@ -898,6 +899,8 @@ export function ChatSurface({
           onStop={onStop}
           onRetry={handleRetryLastSend}
         />
+
+        <UserInputPromptCard />
 
         <ToolApprovalPromptCard streamKey={streamKey} />
 

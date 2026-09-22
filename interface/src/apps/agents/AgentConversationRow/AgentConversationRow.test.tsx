@@ -199,7 +199,7 @@ describe("AgentConversationRow", () => {
         attention={{
           kind: "approval",
           count: 1,
-          toolName: "write_file",
+          label: "write file",
           route: "/agents/agent-1?session=session-1",
         }}
         activeRun={{ route: "/agents/agent-1?session=session-1" }}

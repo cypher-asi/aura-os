@@ -285,6 +285,8 @@ const IMMEDIATE_ENGINE_EVENTS = new Set<EventType>([
   EventType.LoopEnded,
   EventType.ToolApprovalPrompt,
   EventType.ToolApprovalResolved,
+  EventType.AgentUserInputRequested,
+  EventType.AgentUserInputResolved,
 ]);
 
 function canScheduleEngineEventFrame(): boolean {

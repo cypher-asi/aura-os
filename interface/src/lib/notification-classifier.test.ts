@@ -129,6 +129,32 @@ describe("classifyNotification", () => {
     });
   });
 
+  it("routes typed agent questions back to the exact waiting conversation", () => {
+    const notification = classifyNotification({
+      ...baseEvent(EventType.AgentUserInputRequested, {
+        request_id: "input-1",
+        agent_id: "agent-1",
+        questions: [{
+          id: "scope",
+          header: "Scope",
+          question: "Should I update the API too?",
+          options: [],
+          multi_select: false,
+        }],
+      }),
+      project_agent_id: "instance-1",
+    });
+
+    expect(notification).toMatchObject({
+      id: "user_input:input-1",
+      kind: NotificationKind.UserInputRequired,
+      priority: 1,
+      title: "Agent needs your answer",
+      body: "Should I update the API too?",
+      route: "/projects/project-1/agents/instance-1?session=session-1",
+    });
+  });
+
   it("returns null for non-notification events", () => {
     expect(
       classifyNotification(

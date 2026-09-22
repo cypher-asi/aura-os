@@ -78,6 +78,48 @@ describe("MobileAgentActivityBanner", () => {
     );
   });
 
+  it("prioritizes a typed question over other agent activity", async () => {
+    useAgentAttentionStore.setState({
+      pendingInputs: {
+        question: {
+          kind: "input",
+          requestId: "question",
+          questions: [{
+            id: "scope",
+            header: "Scope",
+            question: "Which scope?",
+            options: [],
+            multi_select: false,
+          }],
+          agentId: "agent-1",
+          projectId: "proj-1",
+          agentInstanceId: "instance-1",
+          sessionId: "session-1",
+          route: "/projects/proj-1/agents/instance-1?session=session-1",
+          startedAt: 10,
+        },
+      },
+      activeRuns: {
+        duplicate: {
+          agentId: "agent-1",
+          route: "/projects/proj-1/agents/instance-1?session=session-1",
+          startedAt: 10,
+        },
+      },
+      hydrated: true,
+    });
+
+    renderBanner();
+    const banner = screen.getByRole("button", {
+      name: "1 answer needed. Open agent question",
+    });
+    expect(banner).toHaveAttribute("data-kind", "input");
+    await userEvent.setup().click(banner);
+    expect(screen.getByLabelText("Current route")).toHaveTextContent(
+      "/projects/proj-1/agents/instance-1?session=session-1",
+    );
+  });
+
   it("opens a deferred standalone-agent message when no approval is waiting", async () => {
     useChatCommandOutboxStore.setState({
       commands: [{
