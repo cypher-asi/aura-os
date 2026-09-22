@@ -56,6 +56,15 @@ fn map_gateway_status(status: u16) -> (axum::http::StatusCode, Json<ApiError>) {
         403 => ApiError::forbidden("remote workspace access denied"),
         404 => ApiError::not_found("remote agent or workspace path not found"),
         400 => ApiError::bad_request("remote workspace rejected the path"),
+        413 => (
+            axum::http::StatusCode::PAYLOAD_TOO_LARGE,
+            Json(ApiError {
+                error: "remote workspace file exceeds the read limit".to_string(),
+                code: "payload_too_large".to_string(),
+                details: None,
+                data: None,
+            }),
+        ),
         503 => ApiError::service_unavailable("remote agent workspace is unavailable"),
         _ => ApiError::bad_gateway(format!("swarm gateway returned {status}")),
     }
@@ -272,6 +281,7 @@ mod tests {
             (400, axum::http::StatusCode::BAD_REQUEST),
             (403, axum::http::StatusCode::FORBIDDEN),
             (404, axum::http::StatusCode::NOT_FOUND),
+            (413, axum::http::StatusCode::PAYLOAD_TOO_LARGE),
             (503, axum::http::StatusCode::SERVICE_UNAVAILABLE),
         ] {
             assert_eq!(map_gateway_status(upstream).0, expected);

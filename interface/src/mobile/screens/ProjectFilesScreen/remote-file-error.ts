@@ -11,6 +11,8 @@ export function getRemoteFileErrorDescription(error?: unknown): string {
         return "Access to this workspace file was denied.";
       case 404:
         return "This file or remote agent is no longer available. Refresh the workspace and try again.";
+      case 413:
+        return "This file is too large for mobile preview. Open it in the connected workspace instead.";
       case 502:
       case 503:
       case 504:

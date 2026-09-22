@@ -11,6 +11,7 @@ describe("remote file error copy", () => {
     expect(getRemoteFileErrorDescription(apiError(401))).toContain("Sign in again");
     expect(getRemoteFileErrorDescription(apiError(403))).toContain("denied");
     expect(getRemoteFileErrorDescription(apiError(404))).toContain("Refresh the workspace");
+    expect(getRemoteFileErrorDescription(apiError(413))).toContain("too large");
     expect(getRemoteFileErrorDescription(apiError(503))).toContain("workspace is offline");
     expect(getRemoteFileErrorDescription(apiError(503))).not.toContain("sensitive upstream path");
   });
