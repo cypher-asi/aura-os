@@ -12,6 +12,11 @@ import { useTerminalTarget } from "../../../hooks/use-terminal-target";
 import type { HostedWorkspaceTarget } from "../../../shared/api/hosted-workspace";
 import { useChatUIStore } from "../../../stores/chat-ui-store";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
+import {
+  findMostRecentRealSessionForInstance,
+  projectSessionsSurfaceKey,
+  useSessionsListStore,
+} from "../../../stores/sessions-list-store";
 import styles from "./ProjectFilesScreen.module.css";
 
 interface ProjectFilesContentProps {
@@ -26,6 +31,7 @@ interface ProjectFilesContentProps {
   sourceControlAgentInstanceId?: string;
   conversationAgentId?: string;
   conversationSessionId?: string;
+  conversationContextReady: boolean;
 }
 
 export function MobileProjectFilesScreen() {
@@ -48,6 +54,40 @@ export function MobileProjectFilesScreen() {
   const project = useProjectsListStore((state) => (
     projectId ? state.projects.find((candidate) => candidate.project_id === projectId) ?? null : null
   ));
+  const sourceControlAgentInstanceId = localAgentInstanceId ?? remoteAgentInstanceId;
+  const explicitConversationSessionId = routeSearchParams.get("session") ?? undefined;
+  const sessionsSurfaceKey = projectId ? projectSessionsSurfaceKey(projectId) : null;
+  const projectSessions = useSessionsListStore((state) => (
+    sessionsSurfaceKey ? state.sessionsBySurface[sessionsSurfaceKey] : undefined
+  ));
+  const sessionsLoading = useSessionsListStore((state) => (
+    sessionsSurfaceKey ? state.loadingBySurface[sessionsSurfaceKey] === true : false
+  ));
+  const loadProjectSessions = useSessionsListStore((state) => state.loadProjectSessions);
+  const inferredConversationSessionId = useMemo(() => (
+    findMostRecentRealSessionForInstance(projectSessions, sourceControlAgentInstanceId)?.session_id
+  ), [projectSessions, sourceControlAgentInstanceId]);
+
+  useEffect(() => {
+    if (
+      !projectId ||
+      !sourceControlAgentInstanceId ||
+      explicitConversationSessionId ||
+      projectSessions !== undefined ||
+      sessionsLoading
+    ) {
+      return;
+    }
+    void loadProjectSessions(projectId, project?.name ?? "Project");
+  }, [
+    explicitConversationSessionId,
+    loadProjectSessions,
+    project?.name,
+    projectId,
+    projectSessions,
+    sessionsLoading,
+    sourceControlAgentInstanceId,
+  ]);
 
   if (!projectId) return null;
 
@@ -65,9 +105,10 @@ export function MobileProjectFilesScreen() {
       workspaceSourceLabel={hostedWorkspace ? "Project workspace" : "Remote workspace"}
       workspaceDisplay={remoteWorkspacePath ?? workspacePath ?? null}
       projectName={project?.name ?? "Project"}
-      sourceControlAgentInstanceId={localAgentInstanceId ?? remoteAgentInstanceId}
+      sourceControlAgentInstanceId={sourceControlAgentInstanceId}
       conversationAgentId={routeSearchParams.get("agent") ?? remoteAgentId}
-      conversationSessionId={routeSearchParams.get("session") ?? undefined}
+      conversationSessionId={explicitConversationSessionId ?? inferredConversationSessionId}
+      conversationContextReady={Boolean(explicitConversationSessionId) || projectSessions !== undefined}
     />
   );
 }
@@ -84,6 +125,7 @@ function MobileProjectFilesContent({
   sourceControlAgentInstanceId,
   conversationAgentId,
   conversationSessionId,
+  conversationContextReady,
 }: ProjectFilesContentProps) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
@@ -93,7 +135,7 @@ function MobileProjectFilesContent({
   const canBrowseWorkspace = Boolean(hostedWorkspace) || (Boolean(rootPath) && Boolean(remoteAgentId));
 
   const openAgentDraft = useCallback((prompt: string) => {
-    if (!sourceControlAgentInstanceId) return;
+    if (!sourceControlAgentInstanceId || !conversationContextReady) return;
     const streamKey = keyForProjectSession(
       projectId,
       sourceControlAgentInstanceId,
@@ -125,6 +167,7 @@ function MobileProjectFilesContent({
     );
   }, [
     conversationAgentId,
+    conversationContextReady,
     conversationSessionId,
     navigate,
     projectId,
@@ -242,6 +285,7 @@ function MobileProjectFilesContent({
             `Please help me with \`${filePath}\` in this workspace. Inspect the file and related code before recommending or making changes.`,
           );
         }}
+        askAgentDisabled={!conversationContextReady}
       />
     );
   }
@@ -277,7 +321,12 @@ function MobileProjectFilesContent({
         <>
           {sourceControlAgentInstanceId ? (
             <div className={styles.agentHandoffBar}>
-              <Button variant="secondary" size="sm" onClick={discussChanges}>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={!conversationContextReady}
+                onClick={discussChanges}
+              >
                 <MessageSquare size={14} aria-hidden="true" />
                 Ask agent to review changes
               </Button>
@@ -323,6 +372,7 @@ function MobileRemoteFilePreview({
   workspaceDisplay,
   onBack,
   onAskAgent,
+  askAgentDisabled,
 }: {
   filePath: string;
   remoteAgentId?: string;
@@ -330,6 +380,7 @@ function MobileRemoteFilePreview({
   workspaceDisplay: string | null;
   onBack: () => void;
   onAskAgent: (filePath: string) => void;
+  askAgentDisabled: boolean;
 }) {
   const [refreshKey, setRefreshKey] = useState(0);
   return (
@@ -342,11 +393,12 @@ function MobileRemoteFilePreview({
       onBack={onBack}
       onRefresh={() => setRefreshKey((current) => current + 1)}
       onAskAgent={onAskAgent}
+      askAgentDisabled={askAgentDisabled}
     />
   );
 }
 
-function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, hostedWorkspace, workspaceDisplay, onBack, onRefresh, onAskAgent }: {
+function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, hostedWorkspace, workspaceDisplay, onBack, onRefresh, onAskAgent, askAgentDisabled }: {
   filePath: string;
   remoteAgentId?: string;
   hostedWorkspace?: HostedWorkspaceTarget;
@@ -354,6 +406,7 @@ function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, hostedWorkspa
   onBack: () => void;
   onRefresh: () => void;
   onAskAgent: (filePath: string) => void;
+  askAgentDisabled: boolean;
 }) {
   const hostedProjectId = hostedWorkspace?.projectId;
   const hostedAgentInstanceId = hostedWorkspace?.agentInstanceId;
@@ -428,7 +481,12 @@ function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, hostedWorkspa
           <Text size="sm" weight="medium">{fileName}</Text>
           <Text size="xs" variant="muted">{workspaceDisplay ?? filePath}</Text>
         </div>
-        <Button variant="secondary" size="sm" onClick={() => onAskAgent(filePath)}>
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={askAgentDisabled}
+          onClick={() => onAskAgent(filePath)}
+        >
           <MessageSquare size={14} aria-hidden="true" />
           Ask agent about this file
         </Button>
