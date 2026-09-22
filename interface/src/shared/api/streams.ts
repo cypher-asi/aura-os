@@ -30,6 +30,8 @@ export interface ActiveStreamSummary {
   latest_seq: number;
   terminated: boolean;
   started_at_ms: number;
+  /** Content-free environment status suitable for shell/mobile surfaces. */
+  activity?: string | null;
 }
 
 export interface ActiveStreamsResponse {

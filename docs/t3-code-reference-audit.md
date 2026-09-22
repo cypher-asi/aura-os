@@ -138,7 +138,9 @@ The first Aura slice now implements that boundary:
 - The same projection now discovers active desktop/web chat turns without mounting each chat,
   labels the persistent agent as `Working`, and routes a tap to the exact running session. Live
   user-message and assistant-end events keep the state current; approval state takes precedence
-  over running state, matching T3's operator-oriented agent-awareness hierarchy.
+  over running state, matching T3's operator-oriented agent-awareness hierarchy. Cold-start
+  snapshots explicitly exclude terminal streams retained for replay, so the registry's short
+  reconnect TTL cannot resurrect finished desktop work as a false mobile `Working` state.
 - On mobile, that projection is now a compact work inbox rather than passive decoration: agents
   that need approval rise above actively working agents, which rise above idle profiles, while a
   summary reports how many agents need the user and how many are still working. Existing order is
@@ -157,6 +159,13 @@ The first Aura slice now implements that boundary:
   so stopping work opened from desktop does not cancel a sibling conversation running in parallel
   on the same agent. Older clients without a session pin retain the conservative partition-wide
   cancellation fallback.
+- Active-stream snapshots now carry a deliberately redacted activity label derived inside the
+  environment (`Thinking`, `Inspecting code`, `Editing code`, `Running a command`, and similar),
+  never model text, command text, file paths, tool arguments, or unknown private tool names. While
+  mobile is foregrounded it refreshes only the active-run projection every ten seconds and on
+  foreground return, so the shell can show useful desktop-run progress without holding the stream
+  open or polling approvals and questions. This is Aura's content-safe counterpart to T3's
+  per-thread Live Activity updates.
 - Android now has the corresponding OS-background delivery path. The native client requests
   notification permission only when its Firebase resources are present, registers its FCM token
   against the authenticated Aura account, and resynchronizes the enabled notification categories

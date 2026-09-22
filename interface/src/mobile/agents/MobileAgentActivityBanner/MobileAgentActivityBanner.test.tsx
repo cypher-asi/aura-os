@@ -229,4 +229,28 @@ describe("MobileAgentActivityBanner", () => {
 
     expect(api.agents.cancelTurn).toHaveBeenCalledWith("agent-1", "session-2");
   });
+
+  it("shows redacted environment activity without exposing stream content", () => {
+    useAgentAttentionStore.setState({
+      pendingApprovals: {},
+      activeRuns: {
+        "agent-1:project-1:instance-1:session-1": {
+          agentId: "agent-1",
+          projectId: "project-1",
+          agentInstanceId: "instance-1",
+          sessionId: "session-1",
+          route: "/projects/project-1/agents/instance-1?session=session-1",
+          startedAt: 10,
+          activity: "Inspecting code",
+        },
+      },
+      hydrated: true,
+    });
+
+    renderBanner();
+
+    expect(screen.getByRole("button", {
+      name: "1 agent working · Inspecting code. Open active agent",
+    })).toBeInTheDocument();
+  });
 });

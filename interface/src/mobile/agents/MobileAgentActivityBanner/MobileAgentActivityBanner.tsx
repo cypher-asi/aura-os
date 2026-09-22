@@ -10,6 +10,7 @@ import {
 import {
   hydrateAgentAttention,
   markAgentRunStopped,
+  refreshAgentRunActivity,
   type AgentActiveRunItem,
   useAgentAttentionStore,
 } from "../../../stores/agent-attention-store";
@@ -18,6 +19,8 @@ import {
   type PendingChatCommand,
 } from "../../../stores/chat-command-outbox";
 import styles from "./MobileAgentActivityBanner.module.css";
+
+const ACTIVE_RUN_REFRESH_MS = 10_000;
 
 function commandRoute(command: PendingChatCommand): string | undefined {
   return command.surface === "project"
@@ -54,6 +57,24 @@ export function MobileAgentActivityBanner() {
     if (!attentionHydrated) void hydrateAgentAttention();
   }, [attentionHydrated]);
 
+  const activeRunCount = Object.values(activeRuns).filter(Boolean).length;
+  useEffect(() => {
+    if (activeRunCount === 0) return;
+    const refresh = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      void refreshAgentRunActivity().catch(() => {});
+    };
+    const interval = window.setInterval(refresh, ACTIVE_RUN_REFRESH_MS);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [activeRunCount]);
+
   const model = useMemo(() => {
     const approvals = Object.values(pendingApprovals)
       .filter((item) => item && !isAgentSessionRouteCurrent(item.route, currentUrl))
@@ -82,11 +103,13 @@ export function MobileAgentActivityBanner() {
     const approvalCount = approvals.length;
     const waitingCount = waitingCommands.length;
     const runCount = runs.length;
+    const currentActivity = runs[0]?.activity;
     const labels = [
       countLabel(inputCount, "answer needed", "answers needed"),
       countLabel(approvalCount, "approval waiting", "approvals waiting"),
       countLabel(waitingCount, "message waiting to send", "messages waiting to send"),
       countLabel(runCount, "agent working", "agents working"),
+      currentActivity ?? null,
     ].filter((label): label is string => label !== null);
 
     if (labels.length === 0) return null;
