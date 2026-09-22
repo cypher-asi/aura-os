@@ -149,8 +149,22 @@ The first Aura slice now implements that boundary:
   canonical conversation. It
   suppresses the conversation already on screen and snapshots attention independently of a
   successful WebSocket connection, so a cold mobile open still exposes desktop-started work. This
-  is Aura's in-app counterpart to T3's Live Activity model; OS background delivery remains a
-  separate native concern.
+  is Aura's in-app counterpart to T3's Live Activity model.
+- Android now has the corresponding OS-background delivery path. The native client requests
+  notification permission only when its Firebase resources are present, registers its FCM token
+  against the authenticated Aura account, and resynchronizes the enabled notification categories
+  when preferences change. Aura OS stores device registrations account-scoped and delivers task
+  completion/failure/retry, terminal loop, push-stuck, approval-required, and user-input-required
+  events through FCM. Tap payloads contain only an internal canonical route and are validated before
+  navigation. Release Firebase client/server credentials remain deployment configuration, and real
+  warm/cold delivery still needs production-device verification; missing credentials fail closed
+  without blocking app boot.
+- Native mobile now remembers the last authenticated Aura shell route with the full canonical
+  agent/project-instance/session query, scoped to the signed-in user. On a generic bundled-app cold
+  launch it restores that validated internal route before React Router mounts; explicit launch and
+  notification routes still win, while login, public, malformed, external, and oversized routes
+  are never stored. This closes normal Android process-recreation continuity without treating the
+  route cache as execution state or conversation truth.
 - Chat lifecycle and approval firehose events are now stamped with the authenticated owner and
   filtered during both replay and live delivery. Legacy unscoped events retain their existing
   behavior, while new account-scoped control signals cannot appear in another user's mobile agent
