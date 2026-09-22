@@ -44,6 +44,7 @@ import { purgeLegacyChatHistoryFallback } from "./shared/lib/browser-db";
 import { bootstrapTaskStreamSubscriptions } from "./stores/task-stream-bootstrap";
 import { bootstrapProcessStreamSubscriptions } from "./stores/process-stream-bootstrap";
 import { bootstrapChatHistoryInvalidator } from "./stores/chat-history-invalidator-bootstrap";
+import { bootstrapChatCommandOutbox } from "./stores/chat-command-outbox";
 import { isLoggedInSync } from "./shared/lib/auth-token";
 import { useAuthStore } from "./stores/auth-store";
 import { initAnalytics, track } from "./lib/analytics";
@@ -104,6 +105,11 @@ function bootstrapAuthedSubscriptions(): void {
   // `assistant_message_end`, so the next `fetchHistory` re-hits the
   // server. See `stores/chat-history-invalidator-bootstrap.ts`.
   bootstrapChatHistoryInvalidator();
+  // Mobile WebViews can suspend between POSTing a prompt and receiving the
+  // server's persistence receipt. Replay the durable command outbox on boot,
+  // connectivity restoration, and foreground; the server deduplicates by the
+  // original client command id before invoking the agent.
+  bootstrapChatCommandOutbox();
 }
 
 if (isLoggedInSync()) {

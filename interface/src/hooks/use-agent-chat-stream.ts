@@ -83,6 +83,12 @@ import {
   clearPendingToolApproval,
   setPendingToolApproval,
 } from "../stores/tool-approval-store";
+import {
+  enqueueChatCommand,
+  recordChatCommandFailure,
+  removeChatCommand,
+  shouldReplayChatCommandError,
+} from "../stores/chat-command-outbox";
 
 /**
  * Auto-retry budget for transient stream drops on the standalone-agent
@@ -677,7 +683,12 @@ export function useAgentChatStream({
         },
         onError: (error) => {
           if (controller.signal.aborted) return;
-          if (!_generationMode && !commandAccepted) updateCommandDelivery("failed");
+          if (!_generationMode && !commandAccepted) {
+            updateCommandDelivery(
+              shouldReplayChatCommandError(error) ? "queued" : "failed",
+            );
+            void recordChatCommandFailure(userMsg.clientId ?? userMsg.id, error);
+          }
           inFlightRef.current = false;
           // Transport-level drops (SSE idle timeout, WS close) recover
           // the same way as an in-band `Error` frame.
@@ -688,12 +699,29 @@ export function useAgentChatStream({
         },
         onDone: () => {
           if (controller.signal.aborted) return;
+          if (!_generationMode && !commandAccepted) {
+            updateCommandDelivery("queued");
+            void recordChatCommandFailure(
+              userMsg.clientId ?? userMsg.id,
+              new Error("Agent stream ended before command acknowledgement"),
+            );
+          }
           inFlightRef.current = false;
           finalizeStream(refs, partitionSetters, partitionAbortRef, false, { breadcrumbContext });
         },
         onAccepted: (receipt) => {
           if (receipt.commandId !== (userMsg.clientId ?? userMsg.id)) return;
+          if (
+            receipt.sessionId &&
+            receipt.sessionId !== lastNotifiedSessionIdRef.current
+          ) {
+            lastNotifiedSessionIdRef.current = receipt.sessionId;
+            migrateToSession(receipt.sessionId);
+            onSessionReadyRef.current?.(receipt.sessionId);
+            useSessionsListStore.getState().bumpVersion();
+          }
           commandAccepted = true;
+          void removeChatCommand(receipt.commandId);
           updateCommandDelivery(undefined);
         },
       };
@@ -929,6 +957,22 @@ export function useAgentChatStream({
             },
           };
         })();
+        const commandId = userMsg.clientId ?? userMsg.id;
+        await enqueueChatCommand({
+          surface: "agent",
+          commandId,
+          agentId,
+          projectId,
+          content: userMsg.content,
+          action,
+          model: modelForTurn,
+          attachments,
+          commands,
+          sessionId: shouldStartNewSession ? null : sessionIdRef.current,
+          council,
+          mixture,
+          originallyStartedNewSession: shouldStartNewSession,
+        });
         await api.agents.sendEventStream(
           agentId,
           userMsg.content,
@@ -944,11 +988,16 @@ export function useAgentChatStream({
           undefined,
           council,
           mixture,
-          userMsg.clientId ?? userMsg.id,
+          commandId,
         );
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
-        if (!_generationMode && !commandAccepted) updateCommandDelivery("failed");
+        if (!_generationMode && !commandAccepted) {
+          updateCommandDelivery(
+            shouldReplayChatCommandError(err) ? "queued" : "failed",
+          );
+          void recordChatCommandFailure(userMsg.clientId ?? userMsg.id, err);
+        }
         handleStreamError(refs, partitionSetters, err, breadcrumbContext);
       } finally {
         // `inFlightRef` is gated by the same "still my turn" sentinel
@@ -961,7 +1010,6 @@ export function useAgentChatStream({
         // otherwise clobber that new latch even though `abortRef`
         // has moved on.
         if (partitionAbortRef.current === controller) {
-          if (!_generationMode && !commandAccepted) updateCommandDelivery("failed");
           partitionSetters.setIsStreaming(false);
           controller.abort();
           partitionAbortRef.current = null;
