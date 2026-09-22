@@ -22,6 +22,8 @@ import {
 } from "../../../stores/sessions-list-store";
 import styles from "./ProjectFilesScreen.module.css";
 
+const MAX_ACTIONABLE_PREVIEW_LINES = 1_000;
+
 interface ProjectFilesContentProps {
   projectId: string;
   rootPath: string | null;
@@ -298,6 +300,12 @@ function MobileProjectFilesContent({
             `Please help me with \`${filePath}\` in this workspace. Inspect the file and related code before recommending or making changes.`,
           );
         }}
+        onAskAgentLine={(filePath, lineNumber, line) => {
+          const boundedLine = line.slice(0, 500);
+          openAgentDraft(
+            `Please review \`${filePath}\` (line ${lineNumber}) and inspect the surrounding code before responding.\n\n\`\`\`code\n${boundedLine}\n\`\`\``,
+          );
+        }}
         askAgentDisabled={!conversationContextReady}
       />
     );
@@ -386,6 +394,7 @@ function MobileRemoteFilePreview({
   workspaceDisplay,
   onBack,
   onAskAgent,
+  onAskAgentLine,
   askAgentDisabled,
 }: {
   filePath: string;
@@ -394,6 +403,7 @@ function MobileRemoteFilePreview({
   workspaceDisplay: string | null;
   onBack: () => void;
   onAskAgent: (filePath: string) => void;
+  onAskAgentLine: (filePath: string, lineNumber: number, line: string) => void;
   askAgentDisabled: boolean;
 }) {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -407,12 +417,13 @@ function MobileRemoteFilePreview({
       onBack={onBack}
       onRefresh={() => setRefreshKey((current) => current + 1)}
       onAskAgent={onAskAgent}
+      onAskAgentLine={onAskAgentLine}
       askAgentDisabled={askAgentDisabled}
     />
   );
 }
 
-function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, hostedWorkspace, workspaceDisplay, onBack, onRefresh, onAskAgent, askAgentDisabled }: {
+function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, hostedWorkspace, workspaceDisplay, onBack, onRefresh, onAskAgent, onAskAgentLine, askAgentDisabled }: {
   filePath: string;
   remoteAgentId?: string;
   hostedWorkspace?: HostedWorkspaceTarget;
@@ -420,6 +431,7 @@ function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, hostedWorkspa
   onBack: () => void;
   onRefresh: () => void;
   onAskAgent: (filePath: string) => void;
+  onAskAgentLine: (filePath: string, lineNumber: number, line: string) => void;
   askAgentDisabled: boolean;
 }) {
   const hostedProjectId = hostedWorkspace?.projectId;
@@ -436,6 +448,11 @@ function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, hostedWorkspa
 
   const previewSupported = useMemo(() => isMobilePreviewableTextFile(filePath), [filePath]);
   const fileName = useMemo(() => filePath.split(/[\\/]/).pop() ?? filePath, [filePath]);
+  const previewLines = useMemo(() => state.content?.split("\n") ?? null, [state.content]);
+  const actionablePreviewLines = previewLines !== null
+    && previewLines.length <= MAX_ACTIONABLE_PREVIEW_LINES
+    ? previewLines
+    : null;
 
   useEffect(() => {
     if (!previewSupported) return;
@@ -508,6 +525,9 @@ function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, hostedWorkspa
       <div className={styles.previewBody}>
         <div className={styles.previewPath}>
           <Text size="xs" variant="muted">{filePath}</Text>
+          {!askAgentDisabled && actionablePreviewLines ? (
+            <Text size="xs" variant="muted">Tap a source line to ask the agent about it.</Text>
+          ) : null}
         </div>
         {!previewSupported ? (
           <div className={styles.remoteCard}>
@@ -525,8 +545,30 @@ function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, hostedWorkspa
             <Text size="sm" weight="medium">Could not load file</Text>
             <Text size="sm" variant="muted">{state.error}</Text>
           </div>
+        ) : actionablePreviewLines ? (
+          <pre className={styles.previewContent}>
+            <code>
+              {actionablePreviewLines.map((line, index) => (
+                <button
+                  type="button"
+                  className={styles.previewLine}
+                  key={index}
+                  disabled={askAgentDisabled}
+                  onClick={() => onAskAgentLine(filePath, index + 1, line)}
+                  aria-label={`Ask agent about ${filePath} line ${index + 1}`}
+                >
+                  <span className={styles.previewLineNumber} aria-hidden="true">
+                    {index + 1}
+                  </span>
+                  <span className={styles.previewLineCode}>{line || " "}</span>
+                </button>
+              ))}
+            </code>
+          </pre>
         ) : (
-          <pre className={styles.previewContent}>{state.content ?? ""}</pre>
+          <pre className={`${styles.previewContent} ${styles.previewContentPlain}`}>
+            {state.content ?? ""}
+          </pre>
         )}
       </div>
     </div>
