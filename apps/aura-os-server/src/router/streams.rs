@@ -18,6 +18,14 @@ pub(super) fn stream_routes() -> Router<AppState> {
             "/api/streams/tool-approvals/:request_id",
             post(streams::respond_to_tool_approval),
         )
+        .route(
+            "/api/streams/user-input",
+            get(streams::list_pending_user_inputs).post(streams::request_user_input),
+        )
+        .route(
+            "/api/streams/user-input/:request_id/respond",
+            post(streams::respond_to_user_input),
+        )
         // Subagent attach is registered BEFORE the `:attach_id` wildcard
         // so `/api/streams/subagents/...` is not shadowed by it.
         .route(

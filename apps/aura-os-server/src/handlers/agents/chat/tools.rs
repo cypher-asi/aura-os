@@ -62,6 +62,13 @@ pub(super) async fn build_session_installed_tools(
     if let Some(tool) = set_project_workspace_tool(ctx.project_id, ctx.jwt) {
         tools.push(tool);
     }
+    tools.push(user_input_tool(
+        ctx.jwt,
+        ctx.template_agent_id,
+        ctx.agent_id,
+        ctx.project_id,
+        ctx.source_session_id,
+    ));
     tools.extend(project_management_tools(
         ctx.template_agent_id,
         ctx.org_id,
@@ -247,6 +254,107 @@ fn set_project_workspace_tool(project_id: Option<&str>, jwt: &str) -> Option<Ins
         runtime_execution: None,
         metadata,
     })
+}
+
+fn user_input_tool(
+    jwt: &str,
+    template_agent_id: &str,
+    runtime_agent_id: &str,
+    project_id: Option<&str>,
+    session_id: Option<&str>,
+) -> InstalledTool {
+    let base = crate::handlers::agents::workspace_tools::control_plane_api_base_url();
+    let mut query = url::form_urlencoded::Serializer::new(String::new());
+    query.append_pair("agent_id", template_agent_id);
+    if runtime_agent_id != template_agent_id {
+        query.append_pair("agent_instance_id", runtime_agent_id);
+    }
+    if let Some(project_id) = project_id.filter(|value| !value.trim().is_empty()) {
+        query.append_pair("project_id", project_id);
+    }
+    if let Some(session_id) = session_id.filter(|value| !value.trim().is_empty()) {
+        query.append_pair("session_id", session_id);
+    }
+    let endpoint = format!("{base}/api/streams/user-input?{}", query.finish());
+    let mut metadata = HashMap::new();
+    metadata.insert(
+        "aura_source_kind".to_string(),
+        serde_json::Value::String("aura_native".to_string()),
+    );
+    metadata.insert(
+        "aura_trust_class".to_string(),
+        serde_json::Value::String("platform".to_string()),
+    );
+
+    InstalledTool {
+        name: "request_user_input".to_string(),
+        description: "Pause this turn to ask the user one to three concise, decision-oriented questions when their answer materially changes the work. Do not ask for facts that can be discovered from the workspace. Each question must offer two or three mutually exclusive options; the Aura client also permits a custom answer. The tool returns only after the user answers from any connected client.".to_string(),
+        input_schema: json!({
+            "type": "object",
+            "properties": {
+                "questions": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 3,
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z0-9_-]{1,64}$",
+                                "description": "Stable key used in the returned answer map."
+                            },
+                            "header": {
+                                "type": "string",
+                                "maxLength": 40,
+                                "description": "Short label for the decision."
+                            },
+                            "question": {
+                                "type": "string",
+                                "maxLength": 500,
+                                "description": "One concrete question for the user."
+                            },
+                            "options": {
+                                "type": "array",
+                                "minItems": 2,
+                                "maxItems": 3,
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "label": { "type": "string", "maxLength": 80 },
+                                        "description": { "type": "string", "maxLength": 240 }
+                                    },
+                                    "required": ["label", "description"],
+                                    "additionalProperties": false
+                                }
+                            },
+                            "multi_select": {
+                                "type": "boolean",
+                                "default": false,
+                                "description": "Allow more than one option when true."
+                            }
+                        },
+                        "required": ["id", "header", "question", "options"],
+                        "additionalProperties": false
+                    }
+                }
+            },
+            "required": ["questions"],
+            "additionalProperties": false
+        }),
+        endpoint,
+        auth: ToolAuth::Bearer {
+            token: jwt.to_string(),
+        },
+        // The control-plane handler returns slightly before this deadline so
+        // the agent receives a useful expiry result rather than a transport
+        // timeout. Harness tool heartbeats keep the parent stream alive.
+        timeout_ms: Some(30 * 60 * 1_000),
+        namespace: Some("aura_control".to_string()),
+        required_integration: None,
+        runtime_execution: None,
+        metadata,
+    }
 }
 
 fn self_improvement_tool(ctx: &InstalledToolsCtx<'_>) -> Option<InstalledTool> {
@@ -514,6 +622,27 @@ mod tests {
             serde_json::Value::String("null".to_string())
         );
         assert!(set_project_workspace_tool(None, "jwt-token").is_none());
+    }
+
+    #[test]
+    fn user_input_tool_is_bound_to_the_canonical_conversation() {
+        let tool = user_input_tool(
+            "jwt-token",
+            "agent-1",
+            "instance-1",
+            Some("project-1"),
+            Some("session-1"),
+        );
+
+        assert_eq!(tool.name, "request_user_input");
+        assert_eq!(tool.namespace.as_deref(), Some("aura_control"));
+        assert!(tool.endpoint.contains("agent_id=agent-1"));
+        assert!(tool.endpoint.contains("agent_instance_id=instance-1"));
+        assert!(tool.endpoint.contains("project_id=project-1"));
+        assert!(tool.endpoint.contains("session_id=session-1"));
+        assert_eq!(tool.timeout_ms, Some(30 * 60 * 1_000));
+        assert_eq!(tool.input_schema["properties"]["questions"]["maxItems"], 3);
+        assert!(matches!(tool.auth, ToolAuth::Bearer { ref token } if token == "jwt-token"));
     }
 
     #[test]
