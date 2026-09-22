@@ -1,6 +1,6 @@
 const DB_NAME = "aura-browser-store";
 // Bump this when adding new object stores so `onupgradeneeded` creates them.
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const LOCAL_FALLBACK_PREFIX = "aura-idb";
 
 export const BROWSER_DB_STORES = {
@@ -23,6 +23,12 @@ export const BROWSER_DB_STORES = {
   taskOutputCache: "taskOutputCache",
   taskOutputPanel: "taskOutputPanel",
   taskTurns: "taskTurns",
+  // Commands accepted optimistically by the chat UI but not yet
+  // acknowledged by aura-os-server. Mobile/WebView lifecycle changes can
+  // terminate a POST between persistence and receipt delivery; keeping the
+  // exact request in IDB lets the authenticated shell replay it with the same
+  // idempotency key after foregrounding or reconnecting.
+  chatCommandOutbox: "chatCommandOutbox",
 } as const;
 
 export type BrowserDbStoreName =

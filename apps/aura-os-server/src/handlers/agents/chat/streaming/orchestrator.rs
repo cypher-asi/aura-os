@@ -9,17 +9,18 @@ use aura_os_core::HarnessMode;
 use aura_os_harness::{
     CouncilPresentation, ErrorMsg, HarnessOutbound, SessionBridgeTurn, SessionConfig,
 };
-use axum::response::sse::{KeepAlive, Sse};
+use axum::response::sse::{Event, KeepAlive, Sse};
 use tokio::sync::broadcast;
 use tracing::{debug, error, warn};
 
 use crate::dto::ChatAttachmentDto;
 use crate::error::{ApiError, ApiResult};
+use crate::handlers::agents::chat::storage_session_sort_key;
 use crate::handlers::agents::chat::types::sse_response_headers;
 use crate::handlers::agents::session_identity::{
     validate_session_identity, SessionIdentityRequirements,
 };
-use crate::live_streams::{StreamKind, StreamScope};
+use crate::live_streams::{ChatCommandMatch, StreamKind, StreamScope};
 use crate::state::AppState;
 
 use super::super::event_bus::publish_user_message_event;
@@ -45,6 +46,11 @@ pub(in super::super) struct OpenChatStreamArgs {
     pub(in super::super) session_config: SessionConfig,
     pub(in super::super) user_content: String,
     pub(in super::super) client_command_id: Option<String>,
+    pub(in super::super) is_command_replay: bool,
+    /// Billing is deferred only for explicit replays so an already-persisted
+    /// command can recover its receipt after a balance change. If no receipt
+    /// exists, this source is checked before persistence or harness execution.
+    pub(in super::super) replay_auth_source: Option<String>,
     pub(in super::super) requested_model: Option<String>,
     pub(in super::super) persist_ctx: Option<ChatPersistCtx>,
     pub(in super::super) attachments: Option<Vec<ChatAttachmentDto>>,
@@ -87,6 +93,8 @@ pub(in super::super) async fn open_harness_chat_stream(
         mut session_config,
         user_content,
         client_command_id,
+        is_command_replay,
+        replay_auth_source,
         requested_model,
         persist_ctx,
         attachments,
@@ -114,6 +122,38 @@ pub(in super::super) async fn open_harness_chat_stream(
     // `send_to_agent` consumers parse and act on.
     let ctx = require_persist_ctx(&session_key, persist_ctx)?;
     let err_ctx = persist_error_ctx(&ctx);
+    let client_command_id = normalize_client_command_id(client_command_id)?;
+
+    // A retry carrying the same client command id must never persist or run
+    // the prompt twice. Serialize identical ids within this server process,
+    // then consult the in-memory receipt cache. Explicit outbox replays also
+    // consult durable session history so the invariant survives a restart.
+    let _command_guard = if let Some(command_id) = client_command_id.as_deref() {
+        let lock = state
+            .live_streams
+            .chat_command_lock(ctx.user_id.as_deref(), command_id);
+        let guard = lock.lock_owned().await;
+        if let Some(command) = find_replayed_chat_command(
+            state,
+            &ctx,
+            command_id,
+            &user_content,
+            is_command_replay,
+            err_ctx.clone(),
+        )
+        .await?
+        {
+            return Ok(replayed_chat_command_response(command, command_id));
+        }
+        Some(guard)
+    } else {
+        None
+    };
+
+    if let Some(auth_source) = replay_auth_source.as_deref() {
+        crate::handlers::billing::require_credits_for_auth_source(state, &ctx.jwt, auth_source)
+            .await?;
+    }
 
     // Phase 5 observability: bump the lifecycle counter at the
     // `accept-the-turn` boundary, after `require_persist_ctx`
@@ -140,7 +180,6 @@ pub(in super::super) async fn open_harness_chat_stream(
     // storage rejects the write we must not charge the caller credits
     // for a turn that would never make it into the target agent's chat
     // history, and we must not leave an orphaned harness turn mid-flight.
-    let client_command_id = normalize_client_command_id(client_command_id)?;
     let persisted_user_evt = persist_user_message(
         &ctx,
         &user_content,
@@ -149,6 +188,16 @@ pub(in super::super) async fn open_harness_chat_stream(
     )
     .await
     .map_err(|e| crate::error::map_chat_persist_storage_error(e, err_ctx.clone()))?;
+
+    if let Some(command_id) = client_command_id.as_deref() {
+        state.live_streams.record_chat_command(
+            ctx.user_id.as_deref(),
+            command_id,
+            &ctx.session_id.to_string(),
+            &ctx.project_id,
+            &user_content,
+        );
+    }
 
     // Snapshot the persistence identifiers so we can advertise them in
     // SSE response headers for callers (e.g. the CEO's `send_to_agent`)
@@ -277,12 +326,17 @@ pub(in super::super) async fn open_harness_chat_stream(
         parent_tool_use_id: None,
         child_run_id: None,
     };
-    let _live = state.live_streams.register_receiver(
+    let live = state.live_streams.register_receiver(
         StreamKind::ChatTurn,
         live_scope,
         events_tx.subscribe(),
         Some(commands_tx.clone()),
     );
+    if let Some(command_id) = client_command_id.as_deref() {
+        state
+            .live_streams
+            .attach_chat_command(ctx.user_id.as_deref(), command_id, &live.attach_id);
+    }
 
     let persist_rx = rx.resubscribe();
     let release_rx = rx.resubscribe();
@@ -395,9 +449,145 @@ pub(in super::super) async fn open_harness_chat_stream(
     let boxed: SseStream = Box::pin(stream);
 
     Ok((
-        sse_response_headers(persist_snapshot.as_ref(), client_command_id.as_deref()),
+        sse_response_headers(
+            persist_snapshot.as_ref(),
+            client_command_id.as_deref(),
+            false,
+            Some(&live.attach_id),
+        ),
         Sse::new(boxed).keep_alive(KeepAlive::default()),
     ))
+}
+
+async fn find_replayed_chat_command(
+    state: &AppState,
+    ctx: &ChatPersistCtx,
+    command_id: &str,
+    content: &str,
+    is_command_replay: bool,
+    err_ctx: crate::error::ChatPersistErrorCtx,
+) -> ApiResult<Option<ChatCommandMatch>> {
+    if let Some(command) = state
+        .live_streams
+        .find_chat_command(ctx.user_id.as_deref(), command_id)
+    {
+        ensure_command_content_matches(&command, content)?;
+        return Ok(Some(command));
+    }
+    if !is_command_replay {
+        return Ok(None);
+    }
+
+    // A fresh-session send may have received and persisted its command before
+    // the client lost the response headers. On replay the request deliberately
+    // avoids `new_session=true`, so the route may resolve a different latest
+    // session if another client has chatted in the meantime. Search the whole
+    // project-agent lane instead of trusting only the route-selected session.
+    let current_session_id = ctx.session_id.to_string();
+    let current_events = ctx
+        .storage
+        .list_events(&current_session_id, &ctx.jwt, None, None)
+        .await
+        .map_err(|error| crate::error::map_chat_persist_storage_error(error, err_ctx.clone()))?;
+    let mut matched = find_persisted_command(current_events, command_id)
+        .map(|event| (current_session_id.clone(), ctx.project_id.clone(), event));
+
+    if matched.is_none() {
+        let mut sessions = ctx
+            .storage
+            .list_sessions(&ctx.project_agent_id, &ctx.jwt)
+            .await
+            .map_err(|error| {
+                crate::error::map_chat_persist_storage_error(error, err_ctx.clone())
+            })?;
+        sessions.sort_by_key(storage_session_sort_key);
+        for session in sessions.into_iter().rev() {
+            if session.id == current_session_id {
+                continue;
+            }
+            let events = ctx
+                .storage
+                .list_events(&session.id, &ctx.jwt, None, None)
+                .await
+                .map_err(|error| {
+                    crate::error::map_chat_persist_storage_error(error, err_ctx.clone())
+                })?;
+            if let Some(persisted) = find_persisted_command(events, command_id) {
+                let project_id = session.project_id.unwrap_or_else(|| ctx.project_id.clone());
+                matched = Some((session.id, project_id, persisted));
+                break;
+            }
+        }
+    }
+    let Some((session_id, project_id, persisted)) = matched else {
+        return Ok(None);
+    };
+    let persisted_content = persisted
+        .content
+        .as_ref()
+        .and_then(|value| value.get("text"))
+        .and_then(|value| value.as_str())
+        .unwrap_or_default();
+    state.live_streams.record_chat_command(
+        ctx.user_id.as_deref(),
+        command_id,
+        &session_id,
+        &project_id,
+        persisted_content,
+    );
+    let command = state
+        .live_streams
+        .find_chat_command(ctx.user_id.as_deref(), command_id)
+        .expect("recorded chat command receipt must be readable");
+    ensure_command_content_matches(&command, content)?;
+    Ok(Some(command))
+}
+
+fn find_persisted_command(
+    events: Vec<aura_os_storage::StorageSessionEvent>,
+    command_id: &str,
+) -> Option<aura_os_storage::StorageSessionEvent> {
+    events.into_iter().find(|event| {
+        event.event_type.as_deref() == Some("user_message")
+            && event
+                .content
+                .as_ref()
+                .and_then(|value| value.get("client_command_id"))
+                .and_then(|value| value.as_str())
+                == Some(command_id)
+    })
+}
+
+fn ensure_command_content_matches(command: &ChatCommandMatch, content: &str) -> ApiResult<()> {
+    if command.content == content {
+        return Ok(());
+    }
+    Err(ApiError::bad_request(
+        "client_command_id was already used for a different message",
+    ))
+}
+
+fn replayed_chat_command_response(command: ChatCommandMatch, command_id: &str) -> SseResponse {
+    let attach_id = command
+        .stream
+        .as_ref()
+        .map(|stream| stream.attach_id.clone());
+    let stream: SseStream = match command.stream {
+        Some(stream) => Box::pin(crate::handlers::streams::attach_sse(stream, 0)),
+        None => Box::pin(futures_util::stream::once(async {
+            Ok(Event::default().event("done").data("{}"))
+        })),
+    };
+    let snapshot = (command.session_id, command.project_id);
+    (
+        sse_response_headers(
+            Some(&snapshot),
+            Some(command_id),
+            true,
+            attach_id.as_deref(),
+        ),
+        Sse::new(stream).keep_alive(KeepAlive::default()),
+    )
 }
 
 fn normalize_client_command_id(value: Option<String>) -> ApiResult<Option<String>> {
@@ -418,7 +608,10 @@ fn normalize_client_command_id(value: Option<String>) -> ApiResult<Option<String
 
 #[cfg(test)]
 mod command_id_tests {
-    use super::normalize_client_command_id;
+    use super::{
+        ensure_command_content_matches, find_persisted_command, normalize_client_command_id,
+    };
+    use crate::live_streams::ChatCommandMatch;
 
     #[test]
     fn command_id_is_trimmed_and_bounded() {
@@ -428,6 +621,47 @@ mod command_id_tests {
         );
         assert!(normalize_client_command_id(Some("x".repeat(129))).is_err());
         assert!(normalize_client_command_id(Some("bad\nvalue".to_string())).is_err());
+    }
+
+    #[test]
+    fn persisted_command_lookup_only_matches_user_messages_with_the_same_id() {
+        let event = |event_type: &str, command_id: &str| aura_os_storage::StorageSessionEvent {
+            id: uuid::Uuid::new_v4().to_string(),
+            session_id: Some(uuid::Uuid::new_v4().to_string()),
+            user_id: Some("user-1".into()),
+            agent_id: None,
+            sender: Some("user".into()),
+            project_id: Some("project-1".into()),
+            org_id: None,
+            event_type: Some(event_type.into()),
+            content: Some(serde_json::json!({
+                "text": "hello",
+                "client_command_id": command_id,
+            })),
+            created_at: None,
+        };
+        let found = find_persisted_command(
+            vec![
+                event("assistant_message_end", "command-1"),
+                event("user_message", "command-2"),
+                event("user_message", "command-1"),
+            ],
+            "command-1",
+        )
+        .expect("matching persisted command");
+        assert_eq!(found.content.unwrap()["client_command_id"], "command-1");
+    }
+
+    #[test]
+    fn command_id_cannot_be_reused_for_different_content() {
+        let command = ChatCommandMatch {
+            session_id: "session-1".into(),
+            project_id: "project-1".into(),
+            content: "first".into(),
+            stream: None,
+        };
+        assert!(ensure_command_content_matches(&command, "first").is_ok());
+        assert!(ensure_command_content_matches(&command, "different").is_err());
     }
 }
 

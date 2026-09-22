@@ -199,6 +199,48 @@ describe("sendAgentEventStream", () => {
       commandId: "command-1",
       sessionId: "session-1",
       projectId: "project-1",
+      attachId: null,
+      replayed: false,
+    });
+  });
+
+  it("marks a replay and exposes its original live-stream receipt", async () => {
+    const handler: StreamEventHandler = {
+      onEvent: vi.fn(),
+      onError: vi.fn(),
+      onAccepted: vi.fn(),
+    };
+
+    await sendAgentEventStream(
+      "a1", "hello", null, undefined, undefined, handler,
+      undefined, undefined, undefined, false, "session-1", undefined,
+      undefined, undefined, "command-1", true,
+    );
+
+    const [, init, , , options] = streamSSE.mock.calls[0] as [
+      string,
+      RequestInit,
+      unknown,
+      unknown,
+      { onResponse: (response: Response) => void },
+    ];
+    expect((init.headers as Record<string, string>)["X-Aura-Command-Replay"]).toBe("1");
+    options.onResponse(new Response(null, {
+      headers: {
+        "x-aura-chat-persisted": "true",
+        "x-aura-chat-command-id": "command-1",
+        "x-aura-chat-session-id": "session-1",
+        "x-aura-chat-project-id": "project-1",
+        "x-aura-attach-id": "attach-1",
+        "x-aura-chat-command-replayed": "true",
+      },
+    }));
+    expect(handler.onAccepted).toHaveBeenCalledWith({
+      commandId: "command-1",
+      sessionId: "session-1",
+      projectId: "project-1",
+      attachId: "attach-1",
+      replayed: true,
     });
   });
 

@@ -54,6 +54,12 @@ import {
   type LastSendArgs,
 } from "./partition-send-control";
 import type { ActiveStreamSummary } from "../../shared/api/streams";
+import {
+  enqueueChatCommand,
+  recordChatCommandFailure,
+  removeChatCommand,
+  shouldReplayChatCommandError,
+} from "../../stores/chat-command-outbox";
 
 // Recover transport drops by rejoining the existing turn. A new POST would
 // persist the prompt again and rerun tools; only explicit user sends may do that.
@@ -465,18 +471,37 @@ export function useChatStream({
         },
         onError: (error) => {
           if (controller.signal.aborted) return;
-          if (!_generationMode && !commandAccepted) updateCommandDelivery("failed");
+          if (!_generationMode && !commandAccepted) {
+            updateCommandDelivery(
+              shouldReplayChatCommandError(error) ? "queued" : "failed",
+            );
+            void recordChatCommandFailure(userMsg.clientId ?? userMsg.id, error);
+          }
           innerHandler.onError(error);
         },
         onDone: innerHandler.onDone
           ? () => {
               if (controller.signal.aborted) return;
+              if (!_generationMode && !commandAccepted) {
+                updateCommandDelivery("queued");
+                void recordChatCommandFailure(
+                  userMsg.clientId ?? userMsg.id,
+                  new Error("Agent stream ended before command acknowledgement"),
+                );
+              }
               innerHandler.onDone?.();
             }
           : undefined,
         onAccepted: (receipt) => {
           if (receipt.commandId !== (userMsg.clientId ?? userMsg.id)) return;
+          if (receipt.sessionId && receipt.sessionId !== captured.sessionId) {
+            innerHandler.onEvent({
+              type: EventType.SessionReady,
+              content: { session_id: receipt.sessionId, tools: [], skills: [] },
+            } as unknown as import("../../shared/types/aura-events").AuraEvent);
+          }
           commandAccepted = true;
+          void removeChatCommand(receipt.commandId);
           updateCommandDelivery(undefined);
         },
       };
@@ -694,6 +719,24 @@ export function useChatStream({
             },
           };
         })();
+        const commandId = userMsg.clientId ?? userMsg.id;
+        await enqueueChatCommand({
+          surface: "project",
+          commandId,
+          projectId: capturedProjectId,
+          agentInstanceId: capturedInstanceId,
+          content: userMsg.content,
+          action,
+          model: modelForTurn,
+          attachments,
+          commands,
+          sessionId: shouldStartNewSession ? null : sessionIdRef.current,
+          council,
+          mixture,
+          agentMentions,
+          safeWorkspace: safeWorkspaceRef.current,
+          originallyStartedNewSession: shouldStartNewSession,
+        });
         await api.sendEventStream(
           capturedProjectId,
           capturedInstanceId,
@@ -711,11 +754,16 @@ export function useChatStream({
           mixture,
           agentMentions,
           safeWorkspaceRef.current,
-          userMsg.clientId ?? userMsg.id,
+          commandId,
         );
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
-        if (!_generationMode && !commandAccepted) updateCommandDelivery("failed");
+        if (!_generationMode && !commandAccepted) {
+          updateCommandDelivery(
+            shouldReplayChatCommandError(err) ? "queued" : "failed",
+          );
+          void recordChatCommandFailure(userMsg.clientId ?? userMsg.id, err);
+        }
         handleStreamError(partitionRefs, partitionSetters, err, breadcrumbContext);
       } finally {
         // Partition-scoped finalization sentinel. The legacy

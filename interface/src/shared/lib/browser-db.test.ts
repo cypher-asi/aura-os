@@ -66,6 +66,15 @@ describe("browserDbSet", () => {
     expect(touched).toBe(false);
   });
 
+  it("does NOT mirror pending chat commands to localStorage", async () => {
+    await browserDbSet(BROWSER_DB_STORES.chatCommandOutbox, "pending", [
+      { commandId: "private-prompt", content: "secret" },
+    ]);
+    expect(
+      window.localStorage.getItem("aura-idb:chatCommandOutbox:pending"),
+    ).toBeNull();
+  });
+
   it("still mirrors small fallback stores (auth, org, ui, ...) to localStorage", async () => {
     await browserDbSet(BROWSER_DB_STORES.ui, "panel", { open: true });
     const raw = window.localStorage.getItem("aura-idb:ui:panel");

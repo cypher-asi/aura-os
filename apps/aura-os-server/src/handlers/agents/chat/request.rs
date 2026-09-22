@@ -4,7 +4,15 @@
 use aura_os_core::SessionEvent;
 use serde::{Deserialize, Serialize};
 
-use super::constants::MAX_AGENT_HISTORY_WINDOW_LIMIT;
+use super::constants::{HEADER_CHAT_COMMAND_REPLAY, MAX_AGENT_HISTORY_WINDOW_LIMIT};
+
+pub(super) fn header_indicates_command_replay(headers: &axum::http::HeaderMap) -> bool {
+    headers
+        .get(HEADER_CHAT_COMMAND_REPLAY)
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        == Some("1")
+}
 
 #[derive(Debug, Clone, Copy, Deserialize, Default)]
 pub(crate) struct AgentEventsQuery {
@@ -89,4 +97,20 @@ pub(super) fn apply_cursor_filter(
     }
 
     result
+}
+
+#[cfg(test)]
+mod command_replay_header_tests {
+    use super::header_indicates_command_replay;
+    use axum::http::HeaderMap;
+
+    #[test]
+    fn command_replay_requires_explicit_one() {
+        let mut headers = HeaderMap::new();
+        assert!(!header_indicates_command_replay(&headers));
+        headers.insert("x-aura-command-replay", "1".parse().unwrap());
+        assert!(header_indicates_command_replay(&headers));
+        headers.insert("x-aura-command-replay", "true".parse().unwrap());
+        assert!(!header_indicates_command_replay(&headers));
+    }
 }

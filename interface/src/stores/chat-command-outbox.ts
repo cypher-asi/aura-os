@@ -1,0 +1,356 @@
+import type {
+  AgentMentionTarget,
+  ChatAttachment,
+  MixtureRequest,
+  MultiModelSlot,
+  StreamEventHandler,
+} from "../api/streams";
+import { sendAgentEventStream, sendEventStream } from "../api/streams";
+import { ApiClientError } from "../shared/api/core";
+import { getStoredSession } from "../shared/lib/auth-token";
+import { getResolvedHostOrigin } from "../shared/lib/host-config";
+import {
+  BROWSER_DB_STORES,
+  browserDbGet,
+  browserDbSet,
+} from "../shared/lib/browser-db";
+import { useStreamStore } from "../hooks/stream/store";
+
+const OUTBOX_KEY = "pending";
+const MAX_OUTBOX_COMMANDS = 50;
+const COMMAND_TTL_MS = 24 * 60 * 60 * 1_000;
+const MAX_REPLAY_ATTEMPTS = 8;
+
+type CouncilRequest = {
+  models: MultiModelSlot[];
+  mechanism?: string;
+};
+
+interface ChatCommandBase {
+  commandId: string;
+  ownerId: string;
+  hostOrigin: string;
+  content: string;
+  action: string | null;
+  model?: string | null;
+  attachments?: ChatAttachment[];
+  commands?: string[];
+  sessionId?: string | null;
+  council?: CouncilRequest;
+  mixture?: MixtureRequest;
+  /** Diagnostic only. Replays intentionally never repeat `new_session=true`. */
+  originallyStartedNewSession: boolean;
+  createdAt: number;
+  attempts: number;
+  nextAttemptAt: number;
+}
+
+export interface ProjectChatCommand extends ChatCommandBase {
+  surface: "project";
+  projectId: string;
+  agentInstanceId: string;
+  agentMentions?: AgentMentionTarget[];
+  safeWorkspace?: boolean;
+}
+
+export interface AgentChatCommand extends ChatCommandBase {
+  surface: "agent";
+  agentId: string;
+  projectId?: string;
+}
+
+export type PendingChatCommand = ProjectChatCommand | AgentChatCommand;
+
+type WithoutOutboxMetadata<T> = T extends PendingChatCommand
+  ? Omit<
+      T,
+      "ownerId" | "hostOrigin" | "createdAt" | "attempts" | "nextAttemptAt"
+    >
+  : never;
+
+export type NewChatCommand = WithoutOutboxMetadata<PendingChatCommand>;
+
+let mutationTail: Promise<void> = Promise.resolve();
+let drainPromise: Promise<void> | null = null;
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+let bootstrapInstalled = false;
+
+function currentOwnerId(): string | null {
+  return getStoredSession()?.user_id ?? null;
+}
+
+function mutateOutbox(
+  mutation: (commands: PendingChatCommand[]) => PendingChatCommand[],
+): Promise<void> {
+  const work = mutationTail.then(async () => {
+    const stored =
+      (await browserDbGet<PendingChatCommand[]>(
+        BROWSER_DB_STORES.chatCommandOutbox,
+        OUTBOX_KEY,
+      )) ?? [];
+    await browserDbSet(
+      BROWSER_DB_STORES.chatCommandOutbox,
+      OUTBOX_KEY,
+      mutation(stored),
+    );
+  });
+  mutationTail = work.catch(() => {});
+  return work;
+}
+
+export async function enqueueChatCommand(command: NewChatCommand): Promise<void> {
+  const ownerId = currentOwnerId();
+  if (!ownerId) return;
+  const hostOrigin = getResolvedHostOrigin();
+  const now = Date.now();
+  const pending = {
+    ...command,
+    ownerId,
+    hostOrigin,
+    createdAt: now,
+    attempts: 0,
+    nextAttemptAt: now,
+  } as PendingChatCommand;
+  await mutateOutbox((commands) => {
+    const live = commands.filter(
+      (item) =>
+        now - item.createdAt < COMMAND_TTL_MS &&
+        !(
+          item.ownerId === ownerId &&
+          item.hostOrigin === hostOrigin &&
+          item.commandId === command.commandId
+        ),
+    );
+    return [...live, pending].slice(-MAX_OUTBOX_COMMANDS);
+  });
+}
+
+export function removeChatCommand(commandId: string): Promise<void> {
+  const ownerId = currentOwnerId();
+  if (!ownerId) return Promise.resolve();
+  const hostOrigin = getResolvedHostOrigin();
+  const removal = mutateOutbox((commands) =>
+    commands.filter(
+      (command) =>
+        command.ownerId !== ownerId ||
+        command.hostOrigin !== hostOrigin ||
+        command.commandId !== commandId,
+    ),
+  );
+  setOptimisticDeliveryStatus(commandId, undefined);
+  return removal;
+}
+
+export function shouldReplayChatCommandError(error: unknown): boolean {
+  if (!(error instanceof ApiClientError)) return true;
+  return (
+    error.status === 408 ||
+    error.status === 409 ||
+    error.status === 425 ||
+    error.status === 429 ||
+    error.status >= 500
+  );
+}
+
+function retryDelayMs(attempts: number): number {
+  return Math.min(1_000 * 2 ** Math.max(0, attempts - 1), 60_000);
+}
+
+export async function recordChatCommandFailure(
+  commandId: string,
+  error: unknown,
+): Promise<void> {
+  const ownerId = currentOwnerId();
+  if (!ownerId) return;
+  const hostOrigin = getResolvedHostOrigin();
+  const now = Date.now();
+  let nextDelay = 1_000;
+  let retainedForReplay = false;
+  await mutateOutbox((commands) =>
+    commands.flatMap((command) => {
+      if (
+        command.ownerId !== ownerId ||
+        command.hostOrigin !== hostOrigin ||
+        command.commandId !== commandId
+      ) {
+        return [command];
+      }
+      // A deterministic rejection (validation, permissions, credits, etc.)
+      // must remain a visible failed bubble, not surprise the user later.
+      if (
+        !shouldReplayChatCommandError(error) ||
+        command.attempts >= MAX_REPLAY_ATTEMPTS
+      ) {
+        return [];
+      }
+      const attempts = command.attempts + 1;
+      nextDelay = retryDelayMs(attempts);
+      retainedForReplay = true;
+      return [{
+        ...command,
+        attempts,
+        nextAttemptAt: now + nextDelay,
+      }];
+    }),
+  );
+  setOptimisticDeliveryStatus(
+    commandId,
+    retainedForReplay ? "queued" : "failed",
+  );
+  if (retainedForReplay) scheduleReplay(nextDelay + 50);
+}
+
+function setOptimisticDeliveryStatus(
+  commandId: string,
+  status: "queued" | "failed" | undefined,
+): void {
+  useStreamStore.setState((state) => {
+    let changed = false;
+    const entries = Object.fromEntries(
+      Object.entries(state.entries).map(([key, entry]) => {
+        let entryChanged = false;
+        const events = entry.events.map((event) => {
+          if (event.clientId !== commandId) return event;
+          changed = true;
+          entryChanged = true;
+          const updated = { ...event };
+          if (status === undefined) delete updated.deliveryStatus;
+          else updated.deliveryStatus = status;
+          return updated;
+        });
+        return [key, entryChanged ? { ...entry, events } : entry];
+      }),
+    );
+    return changed ? { entries } : state;
+  });
+}
+
+async function replayCommand(command: PendingChatCommand): Promise<void> {
+  await new Promise<void>((resolve) => {
+    let settled = false;
+    const controller = new AbortController();
+    const settle = (work: Promise<void>) => {
+      if (settled) return;
+      settled = true;
+      controller.abort();
+      void work.finally(resolve);
+    };
+    const handler: StreamEventHandler = {
+      onEvent: () => {},
+      onAccepted: (receipt) => {
+        if (receipt.commandId !== command.commandId) return;
+        settle(removeChatCommand(command.commandId));
+      },
+      onError: (error) => {
+        settle(recordChatCommandFailure(command.commandId, error));
+      },
+      onDone: () => {
+        if (!settled) {
+          settle(recordChatCommandFailure(
+            command.commandId,
+            new Error("Command replay ended before acknowledgement"),
+          ));
+        }
+      },
+    };
+
+    const request = command.surface === "project"
+      ? sendEventStream(
+          command.projectId,
+          command.agentInstanceId,
+          command.content,
+          command.action,
+          command.model,
+          command.attachments,
+          handler,
+          controller.signal,
+          command.commands,
+          false,
+          command.sessionId,
+          undefined,
+          command.council,
+          command.mixture,
+          command.agentMentions,
+          command.safeWorkspace,
+          command.commandId,
+          true,
+        )
+      : sendAgentEventStream(
+          command.agentId,
+          command.content,
+          command.action,
+          command.model,
+          command.attachments,
+          handler,
+          controller.signal,
+          command.commands,
+          command.projectId,
+          false,
+          command.sessionId,
+          undefined,
+          command.council,
+          command.mixture,
+          command.commandId,
+          true,
+        );
+    void request.catch((error) => {
+      settle(recordChatCommandFailure(command.commandId, error));
+    });
+  });
+}
+
+export function drainChatCommandOutbox(): Promise<void> {
+  if (drainPromise) return drainPromise;
+  drainPromise = (async () => {
+    await mutationTail;
+    const ownerId = currentOwnerId();
+    const hostOrigin = getResolvedHostOrigin();
+    if (!ownerId || (typeof navigator !== "undefined" && !navigator.onLine)) return;
+    const now = Date.now();
+    const commands =
+      (await browserDbGet<PendingChatCommand[]>(
+        BROWSER_DB_STORES.chatCommandOutbox,
+        OUTBOX_KEY,
+      )) ?? [];
+    for (const command of commands) {
+      if (currentOwnerId() !== ownerId) break;
+      if (command.ownerId !== ownerId || command.hostOrigin !== hostOrigin) continue;
+      if (now - command.createdAt >= COMMAND_TTL_MS) {
+        await removeChatCommand(command.commandId);
+        continue;
+      }
+      if (command.nextAttemptAt > Date.now()) continue;
+      await replayCommand(command);
+    }
+  })().finally(() => {
+    drainPromise = null;
+  });
+  return drainPromise;
+}
+
+function scheduleReplay(delayMs = 1_000): void {
+  if (retryTimer !== null || typeof window === "undefined") return;
+  retryTimer = window.setTimeout(() => {
+    retryTimer = null;
+    void drainChatCommandOutbox();
+  }, delayMs);
+}
+
+/** Install one authenticated-shell replay loop for boot, online and resume. */
+export function bootstrapChatCommandOutbox(): void {
+  if (bootstrapInstalled || typeof window === "undefined") return;
+  bootstrapInstalled = true;
+  window.addEventListener("online", () => void drainChatCommandOutbox());
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") void drainChatCommandOutbox();
+  });
+  void drainChatCommandOutbox();
+}
+
+export function _resetChatCommandOutboxForTests(): void {
+  bootstrapInstalled = false;
+  drainPromise = null;
+  mutationTail = Promise.resolve();
+  if (retryTimer !== null) clearTimeout(retryTimer);
+  retryTimer = null;
+}

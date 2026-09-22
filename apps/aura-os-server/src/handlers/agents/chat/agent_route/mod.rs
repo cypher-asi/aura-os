@@ -65,10 +65,18 @@ pub(crate) async fn send_agent_event_stream(
             .stability_metrics
             .inc_client_auto_retry_streamdropped();
     }
+    let is_command_replay = super::request::header_indicates_command_replay(&headers);
 
     let agent = resolve_agent_for_chat(&state, &agent_id, &jwt, &auth_session).await?;
     ensure_chat_runtime_allowed(&state, agent.harness_mode())?;
-    require_credits_for_auth_source(&state, &jwt, &agent.auth_source).await?;
+    // Ordinary turns keep the cheap early billing guard. Explicit command
+    // replays defer it until the orchestrator has checked durable receipts:
+    // an already-accepted command must be able to recover its receipt even if
+    // the user's balance changed afterward, while an unknown id still cannot
+    // start new work for free.
+    if !is_command_replay {
+        require_credits_for_auth_source(&state, &jwt, &agent.auth_source).await?;
+    }
     info!(%agent_id, action = ?body.action, "Agent message stream requested");
 
     if agent.adapter_type != "aura_harness" {
@@ -128,7 +136,9 @@ pub(crate) async fn send_agent_event_stream(
         Some(pid) => BusyScope::TemplateInProject { project_id: pid },
         None => BusyScope::Unscoped,
     };
-    reject_if_partition_busy(&state, &agent_id, busy_scope).await?;
+    if !is_command_replay {
+        reject_if_partition_busy(&state, &agent_id, busy_scope).await?;
+    }
 
     let force_new = body.new_session.unwrap_or(false);
 
@@ -433,6 +443,8 @@ pub(crate) async fn send_agent_event_stream(
             session_config: config,
             user_content: body.content,
             client_command_id: body.client_command_id,
+            is_command_replay,
+            replay_auth_source: is_command_replay.then(|| agent.auth_source.clone()),
             requested_model: body.model,
             persist_ctx,
             attachments: body.attachments,

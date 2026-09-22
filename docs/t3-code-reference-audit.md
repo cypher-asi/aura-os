@@ -130,15 +130,28 @@ The first Aura slice now implements that boundary:
 - Regular chat sends now carry a stable client command id through both project and standalone-agent
   routes. Aura persists that id with the user message, returns a correlated acceptance receipt only
   after the durable write succeeds, and exposes the receipt headers to native WebViews. Optimistic
-  chat bubbles distinguish `Sending…`, accepted, and `Not sent`, so a lossy mobile connection no
-  longer makes an unacknowledged prompt look committed. This is the receipt foundation, not yet an
-  idempotent retry protocol: clients must not automatically replay these commands until server-side
-  duplicate detection and recovery semantics land.
+  chat bubbles distinguish `Sending…`, accepted, queued for retry, and `Not sent`, so a lossy mobile
+  connection no longer makes an unacknowledged prompt look committed.
+- That receipt foundation now has an idempotent replay path. The server serializes attempts by
+  authenticated user plus command id, rejects reuse of an id with different content, retains the
+  original live-stream attachment in memory, and searches durable user-message history across the
+  agent's canonical sessions after a server restart. A replay of accepted work returns the original
+  session/stream identity without persisting or executing the prompt twice. Billing is still checked
+  before genuinely new replay work; an already-persisted command can recover its receipt even if the
+  account balance changed after acceptance. This is at-most-once command acceptance, not yet a
+  durable worker that reconstructs harness execution interrupted by a server restart.
+- Regular project and standalone-agent chat now enqueue the request intent in an IndexedDB outbox
+  before opening the POST. The authenticated shell drains retryable commands on boot, connectivity
+  restoration, and foreground using the original command id, never repeats `new_session=true`, and
+  removes an entry only after the persistence receipt. Entries are user- and environment-scoped,
+  bounded to 50, expire after 24 hours, and are never mirrored into localStorage. Validation,
+  permission, and credit failures are removed instead of surprising the user with a later send.
+  Media-generation requests are intentionally outside this first outbox slice.
 
-Next: formalize `runtimeId`/environment ownership in session metadata, add server-side command
-deduplication and a persisted native prompt outbox on top of the new receipts, and add device
-registration plus background delivery for completion, failure, approval, and input-required events.
-Add the same durable,
+Next: formalize `runtimeId`/environment ownership in session metadata, move accepted command
+execution behind a durable status/worker boundary, expose user-facing outbox inspection/cancel
+controls, and add device registration plus background delivery for completion, failure, approval,
+and input-required events. Add the same durable,
 cross-client response path for structured agent questions/input requests. T3 models these as typed
 questions (`id`, header, prompt, options, and multi-select) answered through a dedicated
 `thread.user-input.respond` command; Aura still needs the equivalent harness protocol event and

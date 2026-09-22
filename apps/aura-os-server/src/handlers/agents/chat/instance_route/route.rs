@@ -68,6 +68,7 @@ pub(crate) async fn send_event_stream(
             .stability_metrics
             .inc_client_auto_retry_streamdropped();
     }
+    let is_command_replay = super::super::request::header_indicates_command_replay(&headers);
 
     let instance = state
         .agent_instance_service
@@ -75,7 +76,9 @@ pub(crate) async fn send_event_stream(
         .await
         .map_err(|e| ApiError::internal(format!("looking up agent instance: {e}")))?;
     ensure_chat_runtime_allowed(&state, instance.harness_mode())?;
-    require_credits_for_auth_source(&state, &jwt, &instance.auth_source).await?;
+    if !is_command_replay {
+        require_credits_for_auth_source(&state, &jwt, &instance.auth_source).await?;
+    }
     let safe_workspace_authority = if body.safe_workspace.unwrap_or(false) {
         let authority = execution_workspace_authority(
             state.harness_http.hosted_local_runtime_available(),
@@ -102,15 +105,17 @@ pub(crate) async fn send_event_stream(
     };
     info!(%project_id, %agent_instance_id, action = ?body.action, "Message stream requested");
 
-    reject_if_partition_busy(
-        &state,
-        &instance.agent_id,
-        BusyScope::Instance {
-            project_id: &project_id,
-            agent_instance_id: &agent_instance_id,
-        },
-    )
-    .await?;
+    if !is_command_replay {
+        reject_if_partition_busy(
+            &state,
+            &instance.agent_id,
+            BusyScope::Instance {
+                project_id: &project_id,
+                agent_instance_id: &agent_instance_id,
+            },
+        )
+        .await?;
+    }
 
     let force_new = body.new_session.unwrap_or(false);
 
@@ -486,6 +491,8 @@ pub(crate) async fn send_event_stream(
             session_config: config,
             user_content: body.content,
             client_command_id: body.client_command_id,
+            is_command_replay,
+            replay_auth_source: is_command_replay.then(|| instance.auth_source.clone()),
             requested_model: body.model,
             persist_ctx,
             attachments: body.attachments,
