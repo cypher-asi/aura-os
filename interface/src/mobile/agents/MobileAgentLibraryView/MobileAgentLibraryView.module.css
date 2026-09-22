@@ -9,3 +9,8 @@
   min-height: 0;
   flex: 1;
 }
+
+.search {
+  flex-shrink: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 24%, transparent);
+}

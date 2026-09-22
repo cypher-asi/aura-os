@@ -88,7 +88,9 @@ The first Aura slice now implements that boundary:
   changes when a project workspace is known. Workspace navigation carries the exact canonical
   agent-instance identity instead of resolving whichever project runtime happens to be newest.
 - The agent library warms and displays recent shared conversation previews rather than only profile
-  biography text.
+  biography text. Its mobile search now matches agent identity/profile fields, live attention, and
+  those cross-device conversation previews, with an explicit no-results state instead of a blank
+  list.
 - Desktop-local agents remain readable on mobile while their runtime is unreachable; sending stays
   disabled until the owning host is available instead of bouncing the user out of the conversation.
 - A disabled mobile composer now distinguishes saved conversation availability from execution
@@ -215,9 +217,10 @@ data Aura already holds for recent chats, apps, projects, agents, and menu actio
 navigation; skips disabled actions; and uses `>` for action-only results. It deliberately uses
 canonical Aura routes and existing action handlers rather than owning another navigation system.
 
-Next increments should be server-backed message search, project file-name/content search, recent
-query history, and an explicit result-provider registry so apps can contribute results without
-expanding one component indefinitely.
+The mobile agent library now exposes a touch-native search over agents and its cached cross-device
+conversation previews. Next increments should be server-backed message search, project
+file-name/content search, recent query history, and an explicit result-provider registry so apps
+can contribute results without expanding one component indefinitely.
 
 ### P1 — build a native source-control and review workbench
 

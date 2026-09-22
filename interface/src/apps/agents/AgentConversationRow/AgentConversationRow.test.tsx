@@ -150,19 +150,18 @@ describe("AgentConversationRow", () => {
     expect(screen.queryByText("Rose")).not.toBeInTheDocument();
   });
 
-  it("prefers personality over last message in metadata-only mode", () => {
+  it("prefers the latest shared message over static profile metadata", () => {
     render(
       <AgentConversationRow
         agent={baseAgent}
         lastMessage={lastMessage}
-        showMetadataOnly
         isSelected={false}
         {...noopHandlers}
       />,
     );
 
-    expect(screen.getByText("Plans features end to end.")).toBeInTheDocument();
-    expect(screen.queryByText("Latest chat reply")).not.toBeInTheDocument();
+    expect(screen.getByText("Latest chat reply")).toBeInTheDocument();
+    expect(screen.queryByText("Plans features end to end.")).not.toBeInTheDocument();
   });
 
   it("forwards the busy prop to the avatar", () => {
@@ -194,7 +193,6 @@ describe("AgentConversationRow", () => {
       <AgentConversationRow
         agent={baseAgent}
         lastMessage={lastMessage}
-        showMetadataOnly
         isSelected={false}
         attention={{
           kind: "approval",
@@ -218,7 +216,6 @@ describe("AgentConversationRow", () => {
       <AgentConversationRow
         agent={baseAgent}
         lastMessage={lastMessage}
-        showMetadataOnly
         isSelected={false}
         busy
         activeRun={{ route: "/agents/agent-1?session=session-1" }}
