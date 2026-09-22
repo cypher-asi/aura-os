@@ -14,6 +14,7 @@ import {
   BROWSER_DB_STORES,
   browserDbGet,
   browserDbSet,
+  browserDbSetDurable,
 } from "../shared/lib/browser-db";
 import { useStreamStore } from "../hooks/stream/store";
 
@@ -87,6 +88,16 @@ let drainPromise: Promise<void> | null = null;
 let retryTimer: ReturnType<typeof setTimeout> | null = null;
 let bootstrapInstalled = false;
 
+export class ChatCommandOutboxUnavailableError extends Error {
+  override name = "ChatCommandOutboxUnavailableError";
+
+  constructor() {
+    super(
+      "Couldn't safely save this message on this device. Free some storage and try again.",
+    );
+  }
+}
+
 function currentOwnerId(): string | null {
   return getStoredSession()?.user_id ?? null;
 }
@@ -110,6 +121,7 @@ function publishCurrentScope(commands: PendingChatCommand[]): void {
 
 function mutateOutbox(
   mutation: (commands: PendingChatCommand[]) => PendingChatCommand[],
+  requireDurableCommit = false,
 ): Promise<void> {
   const work = mutationTail.then(async () => {
     const stored =
@@ -118,11 +130,23 @@ function mutateOutbox(
         OUTBOX_KEY,
       )) ?? [];
     const next = mutation(stored);
-    await browserDbSet(
-      BROWSER_DB_STORES.chatCommandOutbox,
-      OUTBOX_KEY,
-      next,
-    );
+    if (requireDurableCommit) {
+      await browserDbSetDurable(
+        BROWSER_DB_STORES.chatCommandOutbox,
+        OUTBOX_KEY,
+        next,
+      );
+    } else {
+      // Once a command has been durably enqueued, later bookkeeping is
+      // best-effort. If a removal/backoff write fails, replaying the same
+      // command id is safe because the server's acceptance receipt is
+      // idempotent; blocking the UI on cache cleanup would be worse.
+      await browserDbSet(
+        BROWSER_DB_STORES.chatCommandOutbox,
+        OUTBOX_KEY,
+        next,
+      );
+    }
     publishCurrentScope(next);
   });
   mutationTail = work.catch(() => {});
@@ -142,18 +166,25 @@ export async function enqueueChatCommand(command: NewChatCommand): Promise<void>
     attempts: 0,
     nextAttemptAt: now,
   } as PendingChatCommand;
-  await mutateOutbox((commands) => {
-    const live = commands.filter(
-      (item) =>
-        now - item.createdAt < COMMAND_TTL_MS &&
-        !(
-          item.ownerId === ownerId &&
-          item.hostOrigin === hostOrigin &&
-          item.commandId === command.commandId
-        ),
+  try {
+    await mutateOutbox(
+      (commands) => {
+        const live = commands.filter(
+          (item) =>
+            now - item.createdAt < COMMAND_TTL_MS &&
+            !(
+              item.ownerId === ownerId &&
+              item.hostOrigin === hostOrigin &&
+              item.commandId === command.commandId
+            ),
+        );
+        return [...live, pending].slice(-MAX_OUTBOX_COMMANDS);
+      },
+      true,
     );
-    return [...live, pending].slice(-MAX_OUTBOX_COMMANDS);
-  });
+  } catch {
+    throw new ChatCommandOutboxUnavailableError();
+  }
 }
 
 export function removeChatCommand(commandId: string): Promise<void> {
@@ -221,6 +252,7 @@ export async function retryChatCommandNow(commandId: string): Promise<boolean> {
 }
 
 export function shouldReplayChatCommandError(error: unknown): boolean {
+  if (error instanceof ChatCommandOutboxUnavailableError) return false;
   if (!(error instanceof ApiClientError)) return true;
   return (
     error.status === 408 ||
@@ -313,7 +345,7 @@ async function replayCommand(command: PendingChatCommand): Promise<void> {
       if (settled) return;
       settled = true;
       controller.abort();
-      void work.finally(resolve);
+      void work.then(resolve, resolve);
     };
     const handler: StreamEventHandler = {
       onEvent: () => {},

@@ -184,7 +184,12 @@ The first Aura slice now implements that boundary:
   launch it restores that validated internal route before React Router mounts; explicit launch and
   notification routes still win, while login, public, malformed, external, and oversized routes
   are never stored. This closes normal Android process-recreation continuity without treating the
-  route cache as execution state or conversation truth.
+  route cache as execution state or conversation truth. The Android-readiness track verified this
+  on an emulator by force-stopping the app and relaunching into the same canonical
+  project/agent/session route; its mobile Chromium and WebKit suite also passed all 16 cases. That
+  validation environment returned `provider_account_unavailable` for a live prompt and had no Git
+  workspace, so long-running Stop/progress/question behavior and live Changes remain covered by
+  deterministic tests rather than being misreported as production end-to-end passes.
 - Chat lifecycle and approval firehose events are now stamped with the authenticated owner and
   filtered during both replay and live delivery. Legacy unscoped events retain their existing
   behavior, while new account-scoped control signals cannot appear in another user's mobile agent
@@ -248,6 +253,13 @@ The first Aura slice now implements that boundary:
   bounded to 50, expire after 24 hours, and are never mirrored into localStorage. Validation,
   permission, and credit failures are removed instead of surprising the user with a later send.
   Media-generation requests are intentionally outside this first outbox slice.
+- Attachment-bearing sends use that same outbox and replay the exact attachment payload after a
+  reconnect. Unlike Aura's ordinary best-effort UI caches, command persistence now requires a
+  confirmed IndexedDB transaction before opening the POST. Quota, abort, and unavailable-storage
+  failures are surfaced as `Not sent` instead of falsely claiming `Waiting to resend`; the in-memory
+  last-send payload still supports an explicit retry while the app remains open. This complements
+  T3's reconnect-aware upload queue: Aura's failed object upload already falls back to the inline
+  attachment, while the command outbox protects the resulting prompt across mobile suspension.
 - Deferred sends now have a distinct `Waiting to resend` state instead of sharing the ordinary
   in-turn `Queued` label. Live chat bubbles expose touch-friendly `Retry now` and `Stop retrying`
   controls; both operate only on the authenticated user's current environment-scoped outbox. A

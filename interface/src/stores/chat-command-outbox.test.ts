@@ -3,6 +3,7 @@ import { ApiClientError } from "../shared/api/core";
 
 const mocks = vi.hoisted(() => ({
   stored: [] as unknown[],
+  durableWriteError: null as Error | null,
   sendAgent: vi.fn(),
   sendProject: vi.fn(),
 }));
@@ -21,6 +22,10 @@ vi.mock("../shared/lib/browser-db", () => ({
   browserDbSet: vi.fn(async (_store: string, _key: string, value: unknown[]) => {
     mocks.stored = structuredClone(value);
   }),
+  browserDbSetDurable: vi.fn(async (_store: string, _key: string, value: unknown[]) => {
+    if (mocks.durableWriteError) throw mocks.durableWriteError;
+    mocks.stored = structuredClone(value);
+  }),
 }));
 
 vi.mock("../api/streams", () => ({
@@ -30,17 +35,20 @@ vi.mock("../api/streams", () => ({
 
 import {
   _resetChatCommandOutboxForTests,
+  ChatCommandOutboxUnavailableError,
   cancelChatCommandReplay,
   drainChatCommandOutbox,
   enqueueChatCommand,
   recordChatCommandFailure,
   retryChatCommandNow,
+  shouldReplayChatCommandError,
   useChatCommandOutboxStore,
 } from "./chat-command-outbox";
 
 describe("chat command outbox", () => {
   beforeEach(() => {
     mocks.stored = [];
+    mocks.durableWriteError = null;
     mocks.sendAgent.mockReset();
     mocks.sendProject.mockReset();
     _resetChatCommandOutboxForTests();
@@ -95,6 +103,13 @@ describe("chat command outbox", () => {
       agentInstanceId: "instance-1",
       content: "continue",
       action: null,
+      attachments: [{
+        type: "image",
+        media_type: "image/png",
+        data: "base64-pixels",
+        name: "screen.png",
+        source_url: "https://cdn.example/screen.png",
+      }],
       sessionId: null,
       originallyStartedNewSession: true,
     });
@@ -102,11 +117,43 @@ describe("chat command outbox", () => {
     await drainChatCommandOutbox();
 
     const args = mocks.sendProject.mock.calls[0];
+    expect(args[5]).toEqual([{
+      type: "image",
+      media_type: "image/png",
+      data: "base64-pixels",
+      name: "screen.png",
+      source_url: "https://cdn.example/screen.png",
+    }]);
     expect(args[9]).toBe(false);
     expect(args[10]).toBeNull();
     expect(args[16]).toBe("cmd-1");
     expect(args[17]).toBe(true);
     expect(mocks.stored).toEqual([]);
+  });
+
+  it("classifies a command that cannot be saved durably as not replayable", async () => {
+    mocks.durableWriteError = new DOMException("quota", "QuotaExceededError");
+
+    const result = enqueueChatCommand({
+      surface: "agent",
+      commandId: "cmd-no-storage",
+      agentId: "agent-1",
+      content: "inspect this screenshot",
+      action: null,
+      attachments: [{
+        type: "image",
+        media_type: "image/png",
+        data: "large-payload",
+        name: "screen.png",
+      }],
+      originallyStartedNewSession: false,
+    });
+
+    await expect(result).rejects.toBeInstanceOf(ChatCommandOutboxUnavailableError);
+    await expect(result).rejects.toThrow("Free some storage and try again");
+    expect(mocks.stored).toEqual([]);
+    expect(shouldReplayChatCommandError(await result.catch((error) => error))).toBe(false);
+    expect(mocks.sendAgent).not.toHaveBeenCalled();
   });
 
   it("drops deterministic rejections instead of surprising the user later", async () => {

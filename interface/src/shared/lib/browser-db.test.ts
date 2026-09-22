@@ -40,6 +40,7 @@ import {
   BROWSER_DB_STORES,
   browserDbGet,
   browserDbSet,
+  browserDbSetDurable,
   purgeLegacyChatHistoryFallback,
 } from "./browser-db";
 
@@ -96,6 +97,19 @@ describe("browserDbSet", () => {
     } finally {
       setItem.mockRestore();
     }
+  });
+});
+
+describe("browserDbSetDurable", () => {
+  it("rejects instead of pretending an outbox write succeeded without IndexedDB", async () => {
+    await expect(
+      browserDbSetDurable(BROWSER_DB_STORES.chatCommandOutbox, "pending", [
+        { commandId: "must-survive", content: "keep me" },
+      ]),
+    ).rejects.toThrow("Durable browser storage is unavailable");
+    expect(
+      window.localStorage.getItem("aura-idb:chatCommandOutbox:pending"),
+    ).toBeNull();
   });
 });
 
