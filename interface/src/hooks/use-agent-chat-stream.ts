@@ -325,6 +325,7 @@ export function useAgentChatStream({
         ...(!_generationMode ? { deliveryStatus: "sending" as const } : {}),
       };
       let commandAccepted = false;
+      let commandDeliveryClassified = false;
       const updateCommandDelivery = (
         status: DisplaySessionEvent["deliveryStatus"],
       ) => {
@@ -684,8 +685,9 @@ export function useAgentChatStream({
         onError: (error) => {
           if (controller.signal.aborted) return;
           if (!_generationMode && !commandAccepted) {
+            commandDeliveryClassified = true;
             updateCommandDelivery(
-              shouldReplayChatCommandError(error) ? "queued" : "failed",
+              shouldReplayChatCommandError(error) ? "retrying" : "failed",
             );
             void recordChatCommandFailure(userMsg.clientId ?? userMsg.id, error);
           }
@@ -700,7 +702,8 @@ export function useAgentChatStream({
         onDone: () => {
           if (controller.signal.aborted) return;
           if (!_generationMode && !commandAccepted) {
-            updateCommandDelivery("queued");
+            commandDeliveryClassified = true;
+            updateCommandDelivery("retrying");
             void recordChatCommandFailure(
               userMsg.clientId ?? userMsg.id,
               new Error("Agent stream ended before command acknowledgement"),
@@ -993,8 +996,9 @@ export function useAgentChatStream({
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         if (!_generationMode && !commandAccepted) {
+          commandDeliveryClassified = true;
           updateCommandDelivery(
-            shouldReplayChatCommandError(err) ? "queued" : "failed",
+            shouldReplayChatCommandError(err) ? "retrying" : "failed",
           );
           void recordChatCommandFailure(userMsg.clientId ?? userMsg.id, err);
         }
@@ -1010,7 +1014,9 @@ export function useAgentChatStream({
         // otherwise clobber that new latch even though `abortRef`
         // has moved on.
         if (partitionAbortRef.current === controller) {
-          if (!_generationMode && !commandAccepted) updateCommandDelivery("failed");
+          if (!_generationMode && !commandAccepted && !commandDeliveryClassified) {
+            updateCommandDelivery("failed");
+          }
           partitionSetters.setIsStreaming(false);
           controller.abort();
           partitionAbortRef.current = null;

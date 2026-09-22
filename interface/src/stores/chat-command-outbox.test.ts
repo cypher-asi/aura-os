@@ -30,9 +30,11 @@ vi.mock("../api/streams", () => ({
 
 import {
   _resetChatCommandOutboxForTests,
+  cancelChatCommandReplay,
   drainChatCommandOutbox,
   enqueueChatCommand,
   recordChatCommandFailure,
+  retryChatCommandNow,
 } from "./chat-command-outbox";
 
 describe("chat command outbox", () => {
@@ -120,6 +122,48 @@ describe("chat command outbox", () => {
         details: null,
       }),
     );
+    expect(mocks.stored).toEqual([]);
+  });
+
+  it("lets the user stop future retries for a deferred command", async () => {
+    await enqueueChatCommand({
+      surface: "agent",
+      commandId: "cmd-cancel",
+      agentId: "agent-1",
+      content: "wait for a better connection",
+      action: null,
+      originallyStartedNewSession: false,
+    });
+
+    await expect(cancelChatCommandReplay("cmd-cancel")).resolves.toBe(true);
+    expect(mocks.stored).toEqual([]);
+    await expect(cancelChatCommandReplay("cmd-cancel")).resolves.toBe(false);
+  });
+
+  it("makes a deferred command eligible immediately when the user retries", async () => {
+    mocks.sendAgent.mockImplementation(async (...args: unknown[]) => {
+      const handler = args[5] as { onAccepted: (receipt: unknown) => void };
+      handler.onAccepted({
+        commandId: "cmd-retry",
+        sessionId: "session-1",
+        projectId: null,
+        attachId: "attach-1",
+        replayed: true,
+      });
+    });
+    await enqueueChatCommand({
+      surface: "agent",
+      commandId: "cmd-retry",
+      agentId: "agent-1",
+      content: "try this now",
+      action: null,
+      originallyStartedNewSession: false,
+    });
+    await recordChatCommandFailure("cmd-retry", new Error("offline"));
+
+    await expect(retryChatCommandNow("cmd-retry")).resolves.toBe(true);
+
+    expect(mocks.sendAgent).toHaveBeenCalledTimes(1);
     expect(mocks.stored).toEqual([]);
   });
 });

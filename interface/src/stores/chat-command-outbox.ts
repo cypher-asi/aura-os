@@ -141,6 +141,54 @@ export function removeChatCommand(commandId: string): Promise<void> {
   return removal;
 }
 
+/** Stop future replay attempts for a command that has not been acknowledged. */
+export async function cancelChatCommandReplay(commandId: string): Promise<boolean> {
+  const ownerId = currentOwnerId();
+  if (!ownerId) return false;
+  const hostOrigin = getResolvedHostOrigin();
+  let removed = false;
+  await mutateOutbox((commands) =>
+    commands.filter((command) => {
+      const matches =
+        command.ownerId === ownerId &&
+        command.hostOrigin === hostOrigin &&
+        command.commandId === commandId;
+      removed ||= matches;
+      return !matches;
+    }),
+  );
+  if (removed) setOptimisticDeliveryStatus(commandId, "cancelled");
+  return removed;
+}
+
+/** Make a deferred command eligible immediately and drain its scoped outbox. */
+export async function retryChatCommandNow(commandId: string): Promise<boolean> {
+  const ownerId = currentOwnerId();
+  if (!ownerId) return false;
+  const hostOrigin = getResolvedHostOrigin();
+  let found = false;
+  await mutateOutbox((commands) =>
+    commands.map((command) => {
+      if (
+        command.ownerId !== ownerId ||
+        command.hostOrigin !== hostOrigin ||
+        command.commandId !== commandId
+      ) {
+        return command;
+      }
+      found = true;
+      return { ...command, nextAttemptAt: Date.now() };
+    }),
+  );
+  if (!found) return false;
+  setOptimisticDeliveryStatus(commandId, "retrying");
+  // A drain may already hold an older snapshot that skipped this command.
+  // Running again after it settles guarantees the newly eligible row is seen.
+  await drainChatCommandOutbox();
+  await drainChatCommandOutbox();
+  return true;
+}
+
 export function shouldReplayChatCommandError(error: unknown): boolean {
   if (!(error instanceof ApiClientError)) return true;
   return (
@@ -195,14 +243,14 @@ export async function recordChatCommandFailure(
   );
   setOptimisticDeliveryStatus(
     commandId,
-    retainedForReplay ? "queued" : "failed",
+    retainedForReplay ? "retrying" : "failed",
   );
   if (retainedForReplay) scheduleReplay(nextDelay + 50);
 }
 
 function setOptimisticDeliveryStatus(
   commandId: string,
-  status: "queued" | "failed" | undefined,
+  status: "sending" | "retrying" | "failed" | "cancelled" | undefined,
 ): void {
   useStreamStore.setState((state) => {
     let changed = false;
@@ -226,6 +274,7 @@ function setOptimisticDeliveryStatus(
 }
 
 async function replayCommand(command: PendingChatCommand): Promise<void> {
+  setOptimisticDeliveryStatus(command.commandId, "sending");
   await new Promise<void>((resolve) => {
     let settled = false;
     const controller = new AbortController();

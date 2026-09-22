@@ -10,6 +10,10 @@ import { useShallow } from "zustand/react/shallow";
 import { MessageBubble } from "../../../apps/chat/components/MessageBubble";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";
 import type { ErrorReportAgentInfo } from "../../../hooks/use-error-report-agent-info";
+import {
+  cancelChatCommandReplay,
+  retryChatCommandNow,
+} from "../../../stores/chat-command-outbox";
 
 import { useStreamStore } from "../../../hooks/stream/store";
 import { useImageScrollPin } from "../../../shared/hooks/use-image-scroll-pin";
@@ -288,6 +292,16 @@ function ChatMessageListImpl({
                         agentId={agentId}
                         errorAgentInfo={errorAgentInfo}
                         onRetry={onRetry}
+                        onRetryPendingDelivery={
+                          row.msg.deliveryStatus === "retrying" && row.msg.clientId
+                            ? () => void retryChatCommandNow(row.msg.clientId as string)
+                            : undefined
+                        }
+                        onCancelPendingDelivery={
+                          row.msg.deliveryStatus === "retrying" && row.msg.clientId
+                            ? () => void cancelChatCommandReplay(row.msg.clientId as string)
+                            : undefined
+                        }
                       />
                     </div>
                   </>

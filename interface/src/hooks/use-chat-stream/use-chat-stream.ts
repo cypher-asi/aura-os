@@ -322,6 +322,7 @@ export function useChatStream({
         ...(!_generationMode ? { deliveryStatus: "sending" as const } : {}),
       };
       let commandAccepted = false;
+      let commandDeliveryClassified = false;
       const updateCommandDelivery = (
         status: (typeof userMsg)["deliveryStatus"] | undefined,
       ) => {
@@ -472,8 +473,9 @@ export function useChatStream({
         onError: (error) => {
           if (controller.signal.aborted) return;
           if (!_generationMode && !commandAccepted) {
+            commandDeliveryClassified = true;
             updateCommandDelivery(
-              shouldReplayChatCommandError(error) ? "queued" : "failed",
+              shouldReplayChatCommandError(error) ? "retrying" : "failed",
             );
             void recordChatCommandFailure(userMsg.clientId ?? userMsg.id, error);
           }
@@ -483,7 +485,8 @@ export function useChatStream({
           ? () => {
               if (controller.signal.aborted) return;
               if (!_generationMode && !commandAccepted) {
-                updateCommandDelivery("queued");
+                commandDeliveryClassified = true;
+                updateCommandDelivery("retrying");
                 void recordChatCommandFailure(
                   userMsg.clientId ?? userMsg.id,
                   new Error("Agent stream ended before command acknowledgement"),
@@ -759,8 +762,9 @@ export function useChatStream({
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         if (!_generationMode && !commandAccepted) {
+          commandDeliveryClassified = true;
           updateCommandDelivery(
-            shouldReplayChatCommandError(err) ? "queued" : "failed",
+            shouldReplayChatCommandError(err) ? "retrying" : "failed",
           );
           void recordChatCommandFailure(userMsg.clientId ?? userMsg.id, err);
         }
@@ -784,7 +788,9 @@ export function useChatStream({
         // microtask-deferred `finally` would clobber the new send's
         // latch.
         if (ctrl.currentController === controller) {
-          if (!_generationMode && !commandAccepted) updateCommandDelivery("failed");
+          if (!_generationMode && !commandAccepted && !commandDeliveryClassified) {
+            updateCommandDelivery("failed");
+          }
           partitionSetters.setIsStreaming(false);
           sidekickRef.current.setAgentStreaming(capturedInstanceId, false);
           controller.abort();

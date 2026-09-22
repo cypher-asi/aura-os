@@ -17,6 +17,7 @@ import { STUCK_THRESHOLD_MS } from "./stream/use-stream-health";
 import { STYLE_LOCK_SUFFIX } from "../constants/generation";
 import { EventType, type AuraEvent } from "../shared/types/aura-events";
 import { useToolApprovalStore } from "../stores/tool-approval-store";
+import { ApiClientError } from "../shared/api/core";
 
 vi.mock("../api/client", () => ({
   api: {
@@ -252,6 +253,26 @@ describe("useAgentChatStream", () => {
 
     const event = useStreamStore.getState().entries[result.current.streamKey].events[0];
     expect(event.deliveryStatus).toBe("failed");
+  });
+
+  it("preserves the retrying state after a transient transport rejection", async () => {
+    vi.mocked(api.agents.sendEventStream).mockImplementationOnce(
+      async (_agentId, _content, _action, _model, _attachments, handler) => {
+        handler?.onError?.(new ApiClientError(503, {
+          error: "temporarily unavailable",
+          code: "unavailable",
+          details: null,
+        }));
+      },
+    );
+    const { result } = renderHook(() => useAgentChatStream({ agentId: "agent-1" }));
+
+    await act(async () => {
+      await result.current.sendMessage("hello");
+    });
+
+    const event = useStreamStore.getState().entries[result.current.streamKey].events[0];
+    expect(event.deliveryStatus).toBe("retrying");
   });
 
   it("promotes a queued prompt without changing its transcript identity", async () => {
