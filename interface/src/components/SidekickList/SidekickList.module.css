@@ -32,3 +32,31 @@
   justify-content: center;
   padding: var(--space-6, 24px) var(--space-4, 16px);
 }
+
+.trailingActions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1, 4px);
+}
+
+.menuButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: -7px -8px -7px 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md, 6px);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.menuButton:hover,
+.menuButton:focus-visible {
+  background: var(--color-overlay-subtle);
+  color: var(--color-text-primary);
+  outline: none;
+}

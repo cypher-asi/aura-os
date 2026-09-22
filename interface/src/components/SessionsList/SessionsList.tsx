@@ -69,6 +69,8 @@ interface SessionsListProps {
    */
   deleteError?: string | null;
   onDismissError?: () => void;
+  /** Show explicit 44px action triggers for touch-first session lists. */
+  showActionButtons?: boolean;
   /**
    * Optional right-aligned content rendered per row. When provided this
    * replaces the default project-name suffix (used by the chat-app's
@@ -161,6 +163,7 @@ export function SessionsList({
   searchQuery,
   deleteError,
   onDismissError,
+  showActionButtons = false,
   renderRowSuffix,
   streamKeyForSession,
 }: SessionsListProps) {
@@ -600,6 +603,7 @@ export function SessionsList({
             ? handleMenuAction
             : undefined
         }
+        showMenuButtons={showActionButtons}
         className={styles.chatsList}
       />
     </>

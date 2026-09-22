@@ -14,6 +14,7 @@ export interface UseSidekickItemContextMenuResult<T> {
   menu: SidekickMenuState<T> | null;
   menuRef: React.RefObject<HTMLDivElement | null>;
   handleContextMenu: (event: ReactMouseEvent) => void;
+  openMenu: (item: T, x: number, y: number) => void;
   closeMenu: () => void;
 }
 
@@ -24,20 +25,21 @@ export function useSidekickItemContextMenu<T>(
   const [menu, setMenu] = useState<SidekickMenuState<T> | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const resolveRef = useRef(resolveItem);
-  resolveRef.current = resolveItem;
-
   const closeMenu = useCallback(() => setMenu(null), []);
+
+  const openMenu = useCallback((item: T, x: number, y: number) => {
+    setMenu({ item, x, y });
+  }, []);
 
   const handleContextMenu = useCallback((event: ReactMouseEvent) => {
     const target = (event.target as HTMLElement).closest("[data-list-item][id]");
     if (!target) return;
     const nodeId = target.id;
-    const item = resolveRef.current(nodeId);
+    const item = resolveItem(nodeId);
     if (!item) return;
     event.preventDefault();
     setMenu({ x: event.clientX, y: event.clientY, item });
-  }, []);
+  }, [resolveItem]);
 
   useEffect(() => {
     if (!menu) return;
@@ -58,7 +60,7 @@ export function useSidekickItemContextMenu<T>(
   }, [menu]);
 
   return useMemo(
-    () => ({ menu, menuRef, handleContextMenu, closeMenu }),
-    [menu, handleContextMenu, closeMenu],
+    () => ({ menu, menuRef, handleContextMenu, openMenu, closeMenu }),
+    [menu, handleContextMenu, openMenu, closeMenu],
   );
 }
