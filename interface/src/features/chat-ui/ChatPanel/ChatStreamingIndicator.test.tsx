@@ -6,8 +6,19 @@ import type { ToolCallEntry } from "../../../shared/types/stream";
 import type { StreamHealth } from "../../../hooks/stream/use-stream-health";
 import type { GenerationEta } from "../../../hooks/stream/use-generation-eta";
 
+vi.mock("@cypher-asi/zui", () => ({
+  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+    <button {...props}>{children}</button>
+  ),
+}));
+
+vi.mock("../../../components/ReportBugButton", () => ({
+  ReportBugButton: () => <button type="button">Report bug</button>,
+}));
+
 const mockStreamEntry: {
   isStreaming: boolean;
+  interruptionReason: "runtime_restarted" | null;
   isWriting: boolean;
   streamingText: string;
   thinkingText: string;
@@ -15,6 +26,7 @@ const mockStreamEntry: {
   progressText: string;
 } = {
   isStreaming: false,
+  interruptionReason: null,
   isWriting: false,
   streamingText: "",
   thinkingText: "",
@@ -63,6 +75,7 @@ describe("ChatStreamingIndicator", () => {
   beforeEach(() => {
     Object.assign(mockStreamEntry, {
       isStreaming: false,
+      interruptionReason: null,
       isWriting: false,
       streamingText: "",
       thinkingText: "",
@@ -82,6 +95,26 @@ describe("ChatStreamingIndicator", () => {
   it("renders nothing when the stream is idle", () => {
     const { container } = render(<ChatStreamingIndicator streamKey="stream-1" />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("shows an honest restart action when persisted work lost its runtime", () => {
+    mockStreamEntry.interruptionReason = "runtime_restarted";
+
+    render(
+      <ChatStreamingIndicator
+        streamKey="stream-1"
+        onStop={() => {}}
+        onRetry={() => {}}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "Run interrupted — the owning Aura runtime no longer has this turn",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Restart turn" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Stop" })).not.toBeInTheDocument();
   });
 
   it("shows the cooking phase label when streaming without active writing", () => {

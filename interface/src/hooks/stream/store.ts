@@ -23,6 +23,9 @@ import {
 
 export interface StreamEntryState {
   isStreaming: boolean;
+  // Set only after the server successfully reports that a persisted
+  // in-flight turn no longer has a live, attachable execution.
+  interruptionReason: "runtime_restarted" | null;
   // True while streamed text is actively revealing word-by-word (i.e. the
   // displayed slice is still catching up to the buffered text). Drives the
   // cooking indicator: it shows whenever the turn is in flow but we are not
@@ -75,6 +78,7 @@ interface StreamStore {
 
 const INITIAL_ENTRY: StreamEntryState = {
   isStreaming: false,
+  interruptionReason: null,
   isWriting: false,
   events: [],
   streamingText: "",
@@ -340,6 +344,25 @@ export function getIsStreaming(key: string): boolean {
   return useStreamStore.getState().entries[key]?.isStreaming ?? false;
 }
 
+export function markStreamInterrupted(key: string): void {
+  ensureEntry(key);
+  touchEntry(key);
+  updateStreamEntry(key, {
+    isStreaming: false,
+    isWriting: false,
+    progressText: "",
+    stuckSince: null,
+    interruptionReason: "runtime_restarted",
+  });
+}
+
+export function clearStreamInterrupted(key: string): void {
+  const entry = getStreamEntry(key);
+  if (!entry?.interruptionReason) return;
+  touchEntry(key);
+  updateStreamEntry(key, { interruptionReason: null });
+}
+
 export function getThinkingDurationMs(key: string): number | null {
   return useStreamStore.getState().entries[key]?.thinkingDurationMs ?? null;
 }
@@ -492,6 +515,7 @@ export function createSetters(keyOrResolver: StreamKeyResolver): StreamSetters {
       if (next && !wasStreaming) {
         patch.lastEventAt = Date.now();
         patch.stuckSince = null;
+        patch.interruptionReason = null;
       }
       updateStreamEntry(key, patch);
     },

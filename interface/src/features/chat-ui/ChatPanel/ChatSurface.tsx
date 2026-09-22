@@ -31,7 +31,7 @@ import {
   useStreamHealth,
   useStuckStreamAutoTimeout,
 } from "../../../hooks/stream/use-stream-health";
-import { createSetters, ensureEntry } from "../../../hooks/stream/store";
+import { createSetters, ensureEntry, getStreamEntry } from "../../../hooks/stream/store";
 import { getLastSendArgs as getLastAgentChatSendArgs } from "../../../hooks/use-agent-chat-stream";
 import { getPartitionSendControl } from "../../../hooks/use-chat-stream/partition-send-control";
 import { recordStreamCloseReason } from "../../../shared/observability/stream-breadcrumbs";
@@ -354,8 +354,25 @@ export function ChatSurface({
         partitionArgs.sourceImageUrl,
         partitionArgs.agentMentions,
       );
+      return;
     }
-  }, [onSend, onStop, sendDisabled, streamKey]);
+    // A hard runtime restart loses the in-memory replay cache along with the
+    // active stream. The persisted transcript still has the canonical prompt,
+    // so an explicit user retry can restart it without pretending to resume
+    // the lost execution. Never take this fallback for ordinary errors.
+    if (getStreamEntry(streamKey)?.interruptionReason) {
+      const persistedPrompt = [...(historyMessages ?? [])]
+        .reverse()
+        .find((message) => message.role === "user" && message.content.trim());
+      if (persistedPrompt) {
+        onSend(
+          persistedPrompt.content,
+          null,
+          modelForRetry(streamKey, defaultModel),
+        );
+      }
+    }
+  }, [defaultModel, historyMessages, onSend, onStop, sendDisabled, streamKey]);
 
   const handleStuckStreamAutoTimeout = useCallback(() => {
     onStop();

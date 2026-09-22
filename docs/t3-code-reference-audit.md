@@ -161,6 +161,13 @@ The first Aura slice now implements that boundary:
   before genuinely new replay work; an already-persisted command can recover its receipt even if the
   account balance changed after acceptance. This is at-most-once command acceptance, not yet a
   durable worker that reconstructs harness execution interrupted by a server restart.
+- Persisted partial turns are now reconciled against the environment's active-stream registry when
+  a canonical session opens. If discovery succeeds but the turn no longer exists, Aura preserves
+  the partial answer, clears the false `Working` projection, and labels the run interrupted instead
+  of leaving mobile on an endless spinner. `Restart turn` is an explicit user action that reuses the
+  persisted last prompt; Aura never silently resubmits it. If discovery itself fails, the state
+  remains unknown/recoverable rather than falsely claiming interruption. This is honest restart
+  truth at the client boundary, not durable execution recovery.
 - Regular project and standalone-agent chat now enqueue the request intent in an IndexedDB outbox
   before opening the POST. The authenticated shell drains retryable commands on boot, connectivity
   restoration, and foreground using the original command id, never repeats `new_session=true`, and
