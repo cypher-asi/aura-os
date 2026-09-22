@@ -152,11 +152,15 @@ The first Aura slice now implements that boundary:
   controls; both operate only on the authenticated user's current environment-scoped outbox. A
   manual retry makes the existing command id eligible immediately, while stopping retry removes
   future attempts without claiming to cancel work that the server may already have accepted.
+- The mobile agent library now projects that same current-user, current-environment outbox after
+  durable IndexedDB hydration, including while offline. If the originating chat bubble is no
+  longer mounted, users can still see unconfirmed prompts, reopen the exact canonical project or
+  standalone-agent session, retry with the original command id, or remove future replay attempts.
+  A mobile browser test covers this across a full navigation away from the conversation.
 
 Next: formalize `runtimeId`/environment ownership in session metadata, move accepted command
-execution behind a durable status/worker boundary, add an outbox-level inspector for commands whose
-optimistic bubbles are no longer mounted, and add device registration plus background delivery for
-completion, failure, approval, and input-required events. Add the same durable,
+execution behind a durable status/worker boundary, and add device registration plus background
+delivery for completion, failure, approval, and input-required events. Add the same durable,
 cross-client response path for structured agent questions/input requests. T3 models these as typed
 questions (`id`, header, prompt, options, and multi-select) answered through a dedicated
 `thread.user-input.respond` command; Aura still needs the equivalent harness protocol event and

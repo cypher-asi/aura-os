@@ -192,9 +192,18 @@ test("native mobile creates a hosted web agent without provisioning a remote VM"
   const stopRetrying = page.getByRole("button", { name: "Stop retrying" });
   await expect(retryNow).toBeInViewport();
   await expect(stopRetrying).toBeInViewport();
-  await stopRetrying.tap();
-  await expect(page.getByRole("status").filter({ hasText: "Canceled" })).toBeVisible();
-  await expect(retryNow).toHaveCount(0);
+
+  // Leave the conversation entirely. The command must remain inspectable
+  // from the mobile agent library even though its optimistic bubble unmounted.
+  await page.goto("/agents");
+  const pendingSends = page.getByRole("region", { name: "Unconfirmed agent sends" });
+  await expect(pendingSends).toContainText("1 message waiting");
+  const removePending = pendingSends.getByRole("button", {
+    name: "Stop retrying: Reply with Android hosted runtime ready",
+  });
+  await expect(removePending).toBeInViewport();
+  await removePending.tap();
+  await expect(pendingSends).toHaveCount(0);
 
   await page.goto("/projects/proj-1/agents/create");
   const hostedButton = page.getByRole("button", { name: "Hosted", exact: true });

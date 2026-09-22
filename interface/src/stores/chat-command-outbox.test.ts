@@ -35,6 +35,7 @@ import {
   enqueueChatCommand,
   recordChatCommandFailure,
   retryChatCommandNow,
+  useChatCommandOutboxStore,
 } from "./chat-command-outbox";
 
 describe("chat command outbox", () => {
@@ -70,6 +71,9 @@ describe("chat command outbox", () => {
         content: "fix the tests",
         attempts: 0,
       }),
+    ]);
+    expect(useChatCommandOutboxStore.getState().commands).toEqual([
+      expect.objectContaining({ commandId: "cmd-1" }),
     ]);
   });
 
@@ -165,5 +169,34 @@ describe("chat command outbox", () => {
 
     expect(mocks.sendAgent).toHaveBeenCalledTimes(1);
     expect(mocks.stored).toEqual([]);
+  });
+
+  it("hydrates the current environment's pending commands while offline", async () => {
+    Object.defineProperty(navigator, "onLine", {
+      configurable: true,
+      value: false,
+    });
+    mocks.stored = [{
+      surface: "project",
+      commandId: "cmd-offline",
+      ownerId: "user-1",
+      hostOrigin: "https://environment-1.example",
+      projectId: "project-1",
+      agentInstanceId: "instance-1",
+      content: "continue later",
+      action: null,
+      originallyStartedNewSession: false,
+      createdAt: Date.now(),
+      attempts: 1,
+      nextAttemptAt: Date.now() + 10_000,
+    }];
+
+    await drainChatCommandOutbox();
+
+    expect(useChatCommandOutboxStore.getState()).toEqual(expect.objectContaining({
+      hydrated: true,
+      commands: [expect.objectContaining({ commandId: "cmd-offline" })],
+    }));
+    expect(mocks.sendProject).not.toHaveBeenCalled();
   });
 });

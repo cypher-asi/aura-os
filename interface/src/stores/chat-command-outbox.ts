@@ -1,3 +1,4 @@
+import { create } from "zustand";
 import type {
   AgentMentionTarget,
   ChatAttachment,
@@ -61,6 +62,17 @@ export interface AgentChatCommand extends ChatCommandBase {
 
 export type PendingChatCommand = ProjectChatCommand | AgentChatCommand;
 
+interface ChatCommandOutboxProjection {
+  /** Current authenticated user's commands for the resolved environment. */
+  commands: PendingChatCommand[];
+  hydrated: boolean;
+}
+
+export const useChatCommandOutboxStore = create<ChatCommandOutboxProjection>(() => ({
+  commands: [],
+  hydrated: false,
+}));
+
 type WithoutOutboxMetadata<T> = T extends PendingChatCommand
   ? Omit<
       T,
@@ -79,6 +91,23 @@ function currentOwnerId(): string | null {
   return getStoredSession()?.user_id ?? null;
 }
 
+function publishCurrentScope(commands: PendingChatCommand[]): void {
+  const ownerId = currentOwnerId();
+  const hostOrigin = getResolvedHostOrigin();
+  const now = Date.now();
+  useChatCommandOutboxStore.setState({
+    commands: ownerId
+      ? commands.filter(
+          (command) =>
+            command.ownerId === ownerId &&
+            command.hostOrigin === hostOrigin &&
+            now - command.createdAt < COMMAND_TTL_MS,
+        )
+      : [],
+    hydrated: true,
+  });
+}
+
 function mutateOutbox(
   mutation: (commands: PendingChatCommand[]) => PendingChatCommand[],
 ): Promise<void> {
@@ -88,11 +117,13 @@ function mutateOutbox(
         BROWSER_DB_STORES.chatCommandOutbox,
         OUTBOX_KEY,
       )) ?? [];
+    const next = mutation(stored);
     await browserDbSet(
       BROWSER_DB_STORES.chatCommandOutbox,
       OUTBOX_KEY,
-      mutation(stored),
+      next,
     );
+    publishCurrentScope(next);
   });
   mutationTail = work.catch(() => {});
   return work;
@@ -352,15 +383,16 @@ export function drainChatCommandOutbox(): Promise<void> {
   if (drainPromise) return drainPromise;
   drainPromise = (async () => {
     await mutationTail;
-    const ownerId = currentOwnerId();
-    const hostOrigin = getResolvedHostOrigin();
-    if (!ownerId || (typeof navigator !== "undefined" && !navigator.onLine)) return;
-    const now = Date.now();
     const commands =
       (await browserDbGet<PendingChatCommand[]>(
         BROWSER_DB_STORES.chatCommandOutbox,
         OUTBOX_KEY,
       )) ?? [];
+    publishCurrentScope(commands);
+    const ownerId = currentOwnerId();
+    const hostOrigin = getResolvedHostOrigin();
+    if (!ownerId || (typeof navigator !== "undefined" && !navigator.onLine)) return;
+    const now = Date.now();
     for (const command of commands) {
       if (currentOwnerId() !== ownerId) break;
       if (command.ownerId !== ownerId || command.hostOrigin !== hostOrigin) continue;
@@ -402,4 +434,5 @@ export function _resetChatCommandOutboxForTests(): void {
   mutationTail = Promise.resolve();
   if (retryTimer !== null) clearTimeout(retryTimer);
   retryTimer = null;
+  useChatCommandOutboxStore.setState({ commands: [], hydrated: false });
 }
