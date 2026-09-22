@@ -350,7 +350,7 @@ function MobileProjectFilesContent({
               projectId={projectId}
               agentInstanceId={sourceControlAgentInstanceId}
               readOnly
-              onDiscussChange={discussChangedLine}
+              onDiscussChange={conversationContextReady ? discussChangedLine : undefined}
             />
           </div>
         </>
