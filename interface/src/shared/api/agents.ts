@@ -357,9 +357,9 @@ export const agentTemplatesApi = {
   resetSession: (agentId: AgentId) =>
     apiFetch<void>(`/api/agents/${agentId}/reset-session`, { method: "POST" }),
   /**
-   * Forward `HarnessInbound::Cancel` to every live chat session on the
-   * bare-template partition and evict the warm sessions so the next
-   * user message cold-starts cleanly. Used by `stopStreaming` to
+   * Forward `HarnessInbound::Cancel` to the pinned canonical session, or
+   * every live chat session on the bare-template partition when no session
+   * id is available, and evict the matching warm sessions. Used by `stopStreaming` to
    * unstick the per-partition turn slot when the user clicks Stop —
    * without this, a long-running turn (e.g. plan-mode `generate_specs`
    * full of non-terminal `progress` heartbeats) keeps the slot held
@@ -367,8 +367,12 @@ export const agentTemplatesApi = {
    * timeout. Idempotent: the server returns 204 even when no live
    * session exists for the partition.
    */
-  cancelTurn: (agentId: AgentId) =>
-    apiFetch<void>(`/api/agents/${agentId}/cancel-turn`, { method: "POST" }),
+  cancelTurn: (agentId: AgentId, sessionId?: string | null) => {
+    const query = sessionId
+      ? `?${new URLSearchParams({ session_id: sessionId }).toString()}`
+      : "";
+    return apiFetch<void>(`/api/agents/${agentId}/cancel-turn${query}`, { method: "POST" });
+  },
   getContextUsage: (agentId: AgentId, options?: ApiRequestOptions) =>
     apiFetch<ContextUsageResponse>(
       `/api/agents/${agentId}/context-usage`,
@@ -510,17 +514,26 @@ export const agentInstancesApi = {
     ),
   /**
    * Project-instance counterpart to {@link agentTemplatesApi.cancelTurn}.
-   * Forwards `HarnessInbound::Cancel` to every live chat session on
-   * the `{template}::{instance_id}::*` partition and evicts the warm
-   * sessions. Called fire-and-forget from `stopStreaming` so a Stop
+   * Forwards `HarnessInbound::Cancel` to the pinned canonical session, or
+   * every live chat session on the `{template}::{instance_id}::*` partition
+   * when no session id is available, and evicts the matching warm sessions.
+   * Called fire-and-forget from `stopStreaming` so a Stop
    * press unsticks the partition immediately rather than relying on
    * the server-side SSE drop guard alone.
    */
-  cancelInstanceTurn: (projectId: ProjectId, agentInstanceId: AgentInstanceId) =>
-    apiFetch<void>(
-      `/api/projects/${projectId}/agents/${agentInstanceId}/cancel-turn`,
+  cancelInstanceTurn: (
+    projectId: ProjectId,
+    agentInstanceId: AgentInstanceId,
+    sessionId?: string | null,
+  ) => {
+    const query = sessionId
+      ? `?${new URLSearchParams({ session_id: sessionId }).toString()}`
+      : "";
+    return apiFetch<void>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/cancel-turn${query}`,
       { method: "POST" },
-    ),
+    );
+  },
   getContextUsage: (
     projectId: ProjectId,
     agentInstanceId: AgentInstanceId,

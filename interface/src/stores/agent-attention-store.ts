@@ -199,6 +199,15 @@ function runKey(
     .join(":");
 }
 
+/**
+ * Remove a run after the environment accepted an explicit cross-client Stop.
+ * Recording the finish version also prevents a slower attention hydration
+ * that began before the Stop from resurrecting the stale activity row.
+ */
+export function markAgentRunStopped(item: AgentActiveRunItem): void {
+  useAgentAttentionStore.getState().finishRun(runKey(item));
+}
+
 function activeRunFromEvent(event: AuraEvent): AgentActiveRunItem | null {
   const content = event.content as { agent_id?: string };
   const agentId = clean(event.agent_id || content.agent_id);

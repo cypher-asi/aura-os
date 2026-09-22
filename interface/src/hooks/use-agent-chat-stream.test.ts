@@ -140,6 +140,22 @@ describe("useAgentChatStream", () => {
     expect(typeof result.current.resetEvents).toBe("function");
   });
 
+  it("scopes Stop to the canonical standalone session opened on this client", () => {
+    const { result } = renderHook(() =>
+      useAgentChatStream({
+        agentId: "agent-1",
+        sessionId: "session-from-desktop",
+      }),
+    );
+
+    act(() => result.current.stopStreaming());
+
+    expect(api.agents.cancelTurn).toHaveBeenCalledWith(
+      "agent-1",
+      "session-from-desktop",
+    );
+  });
+
   it("surfaces approval prompts replayed into a standalone agent session", async () => {
     let approvalHandler: import("../api/streams").StreamEventHandler | undefined;
     let finishStream!: () => void;

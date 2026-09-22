@@ -1104,7 +1104,11 @@ export function useChatStream({
     // mode turn leaves the slot held until the 90s SSE idle timeout
     // and the next send appears to "time out" with no error surfaced.
     if (projectId && agentInstanceId) {
-      api.cancelInstanceTurn(projectId, agentInstanceId).catch(() => {});
+      api.cancelInstanceTurn(
+        projectId,
+        agentInstanceId,
+        sessionIdRef.current,
+      ).catch(() => {});
     }
     // The per-partition send-control refactor moved the controller
     // actually wired into the fetch off `streamMetaMap[key].abort`
