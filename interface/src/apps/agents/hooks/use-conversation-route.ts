@@ -34,12 +34,17 @@ export function parseConversationRoute(
   const sessionId = params.get("session");
   const queryProjectId = params.get("project");
   const queryInstanceId = params.get("instance");
+  const standaloneView = params.get("view");
   const base = { sessionId, queryProjectId, queryInstanceId } as const;
 
   const segments = pathname.split("/").filter(Boolean);
 
   // `/agents/:agentId` — exactly two segments, the agents shell chat.
-  if (segments[0] === "agents" && segments.length === 2) {
+  if (
+    segments[0] === "agents"
+    && segments.length === 2
+    && standaloneView !== "details"
+  ) {
     return { ...base, isConversationRoute: true, agentId: segments[1] };
   }
 

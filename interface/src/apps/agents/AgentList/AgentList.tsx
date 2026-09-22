@@ -268,11 +268,9 @@ export function AgentList({ mode = "default" }: AgentListProps) {
     // would otherwise reach `/agents/:id` with an `idle` history entry and
     // re-arm `ChatPanel`'s cold-load gate. `warmStandaloneAgentHistory` is
     // idempotent, so overlapping with a prior hover prefetch stays cheap.
-    if (!isMobileLibrary) {
-      warmStandaloneAgentHistory(selectedAgentId);
-    }
+    warmStandaloneAgentHistory(selectedAgentId);
     navigate(`/agents/${selectedAgentId}`);
-  }, [agentId, isMobileLibrary, navigate]);
+  }, [agentId, navigate]);
 
   // Pre-warm the chat-history-store entries the standalone chat reads so
   // `ChatPanel`'s cold-load gate (`.messageContentHidden` + the fading
@@ -291,12 +289,12 @@ export function AgentList({ mode = "default" }: AgentListProps) {
   // start so the active chat's history round-trip doesn't contend with
   // preview prefetches for every other agent.
   const prefetchAgentIds = useMemo(() => {
-    if (!isDesktopSidebar) return [];
+    if (!isDesktopSidebar && !isMobileLibrary) return [];
     return agents.map((a) => a.agent_id).filter((id) => id !== agentId);
-  }, [agents, isDesktopSidebar, agentId]);
+  }, [agents, isDesktopSidebar, isMobileLibrary, agentId]);
 
   const activeHistoryResolved = useChatHistoryStore((s) => {
-    if (!isDesktopSidebar || !agentId) return true;
+    if ((!isDesktopSidebar && !isMobileLibrary) || !agentId) return true;
     const entry = s.entries[agentHistoryKey(agentId)];
     return entry?.status === "ready" || entry?.status === "error";
   });
@@ -431,7 +429,7 @@ export function AgentList({ mode = "default" }: AgentListProps) {
   // once at the list level so the rows themselves carry no store
   // subscriptions and stay cheap to (re-)mount on a pane switch.
   const rowModels = useAgentRowModels(filteredAgents, {
-    includePreview: !isMobileLibrary,
+    includePreview: true,
   });
 
   // Map agents to the shared `LeftMenuTree`'s custom-row variant: the tree

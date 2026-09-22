@@ -606,7 +606,7 @@ describe("AgentList", () => {
     expect(row).toHaveAttribute("data-last-message-content", "");
   });
 
-  it("does not prefetch history on mount in mobile-library mode", async () => {
+  it("prefetches shared conversation previews on mobile-library mount", async () => {
     mocks.useParams.mockReturnValue({ agentId: undefined });
     mocks.useAgents.mockReturnValue({
       agents: [agent, secondAgent],
@@ -623,8 +623,30 @@ describe("AgentList", () => {
 
     render(<AgentList mode="mobile-library" />);
 
-    await Promise.resolve();
-    expect(fetchHistory).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(fetchHistory).toHaveBeenCalledWith(
+        "agent:agent-1",
+        expect.any(Function),
+      );
+      expect(fetchHistory).toHaveBeenCalledWith(
+        "agent:agent-2",
+        expect.any(Function),
+      );
+    });
+  });
+
+  it("uses the latest shared message instead of profile copy in the mobile library", () => {
+    mocks.useParams.mockReturnValue({ agentId: undefined });
+    mocks.previewLastMessages = {
+      "agent:agent-1": { id: "evt-mobile", role: "assistant", content: "Desktop work is ready" },
+    };
+
+    render(<AgentList mode="mobile-library" />);
+
+    expect(screen.getByRole("button", { name: "Builder Bot" })).toHaveAttribute(
+      "data-last-message-content",
+      "Desktop work is ready",
+    );
   });
 
   it("opens the shared editor from the mobile create query", () => {

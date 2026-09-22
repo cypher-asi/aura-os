@@ -1,0 +1,19 @@
+.detailsAction {
+  display: inline-flex;
+  width: 44px;
+  min-width: 44px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--color-border) 34%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.detailsAction:active {
+  transform: scale(0.96);
+}

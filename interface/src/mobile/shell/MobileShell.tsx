@@ -205,38 +205,39 @@ export function MobileShell() {
           )}
           <div className={styles.mobileMain}>
             {state.showProjectResponsiveControls && ResponsiveControls && <div className={styles.mobileResponsiveControls}><ResponsiveControls /></div>}
-            {state.isStandaloneAgentLibraryRoot ? (
-              <div className={styles.mobileMainPanel}>
+            <div className={styles.mobileMainPanel}>
+              {/* Keep the last conversation lane mounted while the agent
+                  library or details are open. The host hides itself on those
+                  routes, then resumes without rebuilding transcript state. */}
+              <ErrorBoundary name="conversation"><ConversationSurfaceHost /></ErrorBoundary>
+              {state.isStandaloneAgentLibraryRoot ? (
                 <ErrorBoundary name="main">
                   <Suspense fallback={null}>
                     <MobileAgentLibraryView />
                   </Suspense>
                 </ErrorBoundary>
-              </div>
-            ) : state.isStandaloneAgentDetailRoute ? (
-              <div className={styles.mobileMainPanel}>
+              ) : state.isStandaloneAgentDetailRoute ? (
                 <ErrorBoundary name="main">
                   <Suspense fallback={null}>
                     <MobileAgentDetailsView />
                   </Suspense>
                 </ErrorBoundary>
-              </div>
-            ) : (
-              <div className={styles.mobileMainPanel}>
-                {/*
-                  The persistent agent chat lives in `ConversationSurfaceHost`
-                  (keyed by conversation lane) so switching Agents <-> Projects
-                  on the same agent/session never remounts the chat. On a
-                  conversation route the host paints the chat and the app
-                  MainPanel's outlet is empty; on other routes the host hides
-                  itself and the MainPanel renders the route content.
-                */}
-                <ErrorBoundary name="conversation"><ConversationSurfaceHost /></ErrorBoundary>
-                {!conversationRoute.isConversationRoute && (
-                  <ErrorBoundary name="main"><MainPanel>{routeContent}</MainPanel></ErrorBoundary>
-                )}
-              </div>
-            )}
+              ) : (
+                <>
+                  {/*
+                    The persistent agent chat lives in `ConversationSurfaceHost`
+                    (keyed by conversation lane) so switching Agents <-> Projects
+                    on the same agent/session never remounts the chat. On a
+                    conversation route the host paints the chat and the app
+                    MainPanel's outlet is empty; on other routes the host hides
+                    itself and the MainPanel renders the route content.
+                  */}
+                  {!conversationRoute.isConversationRoute && (
+                    <ErrorBoundary name="main"><MainPanel>{routeContent}</MainPanel></ErrorBoundary>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
         <button

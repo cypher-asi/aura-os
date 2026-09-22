@@ -31,6 +31,7 @@ import { ChatsTab } from "./ChatsTab";
 import { PermissionsTab } from "./PermissionsTab";
 import { MessagingTab } from "./MessagingTab";
 import { CloneAgentModal } from "./CloneAgentModal";
+import { MobileAgentResumeSection } from "../../../mobile/agents/MobileAgentResumeSection";
 import type { Agent } from "../../../shared/types";
 import { isSuperAgent } from "../../../shared/types/permissions";
 import { isAgentOwnedByUser } from "../utils/agent-ownership";
@@ -273,6 +274,9 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
       data-agent-active-tab={effectiveTab}
     >
       <div className={styles.scrollArea}>
+        {isMobileStandalone && (
+          <MobileAgentResumeSection agentId={a.agent_id} />
+        )}
         {effectiveTab === "profile" && (
           <ProfileTab
             agent={a}

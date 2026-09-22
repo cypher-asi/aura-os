@@ -63,7 +63,12 @@ export function useMobileShellState() {
     && location.pathname !== currentProjectRootPath
     && (isProjectAgentManagementRoute || !isPrimaryProjectDestination);
   const isStandaloneAgentLibraryRoot = activeApp.id === "agents" && location.pathname === "/agents";
-  const isStandaloneAgentDetailRoute = activeApp.id === "agents" && /^\/agents\/[^/]+$/.test(location.pathname);
+  const isStandaloneAgentRoute =
+    activeApp.id === "agents" && /^\/agents\/[^/]+$/.test(location.pathname);
+  const isStandaloneAgentDetailRoute =
+    isStandaloneAgentRoute && new URLSearchParams(location.search).get("view") === "details";
+  const isStandaloneAgentChatRoute =
+    isStandaloneAgentRoute && !isStandaloneAgentDetailRoute;
   const isMobileOrganizationRoute = location.pathname === "/projects/organization";
   const showProjectResponsiveControls = activeApp.id === "agents" && location.pathname.startsWith("/projects/");
   const isProjectAgentChatRoute = /^\/projects\/[^/]+\/agents\/(?!create$|attach$)[^/]+$/.test(location.pathname);
@@ -82,6 +87,7 @@ export function useMobileShellState() {
     mobileTargetProjectId, mobileTargetProject,
     showProjectTitle, showProjectBack, showProjectResponsiveControls,
     isStandaloneAgentLibraryRoot, isStandaloneAgentDetailRoute,
+    isStandaloneAgentChatRoute,
     isMobileOrganizationRoute,
     isProjectAgentChatRoute, isProjectAgentManagementRoute,
     showGlobalTitle, globalTitle,
