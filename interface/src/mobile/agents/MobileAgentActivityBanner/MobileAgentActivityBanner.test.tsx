@@ -3,6 +3,14 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { MemoryRouter, useLocation } from "react-router-dom";
 
+vi.mock("../../../api/client", () => ({
+  api: {
+    cancelInstanceTurn: vi.fn().mockResolvedValue(undefined),
+    agents: { cancelTurn: vi.fn().mockResolvedValue(undefined) },
+  },
+}));
+
+import { api } from "../../../api/client";
 import { useAgentAttentionStore } from "../../../stores/agent-attention-store";
 import { useChatCommandOutboxStore } from "../../../stores/chat-command-outbox";
 import { MobileAgentActivityBanner } from "./MobileAgentActivityBanner";
@@ -23,6 +31,7 @@ function renderBanner(initialEntry = "/projects/proj-1/files") {
 
 afterEach(() => {
   cleanup();
+  vi.clearAllMocks();
   useAgentAttentionStore.getState().clear();
   useChatCommandOutboxStore.setState({ commands: [], hydrated: false });
 });
@@ -169,5 +178,55 @@ describe("MobileAgentActivityBanner", () => {
 
     renderBanner("/projects/proj-1/agents/instance-1?session=session-1&view=chat");
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("stops the exact desktop-started project session without opening it", async () => {
+    useAgentAttentionStore.setState({
+      pendingApprovals: {},
+      activeRuns: {
+        "agent-1:proj-1:instance-1:session-1": {
+          agentId: "agent-1",
+          projectId: "proj-1",
+          agentInstanceId: "instance-1",
+          sessionId: "session-1",
+          route: "/projects/proj-1/agents/instance-1?session=session-1",
+          startedAt: 10,
+        },
+      },
+      hydrated: true,
+    });
+
+    renderBanner();
+    await userEvent.setup().click(screen.getByRole("button", { name: "Stop active agent" }));
+
+    expect(api.cancelInstanceTurn).toHaveBeenCalledWith(
+      "proj-1",
+      "instance-1",
+      "session-1",
+    );
+    expect(screen.getByLabelText("Current route")).toHaveTextContent(
+      "/projects/proj-1/files",
+    );
+    expect(screen.queryByRole("button", { name: "Stop active agent" })).not.toBeInTheDocument();
+  });
+
+  it("stops the exact standalone-agent session", async () => {
+    useAgentAttentionStore.setState({
+      pendingApprovals: {},
+      activeRuns: {
+        "agent-1:::session-2": {
+          agentId: "agent-1",
+          sessionId: "session-2",
+          route: "/agents/agent-1?session=session-2",
+          startedAt: 10,
+        },
+      },
+      hydrated: true,
+    });
+
+    renderBanner();
+    await userEvent.setup().click(screen.getByRole("button", { name: "Stop active agent" }));
+
+    expect(api.agents.cancelTurn).toHaveBeenCalledWith("agent-1", "session-2");
   });
 });

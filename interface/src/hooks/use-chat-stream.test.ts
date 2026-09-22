@@ -132,8 +132,26 @@ describe("useChatStream", () => {
       result.current.stopStreaming();
     });
 
-    expect(api.cancelInstanceTurn).toHaveBeenCalledWith("p-1", "ai-1");
+    expect(api.cancelInstanceTurn).toHaveBeenCalledWith("p-1", "ai-1", null);
     expect(api.cancelInstanceTurn).toHaveBeenCalledTimes(1);
+  });
+
+  it("scopes Stop to the canonical session opened on this client", () => {
+    const { result } = renderHook(() =>
+      useChatStream({
+        projectId: "p-1",
+        agentInstanceId: "ai-1",
+        sessionId: "session-from-desktop",
+      }),
+    );
+
+    act(() => result.current.stopStreaming());
+
+    expect(api.cancelInstanceTurn).toHaveBeenCalledWith(
+      "p-1",
+      "ai-1",
+      "session-from-desktop",
+    );
   });
 
   // Companion to the test above: the cancel POST is fire-and-forget,

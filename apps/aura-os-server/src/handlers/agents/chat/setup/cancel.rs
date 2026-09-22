@@ -3,14 +3,22 @@
 //! a partition prefix and evicts them so the next user message
 //! cold-starts a fresh harness session.
 
-use aura_os_core::{AgentId, AgentInstanceId, ProjectId};
+use aura_os_core::{AgentId, AgentInstanceId, ProjectId, SessionId};
 use aura_os_harness::HarnessInbound;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
+use serde::Deserialize;
 use tracing::{info, warn};
 
 use crate::error::ApiResult;
 use crate::state::{AppState, AuthJwt};
+
+#[derive(Debug, Default, Deserialize)]
+pub(crate) struct CancelTurnQuery {
+    /// Cancel only this canonical conversation lane when supplied. Clients
+    /// without a pinned session retain the historical partition-wide sweep.
+    session_id: Option<SessionId>,
+}
 
 /// Sweep every chat-session entry under `partition` and forward
 /// [`HarnessInbound::Cancel`] to each one's harness command channel,
@@ -113,8 +121,9 @@ pub(in super::super) async fn cancel_live_sessions_in_registry(
 ///
 /// Phase 7 Stop / refresh cleanup: forward
 /// [`HarnessInbound::Cancel`] to every live `ChatSession` on the
-/// bare-template partition and evict them so the next user message
-/// cold-starts with a fresh harness session. Idempotent — calling it
+/// bare-template partition (or the exact `session_id` lane when supplied)
+/// and evict them so the next user message cold-starts with a fresh harness
+/// session. Idempotent — calling it
 /// when no live session exists is a no-op (and still returns 204).
 ///
 /// Counterpart to `reset_agent_session` but intentionally lighter:
@@ -126,20 +135,21 @@ pub(crate) async fn cancel_agent_turn(
     State(state): State<AppState>,
     AuthJwt(_jwt): AuthJwt,
     Path(agent_id): Path<AgentId>,
+    Query(query): Query<CancelTurnQuery>,
 ) -> ApiResult<StatusCode> {
-    let partition = aura_os_core::harness_agent_id(&agent_id, None, None);
+    let partition = aura_os_core::harness_agent_id(&agent_id, None, query.session_id.as_ref());
     cancel_live_sessions_for_partition(&state, &partition).await;
-    info!(%agent_id, "Agent chat turn cancelled");
+    info!(%agent_id, session_id = ?query.session_id, "Agent chat turn cancelled");
     Ok(StatusCode::NO_CONTENT)
 }
 
 /// `POST /api/projects/:project_id/agents/:agent_instance_id/cancel-turn`
 ///
 /// Phase 7 Stop / refresh cleanup for the project / instance chat
-/// route. Resolves the parent template id so the partition prefix
-/// matches the `{template}::{instance}::{session_id}` shape the chat
-/// route stores under, then sweeps every per-session entry under that
-/// instance.
+/// route. Resolves the parent template id so the partition matches the
+/// `{template}::{instance}::{session_id}` shape the chat route stores under.
+/// A supplied `session_id` targets only that lane; omission preserves the
+/// legacy sweep across every per-session entry under the instance.
 ///
 /// Counterpart to `reset_instance_session`; see [`cancel_agent_turn`]
 /// for the contract distinction.
@@ -147,6 +157,7 @@ pub(crate) async fn cancel_instance_turn(
     State(state): State<AppState>,
     AuthJwt(_jwt): AuthJwt,
     Path((project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
+    Query(query): Query<CancelTurnQuery>,
 ) -> ApiResult<StatusCode> {
     let live_session_key = match state
         .agent_instance_service
@@ -156,7 +167,7 @@ pub(crate) async fn cancel_instance_turn(
         Ok(instance) => Some(aura_os_core::harness_agent_id(
             &instance.agent_id,
             Some(&agent_instance_id),
-            None,
+            query.session_id.as_ref(),
         )),
         Err(e) => {
             warn!(
@@ -171,7 +182,7 @@ pub(crate) async fn cancel_instance_turn(
     if let Some(key) = live_session_key {
         cancel_live_sessions_for_partition(&state, &key).await;
     }
-    info!(%agent_instance_id, "Instance chat turn cancelled");
+    info!(%agent_instance_id, session_id = ?query.session_id, "Instance chat turn cancelled");
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -298,6 +309,39 @@ mod tests {
                 .get(&ChatSessionKey::new(unrelated, None))
                 .is_some(),
             "cancel-turn for ai-1 must NOT touch sibling instance ai-2 — partition prefix is exact",
+        );
+    }
+
+    /// A client that supplies the canonical session id must not interrupt a
+    /// sibling conversation running in parallel on the same agent instance.
+    /// This is the mobile/desktop handoff contract: Stop follows the opened
+    /// session, not whichever other lane happens to share the instance.
+    #[tokio::test]
+    async fn cancel_live_sessions_can_target_one_canonical_session() {
+        let registry: ChatSessionRegistry = Arc::new(DashMap::new());
+        let session_a = "agent-template::ai-1::session-a";
+        let session_b = "agent-template::ai-1::session-b";
+        let mut commands_rx_a = insert_fake_chat_session(&registry, session_a);
+        let mut commands_rx_b = insert_fake_chat_session(&registry, session_b);
+
+        cancel_live_sessions_in_registry(&registry, session_a).await;
+
+        let observed = tokio::time::timeout(Duration::from_millis(100), commands_rx_a.recv())
+            .await
+            .expect("target session must observe forwarded Cancel")
+            .expect("commands_tx still open");
+        assert!(matches!(observed, HarnessInbound::Cancel));
+        assert!(registry
+            .get(&ChatSessionKey::new(session_a, None))
+            .is_none());
+        assert!(registry
+            .get(&ChatSessionKey::new(session_b, None))
+            .is_some());
+        assert!(
+            tokio::time::timeout(Duration::from_millis(20), commands_rx_b.recv())
+                .await
+                .is_err(),
+            "session-scoped cancel must not notify a sibling lane",
         );
     }
 

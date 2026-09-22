@@ -1357,7 +1357,7 @@ export function useAgentChatStream({
   const stopStreaming = useCallback(() => {
     inFlightRef.current = false;
     if (agentId) {
-      api.agents.cancelTurn(agentId).catch(() => {});
+      api.agents.cancelTurn(agentId, sessionIdRef.current).catch(() => {});
     }
     core.baseStopStreaming();
   }, [agentId, core.baseStopStreaming]);

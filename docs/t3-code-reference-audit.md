@@ -150,6 +150,13 @@ The first Aura slice now implements that boundary:
   suppresses the conversation already on screen and snapshots attention independently of a
   successful WebSocket connection, so a cold mobile open still exposes desktop-started work. This
   is Aura's in-app counterpart to T3's Live Activity model.
+- That global mobile activity strip is now a control surface as well as a status surface. When its
+  highest-priority item is an active run, mobile exposes a separate 44px Stop action that cancels
+  the environment-owned turn without first navigating away from the user's current screen. The
+  request carries the canonical session id for both project-instance and standalone-agent chats,
+  so stopping work opened from desktop does not cancel a sibling conversation running in parallel
+  on the same agent. Older clients without a session pin retain the conservative partition-wide
+  cancellation fallback.
 - Android now has the corresponding OS-background delivery path. The native client requests
   notification permission only when its Firebase resources are present, registers its FCM token
   against the authenticated Aura account, and resynchronizes the enabled notification categories

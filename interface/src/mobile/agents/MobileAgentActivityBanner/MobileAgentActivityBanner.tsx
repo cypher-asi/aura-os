@@ -1,13 +1,16 @@
-import { CircleAlert, CircleHelp, LoaderCircle, Send } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { CircleAlert, CircleHelp, LoaderCircle, Send, Square } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { api } from "../../../api/client";
 import {
   buildAgentSessionRoute,
   isAgentSessionRouteCurrent,
 } from "../../../shared/lib/agent-session-route";
 import {
   hydrateAgentAttention,
+  markAgentRunStopped,
+  type AgentActiveRunItem,
   useAgentAttentionStore,
 } from "../../../stores/agent-attention-store";
 import {
@@ -43,6 +46,8 @@ export function MobileAgentActivityBanner() {
   const activeRuns = useAgentAttentionStore((state) => state.activeRuns);
   const attentionHydrated = useAgentAttentionStore((state) => state.hydrated);
   const commands = useChatCommandOutboxStore((state) => state.commands);
+  const [stoppingRoute, setStoppingRoute] = useState<string | null>(null);
+  const [stopErrorRoute, setStopErrorRoute] = useState<string | null>(null);
   const currentUrl = `${location.pathname}${location.search}`;
 
   useEffect(() => {
@@ -114,6 +119,7 @@ export function MobileAgentActivityBanner() {
       label: labels.join(" · "),
       action: "Open active agent",
       kind: "working" as const,
+      run: runs[0] as AgentActiveRunItem,
     };
   }, [activeRuns, commands, currentUrl, pendingApprovals, pendingInputs]);
 
@@ -126,21 +132,62 @@ export function MobileAgentActivityBanner() {
     : model.kind === "outbox"
       ? Send
       : LoaderCircle;
+  const isStopping = model.kind === "working" && stoppingRoute === model.route;
+  const stopFailed = model.kind === "working" && stopErrorRoute === model.route;
+
+  const stopRun = async () => {
+    if (model.kind !== "working") return;
+    setStoppingRoute(model.route);
+    setStopErrorRoute(null);
+    try {
+      if (model.run.projectId && model.run.agentInstanceId) {
+        await api.cancelInstanceTurn(
+          model.run.projectId,
+          model.run.agentInstanceId,
+          model.run.sessionId,
+        );
+      } else {
+        await api.agents.cancelTurn(model.run.agentId, model.run.sessionId);
+      }
+      markAgentRunStopped(model.run);
+    } catch {
+      setStopErrorRoute(model.route);
+    } finally {
+      setStoppingRoute(null);
+    }
+  };
 
   return (
-    <button
-      type="button"
+    <div
       className={styles.root}
       data-kind={model.kind}
-      onClick={() => navigate(model.route)}
-      aria-label={`${model.label}. ${model.action}`}
     >
-      <Icon
-        className={model.kind === "working" ? styles.spinning : undefined}
-        size={16}
-        aria-hidden="true"
-      />
-      <span>{model.label}</span>
-    </button>
+      <button
+        type="button"
+        className={styles.openButton}
+        data-kind={model.kind}
+        onClick={() => navigate(model.route)}
+        aria-label={`${model.label}. ${model.action}`}
+      >
+        <Icon
+          className={model.kind === "working" ? styles.spinning : undefined}
+          size={16}
+          aria-hidden="true"
+        />
+        <span>{stopFailed ? `${model.label} · Stop failed` : model.label}</span>
+      </button>
+      {model.kind === "working" ? (
+        <button
+          type="button"
+          className={styles.stopButton}
+          onClick={() => void stopRun()}
+          disabled={isStopping}
+          aria-label={isStopping ? "Stopping active agent" : "Stop active agent"}
+        >
+          <Square size={13} fill="currentColor" aria-hidden="true" />
+          <span>{isStopping ? "Stopping…" : "Stop"}</span>
+        </button>
+      ) : null}
+    </div>
   );
 }
