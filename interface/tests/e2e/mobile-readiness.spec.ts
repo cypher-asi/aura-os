@@ -26,6 +26,39 @@ test("mobile navigation keeps all five tabs visible and exposes Process and Stat
   await expect(menu).toHaveCount(0);
 });
 
+test("mobile keeps agent attention visible outside the conversation", async ({ page }) => {
+  await page.route("**/api/streams/tool-approvals", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        approvals: [{
+          request_id: "approval-mobile-1",
+          tool_name: "run_command",
+          agent_id: "agent-1",
+          project_id: "proj-1",
+          agent_instance_id: "agent-inst-1",
+          session_id: "session-mobile-1",
+          started_at_ms: 10,
+        }],
+      }),
+    });
+  });
+  await page.route("**/api/streams/active", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: "{\"streams\":[]}" });
+  });
+
+  await page.goto("/projects/proj-1/files");
+  const activity = page.getByRole("button", {
+    name: "1 approval waiting. Open waiting approval",
+  });
+  await expect(activity).toBeInViewport();
+  await activity.tap();
+  await expect(page).toHaveURL(
+    /\/projects\/proj-1\/agents\/agent-inst-1\?session=session-mobile-1$/,
+  );
+});
+
 test.describe("tablet reporting a desktop user agent", () => {
   test.use({ viewport: { width: 1024, height: 768 }, hasTouch: true, isMobile: false,
     userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15" });

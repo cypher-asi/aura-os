@@ -123,6 +123,13 @@ The first Aura slice now implements that boundary:
   that need approval rise above actively working agents, which rise above idle profiles, while a
   summary reports how many agents need the user and how many are still working. Existing order is
   preserved inside each tier, so the temporary activity view does not overwrite pin/recent order.
+- The authenticated mobile shell now keeps that awareness visible while the user is in Files,
+  Tasks, Run, or another screen. A compact banner prioritizes approval-required sessions, then
+  unconfirmed outbound prompts, then active runs, and opens the exact canonical conversation. It
+  suppresses the conversation already on screen and snapshots attention independently of a
+  successful WebSocket connection, so a cold mobile open still exposes desktop-started work. This
+  is Aura's in-app counterpart to T3's Live Activity model; OS background delivery remains a
+  separate native concern.
 - Chat lifecycle and approval firehose events are now stamped with the authenticated owner and
   filtered during both replay and live delivery. Legacy unscoped events retain their existing
   behavior, while new account-scoped control signals cannot appear in another user's mobile agent

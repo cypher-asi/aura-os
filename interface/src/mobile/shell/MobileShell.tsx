@@ -25,6 +25,7 @@ import { useMobileShellState } from "./useMobileShellState";
 import { blurActiveElement } from "./mobile-shell-utils";
 import { ProjectNavigationDrawerContent } from "./ProjectNavigationDrawer";
 import { MobileTopbar } from "./MobileTopbar";
+import { MobileAgentActivityBanner } from "../agents/MobileAgentActivityBanner";
 import {
   AccountSheetContent,
   PreviewSheetContent,
@@ -181,6 +182,7 @@ export function MobileShell() {
               </div>
             </div>
           ) : null}
+          <MobileAgentActivityBanner />
           {!drawerOpen && state.showProjectTitle && !state.isProjectAgentManagementRoute && (
             <div className={styles.mobileProjectTabs}>
               <MobileBottomNav activeId={mobileNavActiveId} onNavigate={handleMobilePrimaryNavigate} />
