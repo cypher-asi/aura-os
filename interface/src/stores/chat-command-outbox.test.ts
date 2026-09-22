@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   durableWriteError: null as Error | null,
   sendAgent: vi.fn(),
   sendProject: vi.fn(),
+  getStatus: vi.fn(),
 }));
 
 vi.mock("../shared/lib/auth-token", () => ({
@@ -33,6 +34,10 @@ vi.mock("../api/streams", () => ({
   sendEventStream: mocks.sendProject,
 }));
 
+vi.mock("../shared/api/chat-commands", () => ({
+  getChatCommandStatus: mocks.getStatus,
+}));
+
 import {
   _resetChatCommandOutboxForTests,
   ChatCommandOutboxUnavailableError,
@@ -52,6 +57,7 @@ describe("chat command outbox", () => {
     mocks.durableWriteError = null;
     mocks.sendAgent.mockReset();
     mocks.sendProject.mockReset();
+    mocks.getStatus.mockReset();
     _resetChatCommandOutboxForTests();
     Object.defineProperty(navigator, "onLine", {
       configurable: true,
@@ -142,40 +148,53 @@ describe("chat command outbox", () => {
       action: null,
       originallyStartedNewSession: false,
     });
-    await markChatCommandAccepted("cmd-running");
+    await markChatCommandAccepted("cmd-running", "attached", "session-1");
     expect(mocks.stored).toEqual([
-      expect.objectContaining({ accepted: true, executionStatus: "attached" }),
+      expect.objectContaining({ accepted: true, executionStatus: "attached", sessionId: "session-1" }),
     ]);
 
-    mocks.sendAgent.mockImplementation(async (...args: unknown[]) => {
-      const handler = args[5] as { onAccepted: (receipt: unknown) => void };
-      handler.onAccepted({
-        commandId: "cmd-running",
-        sessionId: "session-1",
-        projectId: "project-1",
-        attachId: null,
-        replayed: true,
-        executionStatus: "unconfirmed",
-      });
+    mocks.getStatus.mockResolvedValueOnce({
+      commandId: "cmd-running", sessionId: "session-1", executionStatus: "unconfirmed",
     });
     await retryChatCommandNow("cmd-running");
-    expect(mocks.sendAgent.mock.calls[0][16]).toBe(true);
+    expect(mocks.getStatus).toHaveBeenCalledWith(
+      { surface: "agent", agentId: "agent-1", sessionId: "session-1" },
+      "cmd-running",
+    );
+    expect(mocks.sendAgent).not.toHaveBeenCalled();
     expect(mocks.stored).toEqual([
       expect.objectContaining({ accepted: true, executionStatus: "unconfirmed" }),
     ]);
 
-    mocks.sendAgent.mockImplementation(async (...args: unknown[]) => {
-      const handler = args[5] as { onAccepted: (receipt: unknown) => void };
-      handler.onAccepted({
-        commandId: "cmd-running",
-        sessionId: "session-1",
-        projectId: "project-1",
-        attachId: null,
-        replayed: true,
-        executionStatus: "completed",
-      });
+    mocks.getStatus.mockResolvedValueOnce({
+      commandId: "cmd-running", sessionId: "session-1", executionStatus: "completed",
     });
     await retryChatCommandNow("cmd-running");
+    expect(mocks.stored).toEqual([]);
+  });
+
+  it("checks an accepted attachment command without uploading the attachment again", async () => {
+    await enqueueChatCommand({
+      surface: "project",
+      commandId: "cmd-image",
+      projectId: "project-1",
+      agentInstanceId: "instance-1",
+      content: "inspect this screenshot",
+      action: null,
+      attachments: [{ type: "image", media_type: "image/png", data: "large-base64-pixels" }],
+      originallyStartedNewSession: true,
+    });
+    await markChatCommandAccepted("cmd-image", "attached", "session-2");
+    mocks.getStatus.mockResolvedValue({
+      commandId: "cmd-image", sessionId: "session-2", executionStatus: "completed",
+    });
+    await retryChatCommandNow("cmd-image");
+    expect(mocks.getStatus).toHaveBeenCalledWith(
+      { surface: "project", projectId: "project-1", agentInstanceId: "instance-1",
+        sessionId: "session-2" },
+      "cmd-image",
+    );
+    expect(mocks.sendProject).not.toHaveBeenCalled();
     expect(mocks.stored).toEqual([]);
   });
 
@@ -188,18 +207,11 @@ describe("chat command outbox", () => {
       action: null,
       originallyStartedNewSession: false,
     });
-    mocks.sendAgent.mockImplementation(async (...args: unknown[]) => {
-      const handler = args[5] as { onAccepted: (receipt: unknown) => void };
-      handler.onAccepted({
-        commandId: "cmd-failed",
-        sessionId: "session-1",
-        projectId: "project-1",
-        attachId: null,
-        replayed: true,
-        executionStatus: "failed",
-      });
+    await markChatCommandAccepted("cmd-failed", "attached", "session-1");
+    mocks.getStatus.mockResolvedValueOnce({
+      commandId: "cmd-failed", sessionId: "session-1", executionStatus: "failed",
     });
-    await drainChatCommandOutbox();
+    await retryChatCommandNow("cmd-failed");
     expect(mocks.stored).toEqual([
       expect.objectContaining({
         accepted: true,
@@ -208,7 +220,7 @@ describe("chat command outbox", () => {
       }),
     ]);
     await drainChatCommandOutbox();
-    expect(mocks.sendAgent).toHaveBeenCalledTimes(1);
+    expect(mocks.sendAgent).not.toHaveBeenCalled();
   });
 
   it("schedules the next accepted-command check after a cold boot before its deadline", async () => {

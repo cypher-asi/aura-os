@@ -349,9 +349,25 @@ The first Aura slice now implements that boundary:
   classified from storage rather than advertised as still running. Mobile surfaces a scoped
   warning for saved-but-unconfirmed execution with a Check again action, and retains a saved-but-
   failed run for review rather than silently removing it. Unit tests cover the terminal marker,
-  replay receipt, and accepted-command outbox lifecycle; Android restart/real-backend QA remains.
+  replay receipt, and accepted-command outbox lifecycle. Android production-WebView QA on the
+  `dea2c9690` APK confirmed that a saved command survives force-stop/relaunch before and after the
+  check deadline, replays the same command/session with both replay and prior-acceptance headers,
+  and transitions through attached, unconfirmed, failed, and completed without duplicate client
+  POSTs after completion. Physical touches on library and chat Check actions worked; relevant
+  controls were 44px and the 320px layout did not overflow. Responses were CDP-injected because
+  the new backend is not deployed, so this does not prove server idempotence or real execution.
   Status checks for commands already acknowledged by the server also assert prior acceptance; if
   storage cannot find that command, Aura fails closed instead of opening a duplicate harness turn.
+- Accepted-command follow-up checks now use authenticated, read-only status endpoints for the exact
+  standalone or project-agent session. The phone no longer re-uploads screenshots or other prompt
+  attachments every 15 seconds, and the status check cannot persist or execute another turn.
+  Unacknowledged commands still use the original payload and idempotent replay POST. Status
+  responses must match the requested command and session; missing or malformed status keeps the
+  accepted command visible as unconfirmed instead of clearing the outbox. The status route uses
+  Aura's existing agent/session ownership checks and the durable terminal marker, with no billing
+  or harness session setup. Both status and project chat send reject an instance ID supplied under
+  another project's URL. The status-only route/outbox path has unit and route integration tests,
+  but has not yet been exercised in Android/WebView or against a deployed backend.
 
 Next: formalize `runtimeId`/environment ownership in session metadata and move accepted command
 execution behind a durable status/worker boundary. Verify configured FCM delivery on production

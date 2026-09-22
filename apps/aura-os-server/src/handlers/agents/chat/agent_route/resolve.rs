@@ -23,7 +23,7 @@ use super::super::persist::{try_pin_session, PinnedSessionOutcome};
 /// (and a hosted process with a warm caller-owned cache) survive a
 /// transient directory outage without turning the shadow into a
 /// cross-user authorization bypass.
-pub(super) async fn resolve_agent_for_chat(
+pub(in crate::handlers::agents::chat) async fn resolve_agent_for_chat(
     state: &AppState,
     agent_id: &AgentId,
     jwt: &str,

@@ -77,6 +77,12 @@ pub(crate) async fn send_event_stream(
         .get_instance(&project_id, &agent_instance_id)
         .await
         .map_err(|e| ApiError::internal(format!("looking up agent instance: {e}")))?;
+    // The instance service resolves by instance ID; the URL's project ID is
+    // not part of that storage lookup. Do not let a mismatched project path
+    // start a turn against another project's agent instance.
+    if instance.project_id != project_id {
+        return Err(ApiError::not_found("agent instance not found"));
+    }
     ensure_chat_runtime_allowed(&state, instance.harness_mode())?;
     if !is_command_replay {
         require_credits_for_auth_source(&state, &jwt, &instance.auth_source).await?;

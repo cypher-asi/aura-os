@@ -7,6 +7,7 @@ import type {
   StreamEventHandler,
 } from "../api/streams";
 import { sendAgentEventStream, sendEventStream } from "../api/streams";
+import { getChatCommandStatus } from "../shared/api/chat-commands";
 import { ApiClientError } from "../shared/api/core";
 import { getStoredSession } from "../shared/lib/auth-token";
 import { getResolvedHostOrigin } from "../shared/lib/host-config";
@@ -395,7 +396,37 @@ function setOptimisticDeliveryStatus(
 }
 
 async function replayCommand(command: PendingChatCommand): Promise<void> {
-  if (!command.accepted) setOptimisticDeliveryStatus(command.commandId, "sending");
+  if (command.accepted) {
+    // Once the server has acknowledged persistence, polling is a read-only
+    // status check. Never re-upload large attachments or open another turn.
+    if (!command.sessionId) {
+      await markChatCommandAccepted(command.commandId, "unconfirmed");
+      return;
+    }
+    try {
+      const target = command.surface === "project"
+        ? { surface: "project" as const, projectId: command.projectId,
+            agentInstanceId: command.agentInstanceId, sessionId: command.sessionId }
+        : { surface: "agent" as const, agentId: command.agentId,
+            sessionId: command.sessionId };
+      const status = await getChatCommandStatus(target, command.commandId);
+      if (status.executionStatus === "completed") {
+        await removeChatCommand(command.commandId);
+      } else if (status.executionStatus === "failed") {
+        await markChatCommandExecutionFailed(command.commandId, status.sessionId);
+      } else {
+        await markChatCommandAccepted(
+          command.commandId,
+          status.executionStatus,
+          status.sessionId,
+        );
+      }
+    } catch (error) {
+      await recordChatCommandFailure(command.commandId, error);
+    }
+    return;
+  }
+  setOptimisticDeliveryStatus(command.commandId, "sending");
   await new Promise<void>((resolve) => {
     let settled = false;
     const controller = new AbortController();

@@ -23,6 +23,7 @@ use crate::handlers::agents::session_identity::{
 use crate::live_streams::{ChatCommandMatch, StreamKind, StreamScope};
 use crate::state::AppState;
 
+use super::super::command_status::find_command_terminal;
 use super::super::constants::HEADER_CHAT_EXECUTION_STATUS;
 use super::super::event_bus::publish_user_message_event;
 use super::super::maybe_spawn_subagent_capture;
@@ -587,26 +588,6 @@ async fn find_replayed_chat_command(
         .expect("recorded chat command receipt must be readable");
     ensure_command_content_matches(&command, content)?;
     Ok(Some((command, status.unwrap_or("unconfirmed"))))
-}
-
-fn find_command_terminal(
-    events: &[aura_os_storage::StorageSessionEvent],
-    command_id: &str,
-) -> Option<&'static str> {
-    events.iter().rev().find_map(|event| {
-        if event.event_type.as_deref() != Some("chat_command_terminal") {
-            return None;
-        }
-        let content = event.content.as_ref()?;
-        if content.get("client_command_id")?.as_str()? != command_id {
-            return None;
-        }
-        match content.get("status")?.as_str()? {
-            "completed" => Some("completed"),
-            "failed" => Some("failed"),
-            _ => None,
-        }
-    })
 }
 
 fn find_persisted_command(

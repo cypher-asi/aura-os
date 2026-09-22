@@ -6,6 +6,7 @@
 
 mod agent_route;
 mod busy;
+mod command_status;
 mod compaction;
 mod computer_use_gate;
 mod constants;
@@ -41,6 +42,7 @@ pub(crate) use super::safe_workspace::{
     prepare_hosted_safe_turn_workspace, prepare_safe_turn_workspace,
 };
 pub(crate) use agent_route::send_agent_event_stream;
+pub(crate) use command_status::{get_agent_command_status, get_instance_command_status};
 pub(crate) use dev_loop_persist::spawn_dev_loop_persist_task;
 pub(crate) use discovery::{find_matching_project_agents, storage_session_sort_key};
 pub(crate) use event_bus::{publish_assistant_message_end_event, publish_user_message_event};

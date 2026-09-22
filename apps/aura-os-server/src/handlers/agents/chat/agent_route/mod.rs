@@ -44,7 +44,8 @@ use persistence::{
     LoadAgentHistoryCtx,
 };
 use prompt::{build_agent_session_fields, load_project_state_for_agent, normalize_agent_perms};
-use resolve::{resolve_agent_for_chat, resolve_pinned_session_for_agent};
+pub(in crate::handlers::agents::chat) use resolve::resolve_agent_for_chat;
+use resolve::resolve_pinned_session_for_agent;
 
 pub(crate) use resolve::parse_wire_session_id;
 

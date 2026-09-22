@@ -25,9 +25,10 @@ pub(crate) mod workspace_tools;
 
 pub(crate) use aside::{ask_agent_session_aside, ask_instance_session_aside};
 pub(crate) use chat::{
-    cancel_agent_turn, cancel_instance_turn, import_public_chat_session, list_agent_events,
-    list_agent_events_paginated, list_agent_session_events, list_agent_session_events_paginated,
-    list_events, list_session_events_paginated, reset_agent_session, reset_instance_session,
+    cancel_agent_turn, cancel_instance_turn, get_agent_command_status, get_instance_command_status,
+    import_public_chat_session, list_agent_events, list_agent_events_paginated,
+    list_agent_session_events, list_agent_session_events_paginated, list_events,
+    list_session_events_paginated, reset_agent_session, reset_instance_session,
     send_agent_event_stream, send_event_stream,
 };
 pub(crate) use context_contents::{get_agent_context_contents, get_instance_context_contents};
