@@ -148,34 +148,50 @@ const TERMINAL_VM_STATES = new Set<string>(["error", "stopped"]);
 const MAX_CONSECUTIVE_POLL_FAILURES = 3;
 const _pollFailureCounts = new Map<string, number>();
 
+async function fetchRemoteAgentStatus(agentId: string): Promise<void> {
+  try {
+    const vm = await api.swarm.getRemoteAgentState(agentId);
+    _pollFailureCounts.delete(agentId);
+    setStatus(agentId, vm.state);
+    // Settled terminal state — stop polling but keep showing it. A manual
+    // refresh below re-arms the agent before checking, so a runtime started
+    // from another client can become live immediately instead of waiting for
+    // the next list reload or websocket event.
+    if (TERMINAL_VM_STATES.has(vm.state)) {
+      pauseRemoteAgentPolling(agentId);
+    } else if (!_remoteAgentIds.has(agentId)) {
+      armRemoteAgentPolling(agentId);
+    }
+  } catch (err: unknown) {
+    if (
+      err instanceof ApiClientError &&
+      TERMINAL_REMOTE_STATUSES.has(err.status)
+    ) {
+      unregisterRemoteAgent(agentId);
+      return;
+    }
+    setStatus(agentId, "error");
+    const failures = (_pollFailureCounts.get(agentId) ?? 0) + 1;
+    _pollFailureCounts.set(agentId, failures);
+    if (failures >= MAX_CONSECUTIVE_POLL_FAILURES) {
+      pauseRemoteAgentPolling(agentId);
+    }
+  }
+}
+
 function pollRemoteAgents() {
   for (const agentId of _remoteAgentIds) {
-    api.swarm
-      .getRemoteAgentState(agentId)
-      .then((vm) => {
-        _pollFailureCounts.delete(agentId);
-        setStatus(agentId, vm.state);
-        // Settled terminal state — stop polling but keep showing it.
-        if (TERMINAL_VM_STATES.has(vm.state)) {
-          pauseRemoteAgentPolling(agentId);
-        }
-      })
-      .catch((err: unknown) => {
-        if (
-          err instanceof ApiClientError &&
-          TERMINAL_REMOTE_STATUSES.has(err.status)
-        ) {
-          unregisterRemoteAgent(agentId);
-          return;
-        }
-        setStatus(agentId, "error");
-        const failures = (_pollFailureCounts.get(agentId) ?? 0) + 1;
-        _pollFailureCounts.set(agentId, failures);
-        if (failures >= MAX_CONSECUTIVE_POLL_FAILURES) {
-          pauseRemoteAgentPolling(agentId);
-        }
-      });
+    void fetchRemoteAgentStatus(agentId);
   }
+}
+
+/** Force a fresh VM-state check for a user-selected remote agent. */
+export async function refreshRemoteAgentStatus(agentId: string): Promise<void> {
+  setMachineTypes({ [agentId]: "remote" });
+  if (!_polledAgentIds.has(agentId)) {
+    armRemoteAgentPolling(agentId);
+  }
+  await fetchRemoteAgentStatus(agentId);
 }
 
 export const useProfileStatusStore = create<ProfileStatusState>()((_, get) => ({

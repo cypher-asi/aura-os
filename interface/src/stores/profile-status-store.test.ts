@@ -58,7 +58,10 @@ vi.mock("../api/client", () => ({
   api: mockApi,
 }));
 
-import { useProfileStatusStore } from "./profile-status-store";
+import {
+  refreshRemoteAgentStatus,
+  useProfileStatusStore,
+} from "./profile-status-store";
 import { ApiClientError } from "../shared/api/core";
 import { EventType } from "../shared/types/aura-events";
 
@@ -207,6 +210,28 @@ describe("profile-status-store", () => {
           (args: unknown[]) => args[0] === "r-term",
         ),
       ).toBe(false);
+    });
+
+    it("manually rechecks a terminal agent and resumes live polling", async () => {
+      mockApi.swarm.getRemoteAgentState.mockImplementation((id: string) =>
+        id === "r-manual" &&
+        useProfileStatusStore.getState().statuses[id] !== "stopped"
+          ? Promise.resolve({ state: "stopped" })
+          : Promise.resolve({ state: "running" }),
+      );
+
+      useProfileStatusStore.getState().registerRemoteAgents([
+        { agent_id: "r-manual" },
+      ]);
+      await vi.waitFor(() => {
+        expect(useProfileStatusStore.getState().statuses["r-manual"]).toBe("stopped");
+      });
+
+      mockApi.swarm.getRemoteAgentState.mockResolvedValue({ state: "running" });
+      await refreshRemoteAgentStatus("r-manual");
+
+      expect(useProfileStatusStore.getState().statuses["r-manual"]).toBe("running");
+      expect(useProfileStatusStore.getState().machineTypes["r-manual"]).toBe("remote");
     });
 
     it("pauses polling after consecutive failures but keeps the status", async () => {

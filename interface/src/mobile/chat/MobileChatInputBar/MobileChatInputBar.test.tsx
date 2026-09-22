@@ -4,6 +4,13 @@ import { vi } from "vitest";
 import { MobileChatInputBar } from "./MobileChatInputBar";
 
 const mockStopVoiceDictation = vi.hoisted(() => vi.fn());
+const mockRefreshAuraRuntimeCapabilities = vi.hoisted(() => vi.fn(async () => undefined));
+const mockRefreshRemoteAgentStatus = vi.hoisted(() => vi.fn(async () => undefined));
+const mockOpenHostSettings = vi.hoisted(() => vi.fn());
+const mockCapabilities = vi.hoisted(() => ({
+  remoteOnly: false,
+  supportsHostRetargeting: false,
+}));
 const mockChatUI = vi.hoisted(() => ({
   selectedModel: "aura-claude-opus-4-6",
   selectedEffort: "medium",
@@ -79,7 +86,17 @@ vi.mock("../../../hooks/stream/hooks", () => ({
 }));
 
 vi.mock("../../../hooks/use-aura-capabilities", () => ({
-  useAuraCapabilities: () => ({ remoteOnly: false }),
+  refreshAuraRuntimeCapabilities: mockRefreshAuraRuntimeCapabilities,
+  useAuraCapabilities: () => mockCapabilities,
+}));
+
+vi.mock("../../../stores/profile-status-store", () => ({
+  refreshRemoteAgentStatus: mockRefreshRemoteAgentStatus,
+}));
+
+vi.mock("../../../stores/ui-modal-store", () => ({
+  useUIModalStore: (selector: (state: { openHostSettings: typeof mockOpenHostSettings }) => unknown) =>
+    selector({ openHostSettings: mockOpenHostSettings }),
 }));
 
 vi.mock("../../../lib/analytics", () => ({
@@ -117,24 +134,58 @@ function renderInputBar(
 describe("MobileChatInputBar", () => {
   beforeEach(() => {
     mockStopVoiceDictation.mockClear();
+    mockRefreshAuraRuntimeCapabilities.mockClear();
+    mockRefreshRemoteAgentStatus.mockClear();
+    mockOpenHostSettings.mockClear();
+    mockCapabilities.remoteOnly = false;
+    mockCapabilities.supportsHostRetargeting = false;
   });
 
-  it("explains why a remote agent is required when mobile chat is disabled", () => {
+  it("keeps a local conversation readable while its desktop runtime is unavailable", () => {
     renderInputBar({
       machineType: "local",
       sendDisabled: true,
       sendDisabledReason: "This local agent needs the desktop app.",
     });
 
-    expect(screen.getByPlaceholderText("Remote agent required")).toBeDisabled();
-    expect(screen.getByRole("status")).toHaveTextContent("Remote agent required");
+    expect(screen.getByPlaceholderText("Runtime unavailable")).toBeDisabled();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Saved conversation · Desktop runtime unavailable",
+    );
     expect(screen.getByRole("status")).toHaveTextContent(
       "This local agent needs the desktop app.",
     );
-    expect(screen.getByLabelText("Remote agent required")).toHaveTextContent(
-      "Remote required",
+    expect(screen.getByLabelText("Runtime unavailable")).toHaveTextContent("Read only");
+    expect(screen.getByTestId("agent-environment")).toHaveTextContent("Local");
+  });
+
+  it("checks a remote runtime again without replaying a prompt", async () => {
+    const user = userEvent.setup();
+    renderInputBar({
+      machineType: "remote",
+      templateAgentId: "remote-template-1",
+      sendDisabled: true,
+      sendDisabledReason: "This remote agent is offline.",
+    });
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Saved conversation · Remote runtime unavailable",
     );
-    expect(screen.queryByTestId("agent-environment")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Check again" }));
+
+    expect(mockRefreshRemoteAgentStatus).toHaveBeenCalledWith("remote-template-1");
+  });
+
+  it("offers host recovery for a disconnected local runtime", async () => {
+    const user = userEvent.setup();
+    mockCapabilities.supportsHostRetargeting = true;
+    renderInputBar({ machineType: "local", sendDisabled: true });
+
+    await user.click(screen.getByRole("button", { name: "Check again" }));
+    await user.click(screen.getByRole("button", { name: "Host settings" }));
+
+    expect(mockRefreshAuraRuntimeCapabilities).toHaveBeenCalledTimes(1);
+    expect(mockOpenHostSettings).toHaveBeenCalledTimes(1);
   });
 
   it("keeps the normal environment footer when sending is available", () => {

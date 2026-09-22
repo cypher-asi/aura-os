@@ -90,10 +90,15 @@ The first Aura slice now implements that boundary:
   biography text.
 - Desktop-local agents remain readable on mobile while their runtime is unreachable; sending stays
   disabled until the owning host is available instead of bouncing the user out of the conversation.
+- A disabled mobile composer now distinguishes saved conversation availability from execution
+  reachability. Local and remote runtime failures use truthful read-only copy, preserve the runtime
+  identity in the footer, and offer an immediate status recheck; disconnected local clients also
+  expose Host settings without leaving the conversation.
 
-Next: formalize `runtimeId`/environment ownership in session metadata, add a native reconnect/outbox
-state machine, and deliver push deep links for completion, failure, approval, and input-required
-events. Do not make the cloud relay an execution proxy.
+Next: formalize `runtimeId`/environment ownership in session metadata, add server command receipts
+before persisting or replaying a native prompt outbox, and deliver push deep links for completion,
+failure, approval, and input-required events. Do not make the cloud relay an execution proxy or
+present an unacknowledged prompt as accepted work.
 
 ### P0 — finish the safety foundation
 
