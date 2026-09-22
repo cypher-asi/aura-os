@@ -149,8 +149,16 @@ The first Aura slice now implements that boundary:
   canonical conversation. It
   suppresses the conversation already on screen and snapshots attention independently of a
   successful WebSocket connection, so a cold mobile open still exposes desktop-started work. This
-  is Aura's in-app counterpart to T3's Live Activity model; OS background delivery remains a
-  separate native concern.
+  is Aura's in-app counterpart to T3's Live Activity model.
+- Android now has the corresponding OS-background delivery path. The native client requests
+  notification permission only when its Firebase resources are present, registers its FCM token
+  against the authenticated Aura account, and resynchronizes the enabled notification categories
+  when preferences change. Aura OS stores device registrations account-scoped and delivers task
+  completion/failure/retry, terminal loop, push-stuck, approval-required, and user-input-required
+  events through FCM. Tap payloads contain only an internal canonical route and are validated before
+  navigation. Release Firebase client/server credentials remain deployment configuration, and real
+  warm/cold delivery still needs production-device verification; missing credentials fail closed
+  without blocking app boot.
 - Chat lifecycle and approval firehose events are now stamped with the authenticated owner and
   filtered during both replay and live delivery. Legacy unscoped events retain their existing
   behavior, while new account-scoped control signals cannot appear in another user's mobile agent
@@ -207,12 +215,12 @@ The first Aura slice now implements that boundary:
   standalone-agent session, retry with the original command id, or remove future replay attempts.
   A mobile browser test covers this across a full navigation away from the conversation.
 
-Next: formalize `runtimeId`/environment ownership in session metadata, move accepted command
-execution behind a durable status/worker boundary, and add device registration plus background
-delivery for completion, failure, approval, and input-required events. Persist accepted commands
-and pending question waits so a server restart can reconstruct status or explicitly fail the
-original environment-owned turn instead of relying on an in-memory channel. Do not make the cloud
-relay an execution proxy or present an unacknowledged prompt as accepted work.
+Next: formalize `runtimeId`/environment ownership in session metadata and move accepted command
+execution behind a durable status/worker boundary. Verify configured FCM delivery on production
+Android devices, including warm/cold notification activation. Persist accepted commands and pending
+question waits so a server restart can reconstruct status or explicitly fail the original
+environment-owned turn instead of relying on an in-memory channel. Do not make the cloud relay an
+execution proxy or present an unacknowledged prompt as accepted work.
 
 Remote source-control inspection also needs a real cross-service addition rather than a client
 workaround. The current Swarm gateway exposes authenticated pod proxies for files, file reads, and

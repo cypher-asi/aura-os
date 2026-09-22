@@ -663,7 +663,9 @@ mod tests {
             Some("/projects/project-1/agents/instance-1?session=session-1")
         );
         assert_eq!(
-            request.pointer("/message/data/kind").and_then(Value::as_str),
+            request
+                .pointer("/message/data/kind")
+                .and_then(Value::as_str),
             Some("user_input_required")
         );
     }
