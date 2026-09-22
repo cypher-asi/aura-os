@@ -1,33 +1,32 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { Badge, Text } from "@cypher-asi/zui";
-import { Activity, Bot, ChevronDown, Cloud, KeyRound, Minus, Monitor, Plus, Server, Zap } from "lucide-react";
+import { Bot, ChevronDown, Cloud, KeyRound, Minus, Monitor, Plus, Zap } from "lucide-react";
 import { Avatar } from "../../components/Avatar";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useProjectAgentState } from "../../apps/chat/components/ChatView/useProjectAgentState";
 import { api } from "../../api/client";
-import { useRemoteAgentState } from "../../hooks/use-remote-agent-state";
+import { MobileRemoteRuntimeSection } from "../../mobile/agents/MobileRemoteRuntimeSection";
+import { isAgentOwnedByUser } from "../../apps/agents/utils/agent-ownership";
+import { useAgentStore } from "../../apps/agents/stores/agent-store";
+import { useAuthStore } from "../../stores/auth-store";
 import { projectAgentChatRoute } from "../../utils/mobileNavigation";
 import { formatAdapterLabel, formatAuthSourceLabel, formatRunsOnLabel } from "../../apps/agents/AgentInfoPanel/agent-info-utils";
 import { RemoteLogsPanel } from "../../components/RemoteLogsPanel";
 import type { HarnessSkill, HarnessSkillInstallation } from "../../shared/types";
 import styles from "./ProjectAgentDetailsView.module.css";
 
-function formatUptime(seconds: number) {
-  if (seconds < 60) return `${Math.floor(seconds)}s`;
-  const minutes = Math.floor(seconds / 60) % 60;
-  const hours = Math.floor(seconds / 3600);
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
-}
-
 export function ProjectAgentDetailsView() {
   const { projectId, agentInstanceId } = useParams<{ projectId: string; agentInstanceId: string }>();
   const { isMobileLayout } = useAuraCapabilities();
   const { selectedProjectAgent, agentDisplayName, contextUsagePercent } = useProjectAgentState({ projectId, agentInstanceId });
-  const { data: remoteState, loading: remoteLoading, error: remoteError } = useRemoteAgentState(
-    selectedProjectAgent?.machine_type === "remote" ? selectedProjectAgent.agent_id : undefined,
+  const user = useAuthStore((state) => state.user);
+  const agent = useAgentStore((state) =>
+    state.agents.find((candidate) => candidate.agent_id === selectedProjectAgent?.agent_id) ?? null,
   );
+  const agentsStatus = useAgentStore((state) => state.agentsStatus);
+  const fetchAgents = useAgentStore((state) => state.fetchAgents);
+  const isOwnAgent = isAgentOwnedByUser(agent, user);
   const [catalog, setCatalog] = useState<HarnessSkill[]>([]);
   const [installations, setInstallations] = useState<HarnessSkillInstallation[]>([]);
   const [skillsLoading, setSkillsLoading] = useState(false);
@@ -36,6 +35,11 @@ export function ProjectAgentDetailsView() {
   const [showAvailable, setShowAvailable] = useState(false);
   const [showRuntimeDetails, setShowRuntimeDetails] = useState(false);
   const skillsRequestIdRef = useRef(0);
+
+  useEffect(() => {
+    if (!isMobileLayout || !selectedProjectAgent?.agent_id || agent || agentsStatus === "loading" || agentsStatus === "error") return;
+    void fetchAgents({ force: agentsStatus === "ready" }).catch(() => {});
+  }, [agent, agentsStatus, fetchAgents, isMobileLayout, selectedProjectAgent?.agent_id]);
 
   useEffect(() => {
     if (!selectedProjectAgent?.agent_id) return;
@@ -317,42 +321,11 @@ export function ProjectAgentDetailsView() {
             </div>
 
             {selectedProjectAgent.machine_type === "remote" ? (
-              <div className={styles.subsection}>
-                <div className={styles.cardHeaderCopy}>
-                  <Text size="sm" weight="medium">Remote runtime</Text>
-                  <Text size="xs" variant="muted">Live state from the active remote agent</Text>
-                </div>
-                {remoteLoading ? (
-                  <Text size="sm" variant="muted">Checking remote runtime status…</Text>
-                ) : remoteError ? (
-                  <Text size="sm" variant="muted">{remoteError}</Text>
-                ) : remoteState ? (
-                  <div className={styles.settingsList}>
-                    <div className={styles.metaRow}>
-                      <Server size={14} aria-hidden="true" />
-                      <span className={styles.metaLabel}>State</span>
-                      <span className={styles.metaValue}>{remoteState.state}</span>
-                    </div>
-                    <div className={styles.metaRow}>
-                      <Activity size={14} aria-hidden="true" />
-                      <span className={styles.metaLabel}>Sessions</span>
-                      <span className={styles.metaValue}>{remoteState.active_sessions}</span>
-                    </div>
-                    <div className={styles.metaRow}>
-                      <Server size={14} aria-hidden="true" />
-                      <span className={styles.metaLabel}>Endpoint</span>
-                      <span className={styles.metaValue}>{remoteState.endpoint ?? "Unavailable"}</span>
-                    </div>
-                    <div className={styles.metaRow}>
-                      <Activity size={14} aria-hidden="true" />
-                      <span className={styles.metaLabel}>Uptime</span>
-                      <span className={styles.metaValue}>{formatUptime(remoteState.uptime_seconds)}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <Text size="sm" variant="muted">No remote runtime details available yet.</Text>
-                )}
-              </div>
+              <MobileRemoteRuntimeSection
+                agentId={selectedProjectAgent.agent_id}
+                isRemote
+                isOwnAgent={isOwnAgent}
+              />
             ) : null}
 
             {selectedProjectAgent.machine_type === "remote" ? (

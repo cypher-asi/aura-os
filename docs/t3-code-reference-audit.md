@@ -287,6 +287,9 @@ The first Aura slice now implements that boundary:
   supported on desktop: hibernate, restart, stop, wake, start, and recovery, chosen from the live VM
   state and restricted to the agent owner. Provisioning/recovery progress, runtime errors, uptime,
   active sessions, endpoint, and runtime version remain visible in the same touch-oriented card.
+  Project-scoped agent Details now reuses these same controls instead of offering a read-only
+  runtime panel; it resolves ownership from the canonical agent and authenticated user, and hides
+  actions when that ownership cannot be established.
   This borrows T3 mobile's principle that a phone should control the agent-owned environment, while
   keeping Aura's confidential swarm lifecycle rather than copying T3's interactive device-stream UI.
   A non-recoverable state error now wins over any cached VM state, so a stale running/error snapshot
