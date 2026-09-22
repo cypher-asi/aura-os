@@ -46,7 +46,7 @@ and attribution.
 | Source control | Native clone/publish, branch operations, PR/MR creation, linked reviews, local checkout, line-level review requests, and in-app review editing for GitHub, GitLab, Bitbucket, and Azure DevOps. | Highest remaining product gap. Aura has Git tools and provider integrations, but lacks one first-class, provider-neutral source-control/review workbench. |
 | Global discovery | A command palette spans actions, projects, branches, threads, user messages, and final agent responses across connected environments. File-name and file-content search have separate modes. | High. The first Aura slice is now implemented for cached chats, apps, projects, agents, and actions. Server-backed message/content search and file search remain. |
 | Keybindings | Server-backed editable rules, conflict reporting, context expressions, per-command defaults, and project script commands. | Medium. Aura has a centralized menu/shortcut registry but no editing or conflict UI. Build on that registry after the palette settles. |
-| Thread lifecycle | Pin/reorder, snooze, settle/restore, archive, rename/regenerate title, drafts, background submission, PR linking, pagination, and cross-message search. | High. Aura has sessions, summaries, rollover, costs, and agent/task context, but its organization controls are much thinner. |
+| Thread lifecycle | Pin/reorder, snooze, settle/restore, archive, rename/regenerate title, drafts, background submission, PR linking, pagination, and cross-message search. | High. Aura now has server-backed pin, snooze/wake, archive/restore, and rename controls in shared session lists (including mobile agent Details). Reorder, a distinct settle state, regenerated titles, and deeper search remain gaps. |
 | Permission modes | Per-thread Supervised, Auto-accept edits, Auto, and Full access modes map to each provider's native approval/sandbox behavior. | Medium. Aura's capability policy is deeper and should remain authoritative. Add quick per-session presets that compile down to Aura permissions instead of introducing a parallel policy system. |
 | Remote environments | Direct pairing, Tailscale publishing, managed relay endpoints, and desktop-managed SSH all resolve to the same environment and RPC model. | Selective. Aura's confidential swarm is a deliberate product difference. Reuse the normalized environment/connection-lifecycle ideas, but do not bolt T3's machine-pairing model onto the swarm abstraction. |
 | Coding surfaces | Terminal, filesystem, Git diff, preview/browser, attachments, tool activity, approvals, questions, and subagent/workflow observability live beside the conversation. | Medium. Aura already has terminal, files, browser/media, sidekick panels, and subagent/council views. The missing unification is mainly source control and cross-surface navigation. |
@@ -104,7 +104,11 @@ The first Aura slice now implements that boundary:
   it. Remote full-tree polling backs off to 30 seconds while foreground/file-operation signals
   still refresh promptly, reducing needless mobile network and battery use. The mobile Files header
   also provides an explicit 44px refresh action so a user need not wait for that interval after
-  changing code from desktop.
+  changing code from desktop. Android QA on `30a78feac` and `4d6474968` confirmed same-agent
+  stale-list retention after a simulated 503, clearing after a simulated 403, isolation when
+  switching remote agents at the same path, and a physical touch refresh request without 320px
+  overflow. QA also found 39px file rows and misleading temporary-outage copy on 403; the follow-up
+  raises rows to 44px and distinguishes denied, expired-auth, and missing-workspace responses.
 - The agent library warms and displays recent shared conversation previews rather than only profile
   biography text. Its mobile search now matches agent identity/profile fields, live attention, and
   those cross-device conversation previews, with an explicit no-results state instead of a blank
@@ -407,9 +411,12 @@ unsupported actions should be reported as capabilities.
 
 ### P1 — improve session organization
 
-Add pin, archive, settle, snooze, rename/regenerate, and message search to Aura sessions. Preserve
-Aura's agent/project/task relationships rather than flattening everything into T3-style threads.
-"Settle" should be a presentation/work-queue state, separate from the run's terminal status.
+Aura already has server-backed pin, archive/restore, snooze/wake, and user rename on canonical
+project-agent sessions; the shared session-list controls also render in mobile agent Details.
+Next, add deliberate reorder, regenerated titles, and indexed cross-message search. A distinct
+"settle" state remains useful for inbox organization, but should be a presentation/work-queue
+state separate from the run's terminal status. Preserve Aura's agent/project/task relationships
+rather than flattening everything into T3-style threads.
 
 ### P1 — formalize the runtime adapter boundary
 

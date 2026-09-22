@@ -186,6 +186,8 @@
 
 .mobileRow {
   display: flex;
+  min-height: 44px;
+  box-sizing: border-box;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);

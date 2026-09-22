@@ -153,11 +153,13 @@ describe("useFileExplorerState remote workspaces", () => {
     rerender({ refreshTrigger: 1 });
     await waitFor(() => expect(result.current.error).toBe("pod unavailable"));
     expect(result.current.entries[0]?.name).toBe("last-known.ts");
+    expect(result.current.errorStatus).toBe(503);
 
     mockListRemoteDirectory.mockRejectedValueOnce(new ApiClientError(403, { error: "access denied", code: "forbidden", details: null }));
     rerender({ refreshTrigger: 2 });
     await waitFor(() => expect(result.current.error).toBe("access denied"));
     expect(result.current.entries).toEqual([]);
+    expect(result.current.errorStatus).toBe(403);
     unmount();
   });
 });

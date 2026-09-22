@@ -75,6 +75,7 @@ function baseExplorerState() {
     loading: false,
     entries: [],
     error: null,
+    errorStatus: null,
     features: {},
     isMobileLayout: true,
     filteredData: [],
@@ -116,6 +117,21 @@ describe("FileExplorer", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Showing the last list from this session");
     expect(screen.getByTestId("mobile-file-list")).toBeInTheDocument();
     expect(screen.queryByText("private gateway diagnostic")).not.toBeInTheDocument();
+  });
+
+  it("does not call a denied remote workspace a temporary outage", () => {
+    setExplorerState({
+      isRemote: true,
+      error: "raw gateway 403 detail",
+      errorStatus: 403,
+    });
+
+    render(<FileExplorer rootPath="/workspace" remoteAgentId="agent-1" />);
+
+    expect(screen.getByText("Workspace access denied")).toBeInTheDocument();
+    expect(screen.getByText("You no longer have permission to browse this agent workspace.")).toBeInTheDocument();
+    expect(screen.queryByText("raw gateway 403 detail")).not.toBeInTheDocument();
+    expect(screen.queryByText(/temporarily unavailable/i)).not.toBeInTheDocument();
   });
 
   it("keeps local file errors descriptive for desktop workspace issues", () => {

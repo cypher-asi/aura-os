@@ -67,8 +67,8 @@ export function FileExplorer({
     return (
       <PageEmptyState
         icon={<Folder size={32} />}
-        title={getFileExplorerErrorTitle(s.isRemote, s.isHosted)}
-        description={getFileExplorerErrorDescription(s.error, s.isRemote, s.isHosted)}
+        title={getFileExplorerErrorTitle(s.isRemote, s.isHosted, s.errorStatus)}
+        description={getFileExplorerErrorDescription(s.error, s.isRemote, s.isHosted, s.errorStatus)}
       />
     );
   }

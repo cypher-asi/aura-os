@@ -56,10 +56,12 @@ export function useFileExplorerState({
     key: string | null;
     entries: DirEntry[];
     error: string | null;
+    errorStatus: number | null;
   }>({
     key: null,
     entries: [],
     error: null,
+    errorStatus: null,
   });
   const [refreshKey, setRefreshKey] = useState(0);
   const ownerId = useAuthStore((state) => state.user?.user_id ?? null);
@@ -171,13 +173,14 @@ export function useFileExplorerState({
       .then((res) => {
         if (cancelled) return;
         if (res.ok && res.entries) {
-          setDirectoryState({ key: workspaceKey, entries: res.entries, error: null });
+          setDirectoryState({ key: workspaceKey, entries: res.entries, error: null, errorStatus: null });
           return;
         }
         setDirectoryState({
           key: workspaceKey,
           entries: [],
           error: res.error ?? "Failed to list directory",
+          errorStatus: null,
         });
       })
       .catch((e) => {
@@ -192,6 +195,7 @@ export function useFileExplorerState({
             ? current.entries
             : [],
           error: e instanceof Error ? e.message : "Failed to list directory",
+          errorStatus: e instanceof ApiClientError ? e.status : null,
         }));
       });
 
@@ -215,6 +219,9 @@ export function useFileExplorerState({
         : null,
     [directoryState.error, directoryState.key, workspaceKey],
   );
+  const errorStatus = workspaceKey && directoryState.key === workspaceKey
+    ? directoryState.errorStatus
+    : null;
 
   const showOpenFolder = features.linkedWorkspace && !isRemote && !isHosted;
 
@@ -286,6 +293,7 @@ export function useFileExplorerState({
     loading,
     entries,
     error,
+    errorStatus,
     features,
     isMobileLayout,
     filteredData,
