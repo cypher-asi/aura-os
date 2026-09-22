@@ -48,6 +48,13 @@ function postedNotificationIds(postMessage: ReturnType<typeof vi.fn>): string[] 
   });
 }
 
+function lastPostedNotification(postMessage: ReturnType<typeof vi.fn>) {
+  const raw = postMessage.mock.calls.at(-1)?.[0];
+  return JSON.parse(String(raw)) as {
+    payload: { id: string; route?: string };
+  };
+}
+
 describe("useTaskNotifications", () => {
   let postMessage: ReturnType<typeof vi.fn>;
 
@@ -215,5 +222,8 @@ describe("useTaskNotifications", () => {
       "task_failed:task-1",
     ]);
     expect(postedNotificationIds(postMessage)).toEqual(["task_failed:task-1"]);
+    expect(lastPostedNotification(postMessage).payload.route).toBe(
+      "/projects/project-1/agents/project-agent-1?session=session-1",
+    );
   });
 });

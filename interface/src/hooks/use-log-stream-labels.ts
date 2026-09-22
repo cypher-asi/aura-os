@@ -83,6 +83,8 @@ export const EVENT_LABELS: Record<EventType, string> = {
   [EventType.AssistantTurnProgress]: "Message",
   [EventType.TextDelta]: "Message",
   [EventType.ToolUseStart]: "Tool",
+  [EventType.ToolApprovalPrompt]: "Approval",
+  [EventType.ToolApprovalResolved]: "Approval resolved",
   [EventType.GenerationStart]: "Generation",
   [EventType.GenerationProgress]: "Generation",
   [EventType.GenerationPartialImage]: "Generation",

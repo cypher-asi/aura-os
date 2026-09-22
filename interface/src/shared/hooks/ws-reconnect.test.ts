@@ -40,17 +40,24 @@ class MockWebSocket {
 
 describe("createReconnectingWebSocket", () => {
   let origWS: typeof WebSocket;
+  let originalVisibilityState: PropertyDescriptor | undefined;
 
   beforeEach(() => {
     vi.useFakeTimers();
     origWS = globalThis.WebSocket;
     globalThis.WebSocket = MockWebSocket as unknown as typeof WebSocket;
     MockWebSocket.instances = [];
+    originalVisibilityState = Object.getOwnPropertyDescriptor(document, "visibilityState");
   });
 
   afterEach(() => {
     vi.useRealTimers();
     globalThis.WebSocket = origWS;
+    if (originalVisibilityState) {
+      Object.defineProperty(document, "visibilityState", originalVisibilityState);
+    } else {
+      Reflect.deleteProperty(document, "visibilityState");
+    }
   });
 
   it("connects immediately", () => {
@@ -178,6 +185,69 @@ describe("createReconnectingWebSocket", () => {
 
     vi.advanceTimersByTime(10000);
     expect(MockWebSocket.instances).toHaveLength(1);
+  });
+
+  it("replaces a stale socket immediately when the app returns to foreground", () => {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "hidden",
+    });
+    const onStatus = vi.fn();
+    const handle = createReconnectingWebSocket(
+      {
+        url: "ws://test",
+        initialDelay: 100,
+        maxDelay: 5000,
+        backoffMultiplier: 2,
+        resumeOnForeground: true,
+      },
+      vi.fn(),
+      onStatus,
+    );
+    MockWebSocket.instances[0].simulateOpen();
+
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    expect(MockWebSocket.instances[0].closeCalled).toBe(true);
+    expect(MockWebSocket.instances).toHaveLength(2);
+    expect(onStatus).toHaveBeenLastCalledWith(false);
+
+    handle.close();
+  });
+
+  it("cancels a backed-off retry when foreground recovery reconnects now", () => {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "hidden",
+    });
+    const handle = createReconnectingWebSocket(
+      {
+        url: "ws://test",
+        initialDelay: 100,
+        maxDelay: 5000,
+        backoffMultiplier: 2,
+        resumeOnForeground: true,
+      },
+      vi.fn(),
+      vi.fn(),
+    );
+    MockWebSocket.instances[0].close();
+
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(MockWebSocket.instances).toHaveLength(2);
+
+    vi.advanceTimersByTime(100);
+    expect(MockWebSocket.instances).toHaveLength(2);
+
+    handle.close();
   });
 
   it("closes WebSocket on error", () => {

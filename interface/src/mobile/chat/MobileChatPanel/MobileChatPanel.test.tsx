@@ -21,9 +21,12 @@ vi.mock("../MobileChatHeader/MobileChatHeader.module.css", () => ({
   default: new Proxy({}, { get: (_target, prop) => String(prop) }),
 }));
 
-function renderMobilePanel(overrides: Partial<React.ComponentProps<typeof MobileChatPanel>> = {}) {
+function renderMobilePanel(
+  overrides: Partial<React.ComponentProps<typeof MobileChatPanel>> = {},
+  initialEntry = "/",
+) {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <MobileChatPanel
         streamKey="stream-1"
         onSend={vi.fn()}
@@ -51,6 +54,34 @@ describe("MobileChatPanel", () => {
 
     expect(screen.getByRole("button", { name: "Open details for Coca" })).toBeInTheDocument();
     expect(screen.getByText("Open skills and runtime")).toBeInTheDocument();
+  });
+
+  it("links a standalone mobile agent chat to details without losing its session", () => {
+    renderMobilePanel(
+      {},
+      "/agents/agent-1?project=project-1&instance=instance-1&session=session-1",
+    );
+
+    expect(screen.getByRole("link", { name: "Open details for Coca" })).toHaveAttribute(
+      "href",
+      "/agents/agent-1?project=project-1&instance=instance-1&session=session-1&view=details",
+    );
+  });
+
+  it("keeps the project switch affordance and adds agent details beside it", () => {
+    renderMobilePanel(
+      {
+        onMobileHeaderSummaryClick: vi.fn(),
+        mobileHeaderSummaryLabel: "Switch project agent",
+      },
+      "/agents/agent-1?session=session-1",
+    );
+
+    expect(screen.getByRole("button", { name: "Switch project agent" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open details for Coca" })).toHaveAttribute(
+      "href",
+      "/agents/agent-1?session=session-1&view=details",
+    );
   });
 
   it("can present a project-count summary affordance", () => {

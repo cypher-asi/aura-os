@@ -2,6 +2,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import {
   useAuraCapabilities,
   AURA_BREAKPOINTS,
+  refreshAuraRuntimeCapabilities,
   resetAuraCapabilitiesForTests,
 } from "./use-aura-capabilities";
 
@@ -194,6 +195,38 @@ describe("useAuraCapabilities", () => {
       expect(result.current.hostedLocalHarness).toBe(true);
       expect(result.current.hostedSafeWorkspace).toBe(true);
     });
+  });
+
+  it("forces a fresh runtime probe when recovery is requested", async () => {
+    const { matchMedia } = createMockMatchMedia();
+    window.matchMedia = matchMedia as unknown as typeof window.matchMedia;
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({
+          remoteOnly: true,
+          localAgentRuntimeAvailable: false,
+          hostedLocalHarness: false,
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({
+          remoteOnly: false,
+          localAgentRuntimeAvailable: true,
+          hostedLocalHarness: true,
+        }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useAuraCapabilities());
+    await waitFor(() => expect(result.current.runtimeCapabilitiesResolved).toBe(true));
+    expect(result.current.localAgentRuntimeAvailable).toBe(false);
+
+    await refreshAuraRuntimeCapabilities();
+    await waitFor(() => expect(result.current.localAgentRuntimeAvailable).toBe(true));
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("honors server remote-only mode even inside the desktop shell", async () => {

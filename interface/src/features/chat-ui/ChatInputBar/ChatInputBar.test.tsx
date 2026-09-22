@@ -1317,7 +1317,7 @@ describe("ChatInputBar", () => {
       />,
     );
 
-    expect(screen.getByPlaceholderText(/Remote agent required/)).toBeDisabled();
+    expect(screen.getByPlaceholderText(/Runtime unavailable/)).toBeDisabled();
     const send = screen.getByRole("button", { name: "Send" });
     expect(send).toBeDisabled();
     await user.click(send);

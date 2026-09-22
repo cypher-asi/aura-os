@@ -211,6 +211,7 @@ pub(in super::super) async fn open_harness_chat_stream(
     // set on `SessionConfig` at both chat routes.
     let scope_user_id = session_config.user_id.clone();
     let scope_project_id = session_config.project_id.clone();
+    let scope_agent_id = session_config.template_agent_id.clone();
 
     let SessionForTurn {
         is_new,
@@ -262,6 +263,7 @@ pub(in super::super) async fn open_harness_chat_stream(
     let live_scope = StreamScope {
         user_id: scope_user_id,
         project_id: scope_project_id.or_else(|| Some(ctx.project_id.clone())),
+        agent_id: scope_agent_id,
         agent_instance_id: session_key.split("::").nth(1).map(str::to_string),
         session_id: Some(ctx.session_id.to_string()),
         parent_tool_use_id: None,

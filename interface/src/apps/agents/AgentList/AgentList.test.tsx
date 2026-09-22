@@ -22,6 +22,10 @@ const mocks = vi.hoisted(() => ({
   }),
   entries: {} as Record<string, unknown>,
   previewLastMessages: {} as Record<string, unknown>,
+  attentionRoute: null as string | null,
+  activeRunRoute: null as string | null,
+  attentionRoutes: {} as Record<string, string>,
+  activeRunRoutes: {} as Record<string, string>,
   useChatHistoryStore: Object.assign(
     (selector: (state: {
       entries: Record<string, unknown>;
@@ -296,6 +300,17 @@ vi.mock("./use-agent-row-models", () => ({
         loopActivity: null,
         lastMessage: mocks.previewLastMessages[`agent:${a.agent_id}`],
         isPinned: false,
+        attention: (mocks.attentionRoutes[a.agent_id] ?? mocks.attentionRoute)
+          ? {
+              kind: "approval",
+              count: 1,
+              toolName: "write_file",
+              route: mocks.attentionRoutes[a.agent_id] ?? mocks.attentionRoute ?? undefined,
+            }
+          : undefined,
+        activeRun: (mocks.activeRunRoutes[a.agent_id] ?? mocks.activeRunRoute)
+          ? { route: mocks.activeRunRoutes[a.agent_id] ?? mocks.activeRunRoute ?? undefined }
+          : undefined,
       });
     }
     return map;
@@ -331,6 +346,10 @@ describe("AgentList", () => {
     mocks.pendingCreateAgentHandoff = null;
     mocks.entries = {};
     mocks.previewLastMessages = {};
+    mocks.attentionRoute = null;
+    mocks.activeRunRoute = null;
+    mocks.attentionRoutes = {};
+    mocks.activeRunRoutes = {};
     mocks.sessionsBySurface = {};
     mocks.loadAgentSessions = vi.fn(async () => {});
     mocks.storeFetchAgents = vi.fn();
@@ -384,6 +403,56 @@ describe("AgentList", () => {
     await user.click(screen.getByRole("button", { name: "Builder Bot" }));
 
     expect(mocks.navigate).toHaveBeenCalledWith("/agents/agent-1");
+  });
+
+  it("opens the exact waiting session when the agent needs approval", async () => {
+    mocks.useParams.mockReturnValue({ agentId: undefined });
+    mocks.attentionRoute =
+      "/agents/agent-1?project=project-1&instance=instance-1&session=session-1";
+    const user = userEvent.setup();
+
+    render(<AgentList mode="mobile-library" />);
+    await user.click(screen.getByRole("button", { name: "Builder Bot" }));
+
+    expect(mocks.navigate).toHaveBeenCalledWith(mocks.attentionRoute);
+  });
+
+  it("opens the exact desktop-started session that is still working", async () => {
+    mocks.useParams.mockReturnValue({ agentId: undefined });
+    mocks.activeRunRoute =
+      "/projects/project-1/agents/instance-1?session=session-1";
+    const user = userEvent.setup();
+
+    render(<AgentList mode="mobile-library" />);
+    await user.click(screen.getByRole("button", { name: "Builder Bot" }));
+
+    expect(mocks.navigate).toHaveBeenCalledWith(mocks.activeRunRoute);
+  });
+
+  it("turns the mobile library into an activity-first work inbox", () => {
+    mocks.useParams.mockReturnValue({ agentId: undefined });
+    mocks.useAgents.mockReturnValue({
+      agents: [agent, secondAgent],
+      status: "ready",
+      fetchAgents: mocks.fetchAgentsMock,
+    });
+    mocks.useSortedAgents.mockReturnValue([agent, secondAgent]);
+    mocks.activeRunRoutes = {
+      "agent-1": "/agents/agent-1?session=running-session",
+    };
+    mocks.attentionRoutes = {
+      "agent-2": "/agents/agent-2?session=approval-session",
+    };
+
+    render(<AgentList mode="mobile-library" />);
+
+    expect(screen.getByText("1 needs you")).toBeInTheDocument();
+    expect(screen.getByText("1 working")).toBeInTheDocument();
+    const approvalAgent = screen.getByRole("button", { name: "Reviewer Bot" });
+    const workingAgent = screen.getByRole("button", { name: "Builder Bot" });
+    expect(
+      approvalAgent.compareDocumentPosition(workingAgent) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("does not navigate when clicking the already selected agent", async () => {
@@ -606,7 +675,7 @@ describe("AgentList", () => {
     expect(row).toHaveAttribute("data-last-message-content", "");
   });
 
-  it("does not prefetch history on mount in mobile-library mode", async () => {
+  it("prefetches shared conversation previews on mobile-library mount", async () => {
     mocks.useParams.mockReturnValue({ agentId: undefined });
     mocks.useAgents.mockReturnValue({
       agents: [agent, secondAgent],
@@ -623,8 +692,30 @@ describe("AgentList", () => {
 
     render(<AgentList mode="mobile-library" />);
 
-    await Promise.resolve();
-    expect(fetchHistory).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(fetchHistory).toHaveBeenCalledWith(
+        "agent:agent-1",
+        expect.any(Function),
+      );
+      expect(fetchHistory).toHaveBeenCalledWith(
+        "agent:agent-2",
+        expect.any(Function),
+      );
+    });
+  });
+
+  it("uses the latest shared message instead of profile copy in the mobile library", () => {
+    mocks.useParams.mockReturnValue({ agentId: undefined });
+    mocks.previewLastMessages = {
+      "agent:agent-1": { id: "evt-mobile", role: "assistant", content: "Desktop work is ready" },
+    };
+
+    render(<AgentList mode="mobile-library" />);
+
+    expect(screen.getByRole("button", { name: "Builder Bot" })).toHaveAttribute(
+      "data-last-message-content",
+      "Desktop work is ready",
+    );
   });
 
   it("opens the shared editor from the mobile create query", () => {

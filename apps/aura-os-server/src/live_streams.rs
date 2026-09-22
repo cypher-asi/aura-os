@@ -19,6 +19,7 @@
 //! streams linger for a TTL so a client that reconnects just after the
 //! final frame still receives the tail of the output.
 
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -32,6 +33,7 @@ use aura_os_harness::{
     ErrorMsg, HarnessCommandSender, HarnessInbound, HarnessOutbound, HarnessSession,
     MessageAttachment, SessionBridge, SessionBridgeTurn,
 };
+use aura_protocol::{ToolApprovalDecision, ToolApprovalRemember, ToolApprovalResponse};
 
 use crate::event_log::EventLog;
 
@@ -74,6 +76,11 @@ pub enum StreamKind {
 pub struct StreamScope {
     pub user_id: Option<String>,
     pub project_id: Option<String>,
+    /// Stable template-agent identity shared by desktop and mobile.
+    /// This is intentionally separate from `agent_instance_id`, which
+    /// addresses the project-local runtime instance.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_id: Option<String>,
     pub agent_instance_id: Option<String>,
     pub session_id: Option<String>,
     /// Originating parent `task` tool-use id for a
@@ -116,6 +123,9 @@ pub struct LiveStream {
     /// down. Cleared on termination so retained replay data does not keep
     /// the transport alive or allow cancellation of a later reused turn.
     cancel_tx: Mutex<Option<HarnessCommandSender>>,
+    /// In-memory receipts make retries of an uncertain mobile response
+    /// idempotent for the lifetime of the environment-owned run.
+    responded_approvals: Mutex<HashMap<String, (ToolApprovalDecision, ToolApprovalRemember)>>,
     started_at_ms: i64,
     terminated_at: Mutex<Option<Instant>>,
     cancel: CancellationToken,
@@ -177,6 +187,136 @@ impl LiveStream {
         self.cancel.cancel();
     }
 
+    /// Forward a user's decision for a live tool-approval prompt to the
+    /// environment-owned harness turn. Chat streams are registered through
+    /// `register_receiver`, so their command sender lives in `cancel_tx`
+    /// even though it carries more than cancellation commands.
+    pub fn respond_to_tool_approval(
+        &self,
+        request_id: String,
+        decision: ToolApprovalDecision,
+        remember: ToolApprovalRemember,
+    ) -> Result<(), String> {
+        if self.is_terminated() {
+            return Err("run is no longer active".to_string());
+        }
+        let response_key = (decision, remember);
+        let remember_value = match remember {
+            ToolApprovalRemember::Once => "once",
+            ToolApprovalRemember::Session => "session",
+            ToolApprovalRemember::Forever => "forever",
+        };
+        let prompt_accepts_response = self.events.any_value(|value| {
+            if value.get("type").and_then(|v| v.as_str()) != Some("tool_approval_prompt")
+                || value.get("request_id").and_then(|v| v.as_str()) != Some(&request_id)
+            {
+                return false;
+            }
+            let Some(options) = value.get("remember_options").and_then(|v| v.as_array()) else {
+                return remember == ToolApprovalRemember::Once;
+            };
+            (options.is_empty() && remember == ToolApprovalRemember::Once)
+                || options
+                    .iter()
+                    .any(|option| option.as_str() == Some(remember_value))
+        });
+        if !prompt_accepts_response {
+            return Err("approval response uses an unavailable remember scope".to_string());
+        }
+        {
+            let mut responded = self
+                .responded_approvals
+                .lock()
+                .expect("live stream approval receipts poisoned");
+            if let Some(existing) = responded.get(&request_id) {
+                return if *existing == response_key {
+                    Ok(())
+                } else {
+                    Err("approval request was already answered differently".to_string())
+                };
+            }
+            responded.insert(request_id.clone(), response_key);
+        }
+        let guard = self
+            .cancel_tx
+            .lock()
+            .expect("live stream cancel_tx poisoned");
+        let tx = guard
+            .as_ref()
+            .ok_or_else(|| "run does not accept approval responses".to_string())?;
+        let result = tx.try_send(HarnessInbound::ToolApprovalResponse(ToolApprovalResponse {
+            request_id: request_id.clone(),
+            decision,
+            remember,
+        }));
+        if let Err(err) = result {
+            self.responded_approvals
+                .lock()
+                .expect("live stream approval receipts poisoned")
+                .remove(&request_id);
+            return Err(err.to_string());
+        }
+        self.events.append(serde_json::json!({
+            "type": "tool_approval_resolved",
+            "request_id": request_id,
+        }));
+        Ok(())
+    }
+
+    fn pending_tool_approvals(&self) -> Vec<PendingToolApprovalSummary> {
+        let mut pending = HashMap::<String, PendingToolApprovalSummary>::new();
+        for value in self.events.snapshot_values() {
+            match value.get("type").and_then(|entry| entry.as_str()) {
+                Some("tool_approval_prompt") => {
+                    let Some(request_id) = value
+                        .get("request_id")
+                        .and_then(|entry| entry.as_str())
+                        .filter(|entry| !entry.is_empty())
+                    else {
+                        continue;
+                    };
+                    let Some(tool_name) = value
+                        .get("tool_name")
+                        .and_then(|entry| entry.as_str())
+                        .filter(|entry| !entry.is_empty())
+                    else {
+                        continue;
+                    };
+                    let agent_id = self.scope.agent_id.as_deref().or_else(|| {
+                        value
+                            .get("agent_id")
+                            .and_then(|entry| entry.as_str())
+                            .filter(|entry| !entry.is_empty())
+                    });
+                    let Some(agent_id) = agent_id else {
+                        continue;
+                    };
+                    pending.insert(
+                        request_id.to_string(),
+                        PendingToolApprovalSummary {
+                            request_id: request_id.to_string(),
+                            tool_name: tool_name.to_string(),
+                            agent_id: agent_id.to_string(),
+                            project_id: self.scope.project_id.clone(),
+                            agent_instance_id: self.scope.agent_instance_id.clone(),
+                            session_id: self.scope.session_id.clone(),
+                            started_at_ms: self.started_at_ms,
+                        },
+                    );
+                }
+                Some("tool_approval_resolved") => {
+                    if let Some(request_id) =
+                        value.get("request_id").and_then(|entry| entry.as_str())
+                    {
+                        pending.remove(request_id);
+                    }
+                }
+                _ => {}
+            }
+        }
+        pending.into_values().collect()
+    }
+
     /// Send a follow-up user message into the underlying run. Only
     /// possible while this stream still owns a live [`HarnessSession`]
     /// (i.e. it was registered via [`LiveStreamRegistry::register`] and
@@ -225,6 +365,18 @@ pub struct ActiveStreamSummary {
     pub scope: StreamScope,
     pub latest_seq: u64,
     pub terminated: bool,
+    pub started_at_ms: i64,
+}
+
+/// User-facing identity for an unresolved protected-tool request.
+#[derive(Clone, Debug, Serialize)]
+pub struct PendingToolApprovalSummary {
+    pub request_id: String,
+    pub tool_name: String,
+    pub agent_id: String,
+    pub project_id: Option<String>,
+    pub agent_instance_id: Option<String>,
+    pub session_id: Option<String>,
     pub started_at_ms: i64,
 }
 
@@ -286,6 +438,7 @@ impl LiveStreamRegistry {
             events,
             session: Mutex::new(Some(session)),
             cancel_tx: Mutex::new(None),
+            responded_approvals: Mutex::new(HashMap::new()),
             started_at_ms: chrono::Utc::now().timestamp_millis(),
             terminated_at: Mutex::new(None),
             cancel: cancel.clone(),
@@ -327,6 +480,7 @@ impl LiveStreamRegistry {
             events,
             session: Mutex::new(None),
             cancel_tx: Mutex::new(cancel_tx),
+            responded_approvals: Mutex::new(HashMap::new()),
             started_at_ms: chrono::Utc::now().timestamp_millis(),
             terminated_at: Mutex::new(None),
             cancel: cancel.clone(),
@@ -391,6 +545,51 @@ impl LiveStreamRegistry {
             })
             .map(|entry| entry.value().summary())
             .collect()
+    }
+
+    /// Find the caller-owned, still-running chat stream that emitted a
+    /// particular tool approval request. Request ids are generated by the
+    /// harness and are unique within a run; matching against the retained
+    /// event log lets a reattached mobile client answer the same prompt
+    /// without knowing the opaque attach id used by the original client.
+    pub fn find_chat_tool_approval(
+        &self,
+        user_id: &str,
+        request_id: &str,
+    ) -> Option<Arc<LiveStream>> {
+        self.inner
+            .iter()
+            .filter_map(|entry| {
+                let stream = entry.value();
+                let owned = stream.scope.user_id.as_deref() == Some(user_id);
+                if stream.kind != StreamKind::ChatTurn || stream.is_terminated() || !owned {
+                    return None;
+                }
+                let matches = stream.events.any_value(|value| {
+                    value.get("type").and_then(|v| v.as_str()) == Some("tool_approval_prompt")
+                        && value.get("request_id").and_then(|v| v.as_str()) == Some(request_id)
+                });
+                matches.then(|| stream.clone())
+            })
+            .max_by_key(|stream| stream.started_at_ms)
+    }
+
+    /// Snapshot every unresolved protected-tool request owned by `user_id`.
+    pub fn list_pending_tool_approvals(&self, user_id: &str) -> Vec<PendingToolApprovalSummary> {
+        let mut approvals: Vec<_> = self
+            .inner
+            .iter()
+            .filter_map(|entry| {
+                let stream = entry.value();
+                (stream.kind == StreamKind::ChatTurn
+                    && !stream.is_terminated()
+                    && stream.scope.user_id.as_deref() == Some(user_id))
+                .then(|| stream.pending_tool_approvals())
+            })
+            .flatten()
+            .collect();
+        approvals.sort_by(|left, right| right.started_at_ms.cmp(&left.started_at_ms));
+        approvals
     }
 
     fn spawn_sweeper(self: Arc<Self>) {
@@ -494,6 +693,7 @@ fn spawn_forwarder(
 mod tests {
     use super::*;
     use aura_os_harness::{ErrorMsg, HarnessSession, TextDelta};
+    use aura_protocol::ToolApprovalPrompt;
     use tokio::sync::mpsc;
 
     fn fake_session() -> HarnessSession {
@@ -841,6 +1041,143 @@ mod tests {
         assert!(
             stream.is_terminated(),
             "cancel should mark the stream terminal"
+        );
+    }
+
+    #[tokio::test]
+    async fn mobile_client_can_resolve_and_answer_chat_tool_approval_by_request_id() {
+        let registry = Arc::new(LiveStreamRegistry {
+            inner: DashMap::new(),
+            stream_capacity: 64,
+            ttl: Duration::from_secs(300),
+        });
+        let (events_tx, _rx0) = broadcast::channel::<HarnessOutbound>(16);
+        let (commands_tx, mut commands_rx) = mpsc::channel(4);
+        let stream = registry.register_receiver(
+            StreamKind::ChatTurn,
+            StreamScope {
+                user_id: Some("owner".to_string()),
+                agent_id: Some("template-agent-1".to_string()),
+                session_id: Some("desktop-session".to_string()),
+                ..Default::default()
+            },
+            events_tx.subscribe(),
+            Some(commands_tx),
+        );
+
+        events_tx
+            .send(HarnessOutbound::ToolApprovalPrompt(ToolApprovalPrompt {
+                request_id: "approval-1".to_string(),
+                tool_name: "write_file".to_string(),
+                args: serde_json::json!({ "path": "src/main.rs" }),
+                agent_id: "agent-1".to_string(),
+                remember_options: vec![ToolApprovalRemember::Once],
+            }))
+            .expect("approval prompt should enter the live stream");
+
+        for _ in 0..50 {
+            if stream.events.latest_seq() >= 1 {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+
+        assert!(
+            registry
+                .find_chat_tool_approval("someone-else", "approval-1")
+                .is_none(),
+            "another account must not resolve the owner's approval"
+        );
+        assert!(
+            registry
+                .list_pending_tool_approvals("someone-else")
+                .is_empty(),
+            "another account must not discover the owner's approval"
+        );
+        let pending = registry.list_pending_tool_approvals("owner");
+        assert_eq!(pending.len(), 1);
+        assert_eq!(pending[0].request_id, "approval-1");
+        assert_eq!(pending[0].agent_id, "template-agent-1");
+        assert_eq!(pending[0].session_id.as_deref(), Some("desktop-session"));
+        let resolved = registry
+            .find_chat_tool_approval("owner", "approval-1")
+            .expect("the owning mobile client should resolve the desktop-started prompt");
+        resolved
+            .respond_to_tool_approval(
+                "approval-1".to_string(),
+                ToolApprovalDecision::On,
+                ToolApprovalRemember::Once,
+            )
+            .expect("approval response should reach the live harness channel");
+
+        let observed = tokio::time::timeout(Duration::from_millis(200), commands_rx.recv())
+            .await
+            .expect("approval should be forwarded before timeout")
+            .expect("command channel should stay open");
+        let HarnessInbound::ToolApprovalResponse(response) = observed else {
+            panic!("expected tool approval response");
+        };
+        assert_eq!(response.request_id, "approval-1");
+        assert_eq!(response.decision, ToolApprovalDecision::On);
+        assert_eq!(response.remember, ToolApprovalRemember::Once);
+
+        resolved
+            .respond_to_tool_approval(
+                "approval-1".to_string(),
+                ToolApprovalDecision::On,
+                ToolApprovalRemember::Once,
+            )
+            .expect("an uncertain client retry should be idempotently accepted");
+        assert!(
+            matches!(
+                commands_rx.try_recv(),
+                Err(mpsc::error::TryRecvError::Empty)
+            ),
+            "the same approval request must only be forwarded once"
+        );
+        let crate::event_log::ReplayResult::Replay { events, .. } = resolved.events.replay_since(0)
+        else {
+            panic!("approval stream should retain its replay frames");
+        };
+        assert_eq!(
+            events.last().unwrap().value["type"],
+            "tool_approval_resolved"
+        );
+        assert!(
+            registry.list_pending_tool_approvals("owner").is_empty(),
+            "resolved approvals must disappear from cold-start snapshots"
+        );
+
+        let conflicting = resolved.respond_to_tool_approval(
+            "approval-1".to_string(),
+            ToolApprovalDecision::Off,
+            ToolApprovalRemember::Once,
+        );
+        assert!(conflicting.is_err(), "a conflicting retry must be rejected");
+
+        events_tx
+            .send(HarnessOutbound::ToolApprovalPrompt(ToolApprovalPrompt {
+                request_id: "approval-2".to_string(),
+                tool_name: "run_command".to_string(),
+                args: serde_json::json!({ "command": "cargo test" }),
+                agent_id: "agent-1".to_string(),
+                remember_options: vec![ToolApprovalRemember::Once],
+            }))
+            .expect("second approval prompt should enter the live stream");
+        for _ in 0..50 {
+            if stream.events.latest_seq() >= 3 {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        let unavailable_scope = resolved.respond_to_tool_approval(
+            "approval-2".to_string(),
+            ToolApprovalDecision::On,
+            ToolApprovalRemember::Forever,
+        );
+        assert!(
+            unavailable_scope.is_err(),
+            "unoffered scopes must be rejected"
         );
     }
 }

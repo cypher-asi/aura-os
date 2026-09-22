@@ -277,7 +277,11 @@ describe("ProjectAgentSetupView", () => {
       </Routes>,
       { routerProps: { initialEntries: ["/projects/proj-1/agents/attach"] } },
     );
-    await userEvent.setup().click(await screen.findByRole("button", { name: /Hosted helper/ }));
+    const hostedHelper = await screen.findByRole("button", { name: /Hosted helper/ });
+    expect(hostedHelper).toHaveAttribute("data-agent-action", "attach-existing-agent");
+    expect(hostedHelper).toHaveAttribute("data-agent-agent-id", "agent-9");
+    expect(hostedHelper.closest("section")).toHaveAttribute("data-agent-list-state", "ready");
+    await userEvent.setup().click(hostedHelper);
     expect(await screen.findByText(CREATE_AGENT_CHAT_HANDOFF)).toBeInTheDocument();
     expect(mockCreateAgentInstance).toHaveBeenCalledWith("proj-1", "agent-9");
     expect(screen.queryByRole("button", { name: /Other team|Already attached/ })).not.toBeInTheDocument();

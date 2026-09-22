@@ -20,6 +20,7 @@ interface NativeNotificationPayload {
   body: string;
   sound: boolean;
   badgeCount?: number;
+  route?: string;
 }
 
 export function useTaskNotifications(enabled = true): void {
@@ -97,6 +98,7 @@ export function useTaskNotifications(enabled = true): void {
       subscribe(EventType.TaskRetrying, handler),
       subscribe(EventType.LoopEnded, handler),
       subscribe(EventType.ProjectPushStuck, handler),
+      subscribe(EventType.ToolApprovalPrompt, handler),
     );
     return () => {
       unsubscribe();
@@ -385,6 +387,7 @@ function postNativeNotification(
     body: notification.body,
     sound: options.sound,
     badgeCount: options.badgeCount,
+    route: notification.route,
   };
   window.ipc?.postMessage(
     JSON.stringify({

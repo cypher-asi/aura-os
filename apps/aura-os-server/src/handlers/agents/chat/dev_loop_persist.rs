@@ -204,6 +204,7 @@ mod tests {
         let ctx = ChatPersistCtx {
             storage: Arc::clone(&storage),
             jwt: "jwt".to_string(),
+            user_id: None,
             session_id,
             project_id: project_id.to_string(),
             project_agent_id: PROJECT_AGENT_ID.to_string(),

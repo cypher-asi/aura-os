@@ -239,6 +239,27 @@ describe("sendAgentEventStream", () => {
     expect(handler.onDone).toHaveBeenCalled();
   });
 
+  it("keeps live tool approval prompts in the typed chat event pipeline", async () => {
+    const handler: StreamEventHandler = { onEvent: vi.fn(), onError: vi.fn() };
+    await sendAgentEventStream("a1", "hi", null, undefined, undefined, handler);
+    const callbacks = streamSSE.mock.calls[0][2] as {
+      onEvent: (type: string, data: unknown) => void;
+    };
+
+    callbacks.onEvent("tool_approval_prompt", {
+      request_id: "approval-1",
+      tool_name: "write_file",
+      args: { path: "src/main.ts" },
+      agent_id: "a1",
+      remember_options: ["once", "session"],
+    });
+
+    expect(handler.onEvent).toHaveBeenCalledWith(expect.objectContaining({
+      type: "tool_approval_prompt",
+      content: expect.objectContaining({ request_id: "approval-1", tool_name: "write_file" }),
+    }));
+  });
+
   it("falls back to the tagged payload event type when the SSE event name is generic", async () => {
     const handler: StreamEventHandler = {
       onEvent: vi.fn(),

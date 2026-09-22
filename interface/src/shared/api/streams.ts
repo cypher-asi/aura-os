@@ -1,4 +1,8 @@
 import { apiFetch } from "./core";
+import type {
+  ToolApprovalDecision,
+  ToolApprovalRemember,
+} from "../types/harness-protocol";
 
 /** Kind of harness flow a resumable stream represents. Mirrors the
  *  server `StreamKind` enum. */
@@ -13,6 +17,7 @@ export type StreamKind =
 export interface StreamScope {
   user_id?: string | null;
   project_id?: string | null;
+  agent_id?: string | null;
   agent_instance_id?: string | null;
   session_id?: string | null;
 }
@@ -29,6 +34,16 @@ export interface ActiveStreamSummary {
 
 export interface ActiveStreamsResponse {
   streams: ActiveStreamSummary[];
+}
+
+export interface PendingToolApprovalSummary {
+  request_id: string;
+  tool_name: string;
+  agent_id: string;
+  project_id?: string | null;
+  agent_instance_id?: string | null;
+  session_id?: string | null;
+  started_at_ms: number;
 }
 
 export interface ActiveStreamsFilter {
@@ -53,10 +68,31 @@ export const streamsApi = {
     );
   },
 
+  /** Authoritative snapshot for agents currently waiting on this user. */
+  listPendingToolApprovals: () =>
+    apiFetch<{ approvals: PendingToolApprovalSummary[] }>(
+      "/api/streams/tool-approvals",
+    ),
+
   /** Request cancellation of a running stream's underlying harness run. */
   cancelStream: (attachId: string) =>
     apiFetch<{ cancelled: boolean }>(
       `/api/streams/${encodeURIComponent(attachId)}/cancel`,
       { method: "POST" },
+    ),
+
+  /** Answer a protected tool request on the environment-owned live run. */
+  respondToToolApproval: (
+    requestId: string,
+    decision: ToolApprovalDecision,
+    remember: ToolApprovalRemember,
+  ) =>
+    apiFetch<{ accepted: boolean }>(
+      `/api/streams/tool-approvals/${encodeURIComponent(requestId)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision, remember }),
+      },
     ),
 };

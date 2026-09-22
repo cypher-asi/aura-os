@@ -162,7 +162,19 @@ test("native mobile creates a hosted web agent without provisioning a remote VM"
   // Agents created on web use the same hosted Harness runtime. Android must
   // show and attach them without trying to provision a confidential VM.
   await page.goto("/projects/proj-1/agents/attach");
-  await page.getByRole("button", { name: new RegExp(hostedAgent.name) }).click();
+  const availableAgents = page.locator(
+    '[data-agent-surface="available-agent-list"][data-agent-list-state="ready"]',
+  );
+  await expect(availableAgents).toBeVisible();
+  const hostedAgentCard = availableAgents.locator(
+    `[data-agent-action="attach-existing-agent"][data-agent-agent-id="${hostedAgent.agent_id}"]`,
+  );
+  await expect(hostedAgentCard).toBeVisible();
+  // WebKit can detach this card while the capability/list projections settle.
+  // Resolve the semantic locator and invoke its native click in one browser
+  // task so a transient React replacement cannot split actionability checks
+  // from the actual activation.
+  await hostedAgentCard.evaluate((button: HTMLButtonElement) => button.click());
   await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/agent-inst-mobile-hosted$/);
   const chatInput = page.getByRole("textbox", { name: "Message agent" });
   await chatInput.fill("Reply with Android hosted runtime ready");

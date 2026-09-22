@@ -273,7 +273,19 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
         </section>
       ) : null}
 
-      <section className={styles.section}>
+      <section
+        className={styles.section}
+        data-agent-surface="available-agent-list"
+        data-agent-list-state={
+          loadingAgents
+            ? "loading"
+            : agentsError
+              ? "error"
+              : hasLoadedExistingAgents
+                ? "ready"
+                : "idle"
+        }
+      >
         <div className={styles.sectionHeader}>
           <Text size="sm" weight="medium">Available Agents</Text>
           <Text size="xs" variant="muted">Only agents that are not already attached appear here.</Text>
@@ -284,6 +296,8 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
               key={agent.agent_id}
               type="button"
               className={styles.agentCard}
+              data-agent-action="attach-existing-agent"
+              data-agent-agent-id={agent.agent_id}
               onClick={() => handleAttachExisting(agent)}
               disabled={Boolean(attachingId)}
             >

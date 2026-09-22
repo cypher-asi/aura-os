@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import { ArrowUp, ChevronDown, FileText, Plus, X } from "lucide-react";
+import { Link } from "react-router-dom";
 import { AgentEnvironment } from "../../../apps/agents/components/AgentEnvironment";
 import { CommandChips } from "../../../features/chat-ui/ChatInputBar/CommandChips";
 import { ContextUsageIndicator } from "../../../features/chat-ui/ChatInputBar/ContextUsageIndicator";
@@ -52,8 +53,13 @@ import { MentionMenu } from "../../../features/chat-ui/ChatInputBar/MentionMenu"
 import { MAX_AGENT_MENTIONS, type AgentMentionTarget } from "../../../api/streams";
 import { isUserFacingAgentInstance } from "../../../components/ProjectList/project-list-shared";
 import { filterRuntimeVisibleAgents } from "../../../shared/lib/agent-runtime-visibility";
-import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
+import {
+  refreshAuraRuntimeCapabilities,
+  useAuraCapabilities,
+} from "../../../hooks/use-aura-capabilities";
 import { promptLengthError } from "../../../features/chat-ui/ChatInputBar/composer-length";
+import { refreshRemoteAgentStatus } from "../../../stores/profile-status-store";
+import { useUIModalStore } from "../../../stores/ui-modal-store";
 import styles from "./MobileChatInputBar.module.css";
 
 const CHAT_COMPOSER_MODE_LABELS: Partial<Record<AgentMode, string>> = {
@@ -122,13 +128,15 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       onNewChat,
       sendDisabled = false,
       sendDisabledReason,
+      sendDisabledAction,
       composerTone = "build",
     },
     ref,
   ) {
     const isChatStreaming = useIsStreaming(streamKey);
     const isStreaming = isChatStreaming || isExternallyBusy;
-    const { remoteOnly } = useAuraCapabilities();
+    const { remoteOnly, supportsHostRetargeting } = useAuraCapabilities();
+    const openHostSettings = useUIModalStore((state) => state.openHostSettings);
     const chatUI = useChatUI(streamKey);
     const selectedModel = chatUI.selectedModel;
     const selectedEffort = chatUI.selectedEffort;
@@ -148,6 +156,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
     const mentionStartRef = useRef<number | null>(null);
     const mentionEndRef = useRef<number | null>(null);
     const [modelSheetOpen, setModelSheetOpen] = useState(false);
+    const [runtimeRefreshPending, setRuntimeRefreshPending] = useState(false);
     const [qualitySheetOpen, setQualitySheetOpen] = useState(false);
     // Collapsed vendor sections in the chat model sheet. Empty = all
     // expanded (the default whenever the sheet opens).
@@ -227,7 +236,30 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
           : modeBehavior.kind === "generate_video"
             ? "video"
             : "chat";
-    const isLocalAgent = sendDisabled;
+    const runtimeUnavailable = sendDisabled;
+    const runtimeAgentId = templateAgentId;
+    const canRefreshRuntime =
+      runtimeUnavailable &&
+      (machineType === "local" || (machineType === "remote" && Boolean(runtimeAgentId)));
+    const disabledNoticeTitle =
+      machineType === "remote"
+        ? "Saved conversation · Remote runtime unavailable"
+        : machineType === "local"
+          ? "Saved conversation · Desktop runtime unavailable"
+          : "Conversation is read only";
+    const handleRuntimeRefresh = useCallback(async () => {
+      if (!canRefreshRuntime || runtimeRefreshPending) return;
+      setRuntimeRefreshPending(true);
+      try {
+        if (machineType === "remote" && runtimeAgentId) {
+          await refreshRemoteAgentStatus(runtimeAgentId);
+        } else {
+          await refreshAuraRuntimeCapabilities();
+        }
+      } finally {
+        setRuntimeRefreshPending(false);
+      }
+    }, [canRefreshRuntime, machineType, runtimeAgentId, runtimeRefreshPending]);
     const lengthValidationMessage = promptLengthError(input);
     const isPromptTooLong = lengthValidationMessage != null;
     const isThreeDMode = generationMode === "3d";
@@ -246,7 +278,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       (command) => command.id === "btw",
     );
     const canSend =
-      !isLocalAgent &&
+      !runtimeUnavailable &&
       !isStreaming &&
       !isPromptTooLong &&
       (asideSelected
@@ -909,17 +941,51 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
             </div>
           ) : null}
           <CommandChips commands={selectedCommands} onRemove={handleCommandRemove} />
-          {isLocalAgent ? (
+          {runtimeUnavailable ? (
             <div
               className={styles.disabledNotice}
               role="status"
               aria-live="polite"
               data-agent-surface="mobile-chat-input-disabled-hint"
             >
-              <span className={styles.disabledNoticeTitle}>Remote agent required</span>
+              <span className={styles.disabledNoticeTitle}>{disabledNoticeTitle}</span>
               <span className={styles.disabledNoticeCopy}>
-                {sendDisabledReason ?? "Choose or create a remote agent to chat from mobile."}
+                {sendDisabledReason ?? "Aura can show saved messages, but this runtime cannot accept a new turn right now."}
               </span>
+              {canRefreshRuntime ||
+              (machineType === "local" && supportsHostRetargeting) ||
+              sendDisabledAction ? (
+                <span className={styles.disabledNoticeActions}>
+                  {canRefreshRuntime ? (
+                    <button
+                      type="button"
+                      className={styles.disabledNoticeAction}
+                      onClick={() => void handleRuntimeRefresh()}
+                      disabled={runtimeRefreshPending}
+                    >
+                      {runtimeRefreshPending ? "Checking…" : "Check again"}
+                    </button>
+                  ) : null}
+                  {machineType === "local" && supportsHostRetargeting ? (
+                    <button
+                      type="button"
+                      className={styles.disabledNoticeAction}
+                      onClick={openHostSettings}
+                    >
+                      Host settings
+                    </button>
+                  ) : null}
+                  {sendDisabledAction ? (
+                    <Link
+                      className={styles.disabledNoticeAction}
+                      to={sendDisabledAction.to}
+                      data-agent-action="mobile-chat-disabled-handoff"
+                    >
+                      {sendDisabledAction.label}
+                    </Link>
+                  ) : null}
+                </span>
+              ) : null}
             </div>
           ) : null}
           {lengthValidationMessage ? (
@@ -972,7 +1038,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
             )}
             <textarea
               ref={textareaRef}
-              className={`${styles.textarea}${isLocalAgent ? ` ${styles.textareaAwaitingRemote}` : ""}`}
+              className={`${styles.textarea}${runtimeUnavailable ? ` ${styles.textareaAwaitingRemote}` : ""}`}
               value={input}
               onChange={(event) => {
                 if (voiceListening) stopVoiceDictation();
@@ -988,8 +1054,8 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
               onPaste={handlePaste}
               disabled={sendDisabled}
               placeholder={
-                isLocalAgent
-                  ? "Remote agent required"
+                runtimeUnavailable
+                  ? "Runtime unavailable"
                   : isThreeDMode
                     ? has3DSource
                       ? "Refine your 3D model (optional)"
@@ -1043,18 +1109,17 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
           </div>
           <div className={styles.metaRow}>
             <span className={styles.environmentWrap}>
-              {isLocalAgent ? (
-                <span className={styles.remoteRequiredStatus} aria-label="Remote agent required">
-                  <span className={styles.remoteRequiredDot} aria-hidden="true" />
-                  Remote required
+              <AgentEnvironment
+                machineType={machineType}
+                agentId={templateAgentId ?? agentId}
+                workspacePath={workspacePath}
+              />
+              {runtimeUnavailable ? (
+                <span className={styles.runtimeUnavailableStatus} aria-label="Runtime unavailable">
+                  <span className={styles.runtimeUnavailableDot} aria-hidden="true" />
+                  Read only
                 </span>
-              ) : (
-                <AgentEnvironment
-                  machineType={machineType}
-                  agentId={templateAgentId ?? agentId}
-                  workspacePath={workspacePath}
-                />
-              )}
+              ) : null}
             </span>
             <span className={styles.metaSpacer} />
             {contextUsage != null && contextUsage.utilization > 0 ? (

@@ -173,6 +173,7 @@ mod tests {
             storage: Arc::new(aura_os_storage::StorageClient::with_base_url(
                 "http://localhost:9999",
             )),
+            user_id: None,
             session_id: aura_os_core::SessionId::new(),
             project_id: "project-test".to_string(),
             project_agent_id: "00000000-0000-0000-0000-000000000aaa".to_string(),
@@ -220,6 +221,7 @@ mod tests {
             storage: Arc::new(aura_os_storage::StorageClient::with_base_url(
                 "http://localhost:9999",
             )),
+            user_id: None,
             session_id: aura_os_core::SessionId::new(),
             project_id: "project-test".to_string(),
             project_agent_id: "00000000-0000-0000-0000-000000000aaa".to_string(),

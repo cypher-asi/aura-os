@@ -4,6 +4,7 @@ import type {
   AssistantMessageEnd as HarnessAssistantMessageEnd,
   TextDelta as HarnessTextDelta,
   ToolUseStart as HarnessToolUseStart,
+  ToolApprovalPrompt as HarnessToolApprovalPrompt,
   SubagentSpawned as HarnessSubagentSpawned,
   SubagentStatus as HarnessSubagentStatus,
 } from "../harness-protocol";
@@ -137,6 +138,8 @@ export type SystemEventVariant =
   | { type: typeof EventType.AssistantMessageEnd; content: HarnessAssistantMessageEnd }
   | { type: typeof EventType.TextDelta; content: HarnessTextDelta }
   | { type: typeof EventType.ToolUseStart; content: HarnessToolUseStart }
+  | { type: typeof EventType.ToolApprovalPrompt; content: HarnessToolApprovalPrompt }
+  | { type: typeof EventType.ToolApprovalResolved; content: { request_id: string } }
   | { type: typeof EventType.AssistantTurnProgress; content: {
       message_id?: string;
       project_id?: string;

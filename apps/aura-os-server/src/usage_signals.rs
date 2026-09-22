@@ -628,6 +628,7 @@ mod tests {
         let billing = aura_os_billing::BillingClient::with_base_url(base_url.clone());
         let ctx = ChatPersistCtx {
             storage: Arc::new(aura_os_storage::StorageClient::with_base_url(&base_url)),
+            user_id: None,
             session_id: aura_os_core::SessionId::new(),
             project_id: "project-test".to_string(),
             project_agent_id: "project-agent-test".to_string(),

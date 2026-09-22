@@ -1113,6 +1113,7 @@ describe("maybeLogCrossAgentEvent (Phase 6 gate)", () => {
         session_id: "s-1",
         project_agent_id: "pa-1",
         agent_id: "a-1",
+        user_id: "user-1",
       },
       { watchAgentInstanceId: "pa-1" },
       true,
@@ -1153,6 +1154,7 @@ describe("parseAuraEvent (Phase 5 wire shape)", () => {
         project_id: "p-1",
         project_agent_id: "pa-1",
         agent_id: "a-1",
+        user_id: "user-1",
       },
       {},
     );
@@ -1160,6 +1162,7 @@ describe("parseAuraEvent (Phase 5 wire shape)", () => {
     expect(event.agent_id).toBe("a-1");
     expect(event.session_id).toBe("s-1");
     expect(event.project_id).toBe("p-1");
+    expect(event.user_id).toBe("user-1");
   });
 
   it("parser_falls_back_to_legacy_agent_instance_id", () => {

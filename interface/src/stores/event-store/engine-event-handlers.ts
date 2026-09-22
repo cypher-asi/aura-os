@@ -14,6 +14,7 @@ import { invalidateTaskTurns } from "../task-turn-cache";
 import type { BuildStep, TestStep, GitStep, TaskOutputEntry } from "./event-store";
 import { useEventStore, EMPTY_OUTPUT, subscribers, notifyTaskOutputListeners } from "./event-store";
 import { persistTaskOutputText, removePersistedTaskOutputText } from "./task-output-cache";
+import { applyAgentAttentionEvent } from "../agent-attention-store";
 
 interface OutputUpdate {
   outputs: Record<string, TaskOutputEntry>;
@@ -323,6 +324,11 @@ function handleSessionSummaryUpdated(event: AuraEvent, _u: OutputUpdate): void {
   useSessionsListStore.getState().setSessionSummary(c.session_id, c.summary);
 }
 
+function handleAgentAttention(event: AuraEvent, _u: OutputUpdate): void {
+  void _u;
+  applyAgentAttentionEvent(event);
+}
+
 const DISPATCH: Partial<Record<EventType, EngineHandler>> = {
   [EventType.TaskStarted]: handleTaskStarted,
   [EventType.TextDelta]: handleTextDelta,
@@ -353,6 +359,10 @@ const DISPATCH: Partial<Record<EventType, EngineHandler>> = {
   [EventType.LoopActivityChanged]: handleLoopActivityChanged,
   [EventType.LoopEnded]: handleLoopEnded,
   [EventType.SessionSummaryUpdated]: handleSessionSummaryUpdated,
+  [EventType.UserMessage]: handleAgentAttention,
+  [EventType.AssistantMessageEnd]: handleAgentAttention,
+  [EventType.ToolApprovalPrompt]: handleAgentAttention,
+  [EventType.ToolApprovalResolved]: handleAgentAttention,
 };
 
 export function handleEngineEvent(event: AuraEvent): void {

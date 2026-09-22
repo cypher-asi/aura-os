@@ -5,6 +5,7 @@ import {
   NotificationKind,
   type NotificationPriority,
 } from "../shared/types/notifications";
+import { buildAgentSessionRoute } from "../shared/lib/agent-session-route";
 
 export function classifyNotification(event: AuraEvent): AuraNotification | null {
   switch (event.type) {
@@ -51,6 +52,26 @@ export function classifyNotification(event: AuraEvent): AuraNotification | null 
         taskId: event.content.task_id,
         route: projectRoute(event.project_id),
       };
+    case EventType.ToolApprovalPrompt: {
+      const projectId = event.project_id || undefined;
+      const agentId = event.agent_id || event.content.agent_id || undefined;
+      const agentInstanceId = event.project_agent_id ?? undefined;
+      const sessionId = event.session_id || undefined;
+      const toolName = event.content.tool_name.replaceAll("_", " ");
+      return {
+        id: `tool_approval:${event.content.request_id}`,
+        kind: NotificationKind.ApprovalRequired,
+        priority: 1,
+        title: "Agent needs approval",
+        body: `Review ${toolName} before the agent can continue.`,
+        createdAt: Date.parse(event.created_at) || Date.now(),
+        projectId,
+        agentId,
+        agentInstanceId,
+        sessionId,
+        route: buildAgentSessionRoute({ projectId, agentInstanceId, agentId, sessionId }),
+      };
+    }
     default:
       return null;
   }
@@ -67,6 +88,9 @@ function classifyLoopEnded(
   const priority: NotificationPriority = status === "completed" ? 0 : 1;
   const projectId = loop_id.project_id ?? event.project_id;
   const taskId = activity.current_task_id ?? undefined;
+  const agentInstanceId = loop_id.agent_instance_id ?? event.project_agent_id ?? undefined;
+  const agentId = loop_id.agent_id ?? event.agent_id;
+  const sessionId = event.session_id || undefined;
   const label = loopKindLabel(loop_id.kind);
   const title =
     status === "completed"
@@ -83,7 +107,16 @@ function classifyLoopEnded(
     createdAt: Date.parse(event.created_at) || Date.now(),
     taskId,
     projectId,
-    route: projectRoute(projectId),
+    agentId,
+    agentInstanceId,
+    sessionId,
+    route:
+      buildAgentSessionRoute({
+        projectId,
+        agentInstanceId,
+        agentId,
+        sessionId,
+      }) ?? projectRoute(projectId),
   };
 }
 
@@ -114,6 +147,10 @@ function taskNotification(args: {
     .join(": ");
   const attemptSuffix =
     event.type === EventType.TaskRetrying ? `:${event.content.attempt}` : "";
+  const projectId = event.project_id || undefined;
+  const agentId = event.agent_id || undefined;
+  const agentInstanceId = event.project_agent_id ?? undefined;
+  const sessionId = event.session_id || undefined;
   return {
     id: `${kind}:${taskId}${attemptSuffix}`,
     kind,
@@ -122,8 +159,17 @@ function taskNotification(args: {
     body,
     createdAt: Date.parse(event.created_at) || Date.now(),
     taskId,
-    projectId: event.project_id,
-    route: projectRoute(event.project_id),
+    projectId,
+    agentId,
+    agentInstanceId,
+    sessionId,
+    route:
+      buildAgentSessionRoute({
+        projectId,
+        agentInstanceId,
+        agentId,
+        sessionId,
+      }) ?? projectRoute(projectId),
   };
 }
 

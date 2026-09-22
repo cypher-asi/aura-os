@@ -1,0 +1,156 @@
+.card {
+  margin: 0 12px 8px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--color-warning) 42%, var(--color-border));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--color-warning) 9%, var(--color-bg));
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.12);
+}
+
+.headingRow {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: 10px;
+  color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 16%, transparent);
+}
+
+.copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--color-text);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.copy span,
+.onceLabel,
+.rememberLabel {
+  color: var(--color-text-secondary);
+}
+
+.details {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.details summary {
+  cursor: pointer;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+
+.details pre {
+  max-height: 156px;
+  overflow: auto;
+  margin: 4px 0 0;
+  padding: 9px;
+  border-radius: 9px;
+  background: var(--color-overlay-subtle);
+  color: var(--color-text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+
+.controls {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.rememberLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+}
+
+.rememberLabel select {
+  min-height: 36px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  padding: 0 28px 0 9px;
+}
+
+.onceLabel {
+  font-size: 11px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.actions button {
+  min-width: 76px;
+  min-height: 42px;
+  border-radius: 10px;
+  padding: 0 14px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.actions button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.denyButton {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.allowButton {
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.error {
+  margin: 8px 0 0;
+  color: var(--color-danger);
+  font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  .card {
+    margin-inline: 8px;
+  }
+
+  .controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .actions,
+  .actions button {
+    flex: 1;
+  }
+
+  .actions {
+    width: 100%;
+    margin-left: 0;
+  }
+}

@@ -330,7 +330,7 @@ function renderMobile(path: InitialEntry | InitialEntry[] = "/projects") {
           <Route path="/projects/settings" element={<div>Settings route</div>} />
           <Route path="/profile" element={<div>Profile settings destination</div>} />
           <Route path="/agents" element={<div>Agents</div>} />
-          <Route path="/agents/:agentId" element={<div>Agent details</div>} />
+          <Route path="/agents/:agentId" element={<div>Agent chat</div>} />
           <Route path="/feed" element={<div>Feed</div>} />
           <Route path="/chat" element={<div>Chat destination</div>} />
           <Route path="/projects" element={<div>Projects</div>} />
@@ -412,11 +412,22 @@ describe("MobileShell", () => {
     expect(screen.queryByRole("button", { name: "Open workspace" })).not.toBeInTheDocument();
   });
 
-  it("shows a back button on standalone mobile agent details routes", () => {
+  it("returns from standalone mobile agent details to the shared chat", () => {
     mockActiveApp.id = "agents";
     mockActiveApp.label = "Agents";
+    renderMobile("/agents/agent-1?view=details");
+
+    expect(screen.getByRole("button", { name: "Back to agent chat" })).toBeInTheDocument();
+  });
+
+  it("renders a standalone agent route as the persistent shared chat", () => {
+    mockActiveApp.id = "agents";
+    mockActiveApp.label = "Agents";
+
     renderMobile("/agents/agent-1");
 
+    expect(screen.getByTestId("conversation-surface-host-stub")).toBeInTheDocument();
+    expect(screen.queryByTestId("mobile-agent-details-view")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Back to agent library" })).toBeInTheDocument();
   });
 
@@ -444,9 +455,10 @@ describe("MobileShell", () => {
     mockActiveApp.id = "agents";
     mockActiveApp.label = "Agents";
 
-    renderMobile("/agents/agent-1");
+    renderMobile("/agents/agent-1?view=details");
 
     expect(screen.getByTestId("mobile-agent-details-view")).toBeInTheDocument();
+    expect(screen.getByTestId("conversation-surface-host-stub")).toBeInTheDocument();
     expect(screen.queryByTestId("main-panel")).not.toBeInTheDocument();
   });
 

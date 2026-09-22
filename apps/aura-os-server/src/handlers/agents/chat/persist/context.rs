@@ -12,6 +12,8 @@ use aura_os_storage::StorageClient;
 pub(crate) struct ChatPersistCtx {
     pub(crate) storage: Arc<StorageClient>,
     pub(crate) jwt: String,
+    /// Authenticated owner used to scope cross-client control-plane events.
+    pub(crate) user_id: Option<String>,
     /// Resolved storage session id this chat turn is being persisted
     /// into. Strongly typed as [`SessionId`] in memory; the
     /// `aura_os_storage` JSON layer still wants `String`, so callers
@@ -91,6 +93,7 @@ pub(crate) struct ChatPersistCtx {
 /// materialises a [`ChatPersistCtx`].
 pub(crate) struct ChatPersistRequest<'a> {
     pub(crate) jwt: &'a str,
+    pub(crate) user_id: Option<&'a str>,
     /// When present, the write must use this project binding. Cross-agent
     /// callers set it so agents reused across projects cannot fall back to
     /// whichever conversation happened to be most recent.

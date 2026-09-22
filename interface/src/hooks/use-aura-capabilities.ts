@@ -138,6 +138,15 @@ function requestRuntimeCapabilities(force = false): Promise<void> {
   return runtimeCapabilitiesRequest;
 }
 
+/**
+ * Force an immediate capability probe after a user asks Aura to retry the
+ * connected runtime. The regular poll remains the background safety net; this
+ * is the explicit recovery path used by read-only mobile agent surfaces.
+ */
+export function refreshAuraRuntimeCapabilities(): Promise<void> {
+  return requestRuntimeCapabilities(true);
+}
+
 function readCapabilities(): AuraCapabilities {
   if (typeof window === "undefined") {
     const features = buildFeatureAvailability(false);

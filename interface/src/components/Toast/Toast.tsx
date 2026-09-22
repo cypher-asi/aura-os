@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, CheckCircle2, RotateCw, X, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, RotateCw, ShieldAlert, X, XCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { NotificationKind } from "../../shared/types/notifications";
 import type { ToastNotification } from "../../stores/toast-store";
@@ -13,6 +13,7 @@ const ICONS: Record<NotificationKind, LucideIcon> = {
   [NotificationKind.TaskRetrying]: RotateCw,
   [NotificationKind.LoopEnded]: AlertTriangle,
   [NotificationKind.ProjectPushStuck]: AlertTriangle,
+  [NotificationKind.ApprovalRequired]: ShieldAlert,
 };
 
 export function ToastViewport(): React.ReactElement | null {

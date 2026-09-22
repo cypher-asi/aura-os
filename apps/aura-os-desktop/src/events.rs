@@ -19,6 +19,9 @@ pub(crate) struct NativeNotificationPayload {
     pub sound: bool,
     #[serde(default)]
     pub badge_count: Option<u32>,
+    /** Canonical in-app destination for notification activation. */
+    #[serde(default)]
+    pub route: Option<String>,
 }
 
 fn default_notification_sound() -> bool {

@@ -41,6 +41,19 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
                 size="sm"
                 iconOnly
                 icon={<ArrowLeft size={20} />}
+                aria-label="Back to agent chat"
+                onClick={() => {
+                  const params = new URLSearchParams(state.location.search);
+                  params.delete("view");
+                  navigate(`${state.location.pathname}${params.size > 0 ? `?${params.toString()}` : ""}`);
+                }}
+              />
+            ) : state.isStandaloneAgentChatRoute ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                iconOnly
+                icon={<ArrowLeft size={20} />}
                 aria-label="Back to agent library"
                 onClick={() => navigate("/agents")}
               />

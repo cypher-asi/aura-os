@@ -115,6 +115,7 @@ pub(crate) async fn attach_subagent_stream(
     let scope = StreamScope {
         user_id: Some(session.user_id.clone()),
         project_id: None,
+        agent_id: query.agent_id.map(|id| id.to_string()),
         agent_instance_id: None,
         session_id: None,
         parent_tool_use_id: query.parent_tool_use_id,

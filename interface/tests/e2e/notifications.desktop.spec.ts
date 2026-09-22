@@ -68,6 +68,7 @@ test("desktop task completion event shows toast and posts native notification IP
         body: "Smoke notification task",
         sound: true,
         badgeCount: 1,
+        route: "/projects/proj-1/agents/agent-inst-1?session=session-smoke-1",
       }),
     },
   ]);
@@ -145,6 +146,7 @@ interface AuraNativeNotificationMessage {
     body: string;
     sound: boolean;
     badgeCount?: number;
+    route?: string;
   };
 }
 

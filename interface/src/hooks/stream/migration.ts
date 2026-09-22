@@ -7,6 +7,7 @@ import { migrateAllPartitions } from "./partition-registry";
 import "./store";
 import "./partition-state";
 import "../../stores/chat-ui-store";
+import "../../stores/tool-approval-store";
 
 /**
  * Re-key every per-streamKey map registered with the partition

@@ -1,12 +1,12 @@
 # T3 Code reference audit
 
-Last reviewed: 2026-08-26
+Last reviewed: 2026-09-22
 
 Upstream: <https://github.com/pingdotgg/t3code>
 
-Reviewed commit: `a3a8cbd60539b4af4de8f96c892dbd07a2b6c041`
+Reviewed commit: `aff9318bf46beaf05cc7155b428d3f0b8711efd2` (`origin/main`)
 
-Local checkout: `../t3code`
+Local checkout: `../t3code` (reviewed from `origin/main`; the working tree may remain on an older commit)
 
 ## Bottom line
 
@@ -22,6 +22,13 @@ remote swarm execution, and eval/debug tooling. The largest useful gaps are the 
 control surfaces around those capabilities: global discovery, source-control/review UX, session
 organization and search, a uniform runtime-adapter boundary, resource attribution, and rollback-safe
 updates.
+
+For mobile specifically, T3's most useful lesson is not a second mobile agent runtime. A thread,
+provider process, Git checkout, terminal, and files remain owned by one environment; mobile resumes
+that same environment-scoped thread. T3 shares connection/auth/domain-state code across clients,
+keeps native presentation separate, retains cached projections offline, and reconnects on app
+foreground through one supervisor. Aura should preserve its global persistent agent identity while
+making each active session explicit about the harness/swarm environment that owns execution.
 
 No T3 source was copied into Aura for this audit. The command palette added alongside this document
 is a fresh implementation built on Aura's existing app, project, agent, session, menu, and modal
@@ -45,13 +52,17 @@ and attribution.
 | Coding surfaces | Terminal, filesystem, Git diff, preview/browser, attachments, tool activity, approvals, questions, and subagent/workflow observability live beside the conversation. | Medium. Aura already has terminal, files, browser/media, sidekick panels, and subagent/council views. The missing unification is mainly source control and cross-surface navigation. |
 | Usage and diagnostics | Provider transcript usage is aggregated across environments. A bounded native sidecar attributes CPU/memory/process-tree costs, augmented by Electron host telemetry. | Medium/high. Aura has token, cost, eval, and stability telemetry, but little host/process attribution. A bounded sidecar is a good isolation pattern. |
 | Updating | Immutable server versions, compatibility-aware selection, database snapshotting (including SQLite WAL/SHM), health checks, promotion, and rollback. | Medium/high for desktop and remote-host reliability. Adapt the state-snapshot and health-gated promotion pattern to Aura's Rust server packaging. |
-| Multi-client UX | Web, Electron desktop, and native mobile share contracts and runtime behavior while retaining platform-specific shells. | Medium. Aura already has desktop/web/mobile surfaces; the shared non-visual runtime boundary is the useful reference. |
+| Multi-client UX | Web, Electron desktop, and native mobile share contracts, connection supervision, auth, cached environment state, and domain projections while retaining platform-specific shells. | High for mobile. Aura already has desktop/web/mobile surfaces, but cross-client agent/session discovery, resumability, and offline truth need to feel like one product. |
+| Mobile agent awareness | The environment publishes redacted per-thread activity for push notifications and Live Activities. Notifications deep-link back to `(environmentId, threadId)`; the socket does not need to survive in the background. | High after basic resume reliability. Aura should notify for completion, failure, approval, and required input, keyed to its canonical agent/session/runtime identity. |
+| Mobile outbox and drafts | Composer drafts and pending sends are client-owned, while accepted commands and conversation state remain environment-owned. Reconnect drains retryable client intent without pretending an unacknowledged send was committed. | High. This is the right boundary for reliable mobile prompts on lossy networks. |
 
 Primary T3 sources reviewed:
 
 - `docs/internals/overview.md` — RPC boundary, event-sourced orchestration, drivers, workers, and checkpoints
 - `docs/internals/providers.md` — driver/adapter/instance registry separation
 - `docs/internals/remote.md` — environment identity, pairing, Tailscale, relay, and SSH
+- `docs/internals/connection-runtime.md` — one connection owner, foreground wakeups, offline cache truth, and scoped subscriptions
+- `docs/internals/t3-connect.md` — linked-environment bootstrap and managed reachability without moving execution into the relay
 - `docs/internals/resource-telemetry.md` — bounded native process monitoring
 - `docs/internals/server-updates.md` — version staging, database snapshots, health gates, and rollback
 - `docs/user/keybindings.md` — command palette search and editable keybinding rules
@@ -59,6 +70,72 @@ Primary T3 sources reviewed:
 - `docs/user/permission-modes.md` — thread-scoped runtime permission presets
 
 ## Gap and adoption order
+
+### P0 — make the mobile agent loop real
+
+Mobile must be able to discover an agent created on desktop/web, open its canonical recent session,
+read history even when execution is temporarily unreachable, send when the owning runtime is live,
+and inspect the session's project files. Runtime reachability and persisted-data freshness must be
+shown separately; an offline runtime is not a missing agent.
+
+The first Aura slice now implements that boundary:
+
+- `/agents/:agentId` is again the shared conversation route on mobile instead of being intercepted
+  by a profile-only screen.
+- Agent details move to `?view=details`, preserving the canonical `project`, `instance`, and
+  `session` query identity when moving between chat and controls.
+- The mobile details surface adds Continue chat, recent canonical sessions, and Browse code when a
+  project workspace is known.
+- The agent library warms and displays recent shared conversation previews rather than only profile
+  biography text.
+- Desktop-local agents remain readable on mobile while their runtime is unreachable; sending stays
+  disabled until the owning host is available instead of bouncing the user out of the conversation.
+- A disabled mobile composer now distinguishes saved conversation availability from execution
+  reachability. Local and remote runtime failures use truthful read-only copy, preserve the runtime
+  identity in the footer, and offer an immediate status recheck; disconnected local clients also
+  expose Host settings without leaving the conversation.
+- The shared event connection now replaces even an apparently-open WebSocket when the app returns
+  to the foreground. It mints a fresh connection ticket and resumes from the last event cursor, so
+  mobile does not wait through exponential backoff to learn that an agent completed or failed.
+- Task and loop notifications now retain the persistent agent, project-agent instance, and session
+  identity and target that exact canonical conversation. The same route is included in the native
+  notification payload, establishing one deep-link contract for in-app, desktop, and future mobile
+  push activation.
+- Live tool approval is now a cross-client control-plane operation instead of an SSE event the UI
+  silently drops. The server retains the environment-owned command channel, resolves a response by
+  the harness request id with account ownership checks, and forwards allow/deny plus the offered
+  remember scope to the original run. Project and standalone chats render the same touch-friendly
+  approval card, including after mobile reattaches to a desktop-started stream.
+- Approval-required events are also published with canonical project, agent-instance, agent, and
+  session identity. In-app/native notifications deep-link to the exact waiting conversation, and
+  approval notifications have their own default-on preference. The live-stream registry remains
+  the source of truth for the pending command; the notification is only a routing signal.
+- The agent library now has its own authenticated, reconnectable attention projection. It hydrates
+  unresolved protected-tool requests from the environment-owned streams, applies live prompt and
+  resolution deltas, labels the affected persistent agent as `Needs you`, and opens the exact
+  canonical session when tapped. This makes a desktop-started run actionable after a mobile cold
+  start even if the original notification was missed.
+- The same projection now discovers active desktop/web chat turns without mounting each chat,
+  labels the persistent agent as `Working`, and routes a tap to the exact running session. Live
+  user-message and assistant-end events keep the state current; approval state takes precedence
+  over running state, matching T3's operator-oriented agent-awareness hierarchy.
+- On mobile, that projection is now a compact work inbox rather than passive decoration: agents
+  that need approval rise above actively working agents, which rise above idle profiles, while a
+  summary reports how many agents need the user and how many are still working. Existing order is
+  preserved inside each tier, so the temporary activity view does not overwrite pin/recent order.
+- Chat lifecycle and approval firehose events are now stamped with the authenticated owner and
+  filtered during both replay and live delivery. Legacy unscoped events retain their existing
+  behavior, while new account-scoped control signals cannot appear in another user's mobile agent
+  list.
+
+Next: formalize `runtimeId`/environment ownership in session metadata, add server command receipts
+before persisting or replaying a native prompt outbox, and add device registration plus background
+delivery for completion, failure, approval, and input-required events. Add the same durable,
+cross-client response path for structured agent questions/input requests. T3 models these as typed
+questions (`id`, header, prompt, options, and multi-select) answered through a dedicated
+`thread.user-input.respond` command; Aura still needs the equivalent harness protocol event and
+response command before its UI can honestly expose that feature. Do not make the cloud relay an
+execution proxy or present an unacknowledged prompt as accepted work.
 
 ### P0 — finish the safety foundation
 

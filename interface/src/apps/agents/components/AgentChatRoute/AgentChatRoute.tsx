@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { useAgents } from "../../stores";
-import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
 import { useChatHandoffStore } from "../../../../stores/chat-handoff-store";
 import { standaloneAgentHandoffTarget } from "../../../../utils/chat-handoff";
 
@@ -30,7 +29,6 @@ import { standaloneAgentHandoffTarget } from "../../../../utils/chat-handoff";
 export function AgentChatRoute(): null {
   const { agentId } = useParams();
   const { agents, status } = useAgents();
-  const { remoteOnly } = useAuraCapabilities();
   const pendingCreateAgentHandoff = useChatHandoffStore(
     (s) => s.pendingCreateAgentHandoff,
   );
@@ -39,16 +37,17 @@ export function AgentChatRoute(): null {
   // Only fires on the standalone `/agents/:agentId` route (`agentId` is
   // undefined on the project route, whose param is `agentInstanceId`). Gated
   // on `ready` so a transient `idle`/`loading`/`error` fleet never triggers a
-  // bounce (which could loop). When the current runtime can't reach local
-  // agents, a direct deep link to one is treated as not viewable and bounces
-  // too.
+  // bounce (which could loop). Runtime reachability is intentionally not part
+  // of identity resolution: a mobile client may still read and navigate a
+  // desktop-local agent's persisted transcript while execution is offline.
+  // The chat panel disables sending with a precise runtime message until the
+  // client reconnects to the host that owns the agent.
   const resolvedAgent =
     agentId != null ? agents.find((a) => a.agent_id === agentId) : undefined;
   const agentMissing =
     agentId != null &&
     status === "ready" &&
-    (resolvedAgent == null ||
-      (remoteOnly && resolvedAgent.machine_type === "local"));
+    resolvedAgent == null;
 
   // A just-created agent isn't in the fleet snapshot until the forced refetch
   // lands (a `force` refetch keeps `status: "ready"` throughout), so guard the

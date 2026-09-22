@@ -9,6 +9,7 @@ import { useProjectsListStore } from "../../../stores/projects-list-store";
 import { useSidekickStore } from "../../../stores/sidekick-store";
 import { useStreamStore } from "../../../hooks/stream/store";
 import { useAgentStore } from "../stores";
+import { useAgentAttentionStore } from "../../../stores/agent-attention-store";
 import type { Agent } from "../../../shared/types";
 import type {
   LoopActivityPayload,
@@ -31,6 +32,11 @@ function reset() {
   useProfileStatusStore.setState({ statuses: {}, machineTypes: {} });
   useChatHistoryStore.setState({ previewLastMessages: {} });
   useAgentStore.setState({ pinnedAgentIds: new Set<string>() });
+  useAgentAttentionStore.setState({
+    pendingApprovals: {},
+    activeRuns: {},
+    hydrated: false,
+  });
 }
 
 function modelFor(includePreview = true) {
@@ -134,5 +140,62 @@ describe("useAgentRowModels", () => {
     expect(modelFor(true)?.isPinned).toBe(true);
     expect(modelFor(true)?.lastMessage?.content).toBe("hi");
     expect(modelFor(false)?.lastMessage).toBeUndefined();
+  });
+
+  it("aggregates pending approvals by persistent agent identity", () => {
+    reset();
+    useAgentAttentionStore.setState({
+      hydrated: true,
+      pendingApprovals: {
+        "request-1": {
+          kind: "approval",
+          requestId: "request-1",
+          toolName: "write_file",
+          agentId: "agent-1",
+          route: "/agents/agent-1?session=session-1",
+          startedAt: 10,
+        },
+        "request-2": {
+          kind: "approval",
+          requestId: "request-2",
+          toolName: "run_command",
+          agentId: "agent-1",
+          route: "/agents/agent-1?session=session-2",
+          startedAt: 20,
+        },
+      },
+    });
+
+    expect(modelFor()?.attention).toEqual({
+      kind: "approval",
+      count: 2,
+      toolName: "run_command",
+      route: "/agents/agent-1?session=session-2",
+      startedAt: 20,
+    });
+  });
+
+  it("projects a desktop-started run as busy and directly navigable", () => {
+    reset();
+    useAgentAttentionStore.setState({
+      hydrated: true,
+      activeRuns: {
+        "run-1": {
+          agentId: "agent-1",
+          projectId: "project-1",
+          agentInstanceId: "instance-1",
+          sessionId: "session-1",
+          route: "/projects/project-1/agents/instance-1?session=session-1",
+          startedAt: 10,
+        },
+      },
+    });
+
+    expect(modelFor()).toMatchObject({
+      busy: true,
+      activeRun: {
+        route: "/projects/project-1/agents/instance-1?session=session-1",
+      },
+    });
   });
 });

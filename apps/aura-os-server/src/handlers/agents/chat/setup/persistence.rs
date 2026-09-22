@@ -46,6 +46,7 @@ pub(crate) async fn setup_project_chat_persistence(
         ChatPersistCtx {
             storage,
             jwt: request.jwt.to_string(),
+            user_id: request.user_id.map(ToString::to_string),
             session_id: resolved.session_id,
             project_agent_id: pai,
             project_id: pid,
@@ -211,6 +212,7 @@ pub(crate) async fn setup_agent_chat_persistence_with_matched(
         ChatPersistCtx {
             storage: storage.clone(),
             jwt: request.jwt.to_string(),
+            user_id: request.user_id.map(ToString::to_string),
             session_id: resolved.session_id,
             project_agent_id: pai,
             project_id: pid,
@@ -423,6 +425,7 @@ mod tests {
         let svc = test_session_service(storage.clone());
         let request = ChatPersistRequest {
             jwt: "jwt",
+            user_id: None,
             preferred_project_id: None,
             force_new: false,
             pinned_session_id: None,
@@ -479,6 +482,7 @@ mod tests {
         let svc = test_session_service(storage.clone());
         let request = ChatPersistRequest {
             jwt: "jwt",
+            user_id: None,
             preferred_project_id: None,
             force_new: false,
             pinned_session_id: None,
@@ -560,6 +564,7 @@ mod tests {
         let sender = "ceo-agent-id".to_string();
         let request = ChatPersistRequest {
             jwt: "jwt",
+            user_id: None,
             preferred_project_id: None,
             force_new: false,
             pinned_session_id: None,
@@ -638,6 +643,7 @@ mod tests {
         let from_agent = "barret-agent-id".to_string();
         let request = ChatPersistRequest {
             jwt: "jwt",
+            user_id: None,
             preferred_project_id: None,
             force_new: false,
             pinned_session_id: None,

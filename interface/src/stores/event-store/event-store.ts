@@ -7,6 +7,10 @@ import { resolveWsUrl } from "../../shared/lib/host-config";
 import { persistTaskOutputText } from "./task-output-cache";
 import { handleEngineEvent } from "./engine-event-handlers";
 import { startLoopActivityWatchdog, useLoopActivityStore } from "../loop-activity-store";
+import {
+  clearAgentAttention,
+  hydrateAgentAttention,
+} from "../agent-attention-store";
 
 export interface BuildStep {
   kind: "started" | "passed" | "failed" | "fix_attempt" | "skipped";
@@ -271,12 +275,16 @@ let _engineEventFrame: number | null = null;
 const queuedEngineEvents: AuraEvent[] = [];
 
 const IMMEDIATE_ENGINE_EVENTS = new Set<EventType>([
+  EventType.UserMessage,
+  EventType.AssistantMessageEnd,
   EventType.TaskStarted,
   EventType.TaskCompleted,
   EventType.TaskFailed,
   EventType.LoopStopped,
   EventType.LoopFinished,
   EventType.LoopEnded,
+  EventType.ToolApprovalPrompt,
+  EventType.ToolApprovalResolved,
 ]);
 
 function canScheduleEngineEventFrame(): boolean {
@@ -375,6 +383,7 @@ export function disconnectEventSocket() {
   // streams live and rehydrates via HTTP rather than replaying a stale
   // seq from a previous session.
   _lastSeq = 0;
+  clearAgentAttention();
 }
 
 /**
@@ -393,7 +402,10 @@ async function resyncAfterGap(): Promise<void> {
   // closed, so the reconnect-driven refetch path won't fire.
   useEventStore.setState((s) => ({ resyncNonce: s.resyncNonce + 1 }));
   try {
-    await useLoopActivityStore.getState().hydrate();
+    await Promise.all([
+      useLoopActivityStore.getState().hydrate(),
+      hydrateAgentAttention(),
+    ]);
   } catch (error) {
     if (import.meta.env.DEV) {
       console.warn("ws resync hydrate failed", error);
@@ -424,6 +436,11 @@ export function connectEventSocket() {
       initialDelay: 1000,
       maxDelay: 30000,
       backoffMultiplier: 2,
+      // A mobile WebView can thaw with a socket that still reports OPEN even
+      // though the OS discarded its network path. Replace it immediately on
+      // foreground and ask the server to replay from `_lastSeq` rather than
+      // waiting through the normal exponential backoff.
+      resumeOnForeground: true,
     },
     (data: string) => {
       try {
@@ -475,7 +492,6 @@ export function connectEventSocket() {
           (window as unknown as { __AURA_DEBUG_CROSS_AGENT__?: unknown })
             .__AURA_DEBUG_CROSS_AGENT__
         ) {
-          // eslint-disable-next-line no-console -- gated behind window flag
           console.debug("[aura.cross-agent] ws raw", { raw, parsed: event });
         }
         handleSocketEngineEvent(event);
@@ -492,6 +508,7 @@ export function connectEventSocket() {
       // missed a `loop_activity_changed` event during the disconnect.
       if (connected) {
         void useLoopActivityStore.getState().hydrate();
+        void hydrateAgentAttention();
         startLoopActivityWatchdog();
       }
     },

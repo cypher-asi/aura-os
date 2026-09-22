@@ -124,6 +124,50 @@ pub(crate) async fn cancel_stream(
     Ok(Json(serde_json::json!({ "cancelled": true })))
 }
 
+#[derive(Debug, Deserialize)]
+pub(crate) struct ToolApprovalResponseBody {
+    decision: aura_protocol::ToolApprovalDecision,
+    remember: aura_protocol::ToolApprovalRemember,
+}
+
+/// `POST /api/streams/tool-approvals/:request_id` — answer a protected
+/// tool request from any client that owns the live chat. The lookup is by
+/// harness request id rather than attach id so a phone that discovered and
+/// reattached to desktop-started work can answer the original prompt.
+pub(crate) async fn respond_to_tool_approval(
+    State(state): State<AppState>,
+    AuthSession(session): AuthSession,
+    Path(request_id): Path<String>,
+    Json(body): Json<ToolApprovalResponseBody>,
+) -> ApiResult<Json<serde_json::Value>> {
+    let stream = state
+        .live_streams
+        .find_chat_tool_approval(&session.user_id, &request_id)
+        .ok_or_else(|| ApiError::not_found("live tool approval request not found"))?;
+    stream
+        .respond_to_tool_approval(request_id.clone(), body.decision, body.remember)
+        .map_err(ApiError::bad_request)?;
+    let _ = state.event_broadcast.send(serde_json::json!({
+        "type": "tool_approval_resolved",
+        "user_id": session.user_id,
+        "request_id": request_id,
+    }));
+    Ok(Json(serde_json::json!({ "accepted": true })))
+}
+
+/// `GET /api/streams/tool-approvals` — authoritative cold-start snapshot of
+/// unresolved requests across the caller's live chat turns.
+pub(crate) async fn list_pending_tool_approvals(
+    State(state): State<AppState>,
+    AuthSession(session): AuthSession,
+) -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "approvals": state
+            .live_streams
+            .list_pending_tool_approvals(&session.user_id),
+    }))
+}
+
 /// Build the SSE [`Event`] for a sequenced harness frame, using its
 /// `seq` as the SSE `id:` so the client (and the `EventSource`
 /// `lastEventId` mechanism) can resume from exactly here.

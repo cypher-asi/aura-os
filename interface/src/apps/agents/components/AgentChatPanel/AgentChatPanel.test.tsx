@@ -17,6 +17,9 @@ let mockMachineType: "local" | "remote" = "remote";
 
 vi.mock("../../../../api/client", () => ({
   api: {
+    agents: {
+      listProjectBindings: vi.fn().mockResolvedValue([]),
+    },
     getEvents: vi.fn(),
     listSessionEventsPaginated: vi.fn(),
     getContextUsage: vi.fn(),

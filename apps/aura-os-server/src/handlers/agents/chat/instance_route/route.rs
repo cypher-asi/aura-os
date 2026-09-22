@@ -170,6 +170,7 @@ pub(crate) async fn send_event_stream(
     // pattern in `streaming.rs`.
     let persist_request = ChatPersistRequest {
         jwt: &jwt,
+        user_id: Some(&auth_session.user_id),
         preferred_project_id: Some(project_id.to_string()),
         force_new,
         pinned_session_id: pinned_session_id.as_ref(),

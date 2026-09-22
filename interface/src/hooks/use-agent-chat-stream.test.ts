@@ -1,4 +1,4 @@
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import { useAgentChatStream, _resetAgentChatStreamReplayMap } from "./use-agent-chat-stream";
 import { _resetAllPartitionSendControl } from "./stream/partition-state";
 import { useStreamStore, streamMetaMap } from "./stream/store";
@@ -12,6 +12,7 @@ import {
 import { STUCK_THRESHOLD_MS } from "./stream/use-stream-health";
 import { STYLE_LOCK_SUFFIX } from "../constants/generation";
 import { EventType, type AuraEvent } from "../shared/types/aura-events";
+import { useToolApprovalStore } from "../stores/tool-approval-store";
 
 vi.mock("../api/client", () => ({
   api: {
@@ -113,6 +114,7 @@ describe("useAgentChatStream", () => {
       utilPerTokenByStreamKey: {},
       resetPendingByStreamKey: {},
     });
+    useToolApprovalStore.setState({ prompts: {} });
     vi.mocked(api.agents.sendEventStream).mockReset().mockResolvedValue(undefined);
     vi.mocked(api.streams.listActiveStreams).mockReset().mockResolvedValue({ streams: [] });
     vi.mocked(attachToStream).mockReset().mockResolvedValue(undefined);
@@ -131,6 +133,59 @@ describe("useAgentChatStream", () => {
     expect(typeof result.current.sendMessage).toBe("function");
     expect(typeof result.current.stopStreaming).toBe("function");
     expect(typeof result.current.resetEvents).toBe("function");
+  });
+
+  it("surfaces approval prompts replayed into a standalone agent session", async () => {
+    let approvalHandler: import("../api/streams").StreamEventHandler | undefined;
+    let finishStream!: () => void;
+    vi.mocked(api.agents.sendEventStream).mockImplementation(async (
+      _agentId,
+      _content,
+      _action,
+      _model,
+      _attachments,
+      handler,
+    ) => {
+      approvalHandler = handler;
+      handler?.onEvent({
+        type: EventType.ToolApprovalPrompt,
+        content: {
+          request_id: "approval-standalone",
+          tool_name: "run_command",
+          args: { command: "npm test" },
+          agent_id: "agent-1",
+          remember_options: ["once"],
+        },
+      } as AuraEvent);
+      await new Promise<void>((resolve) => {
+        finishStream = resolve;
+      });
+    });
+    const { result } = renderHook(() =>
+      useAgentChatStream({ agentId: "agent-1", sessionId: "session-1" }),
+    );
+
+    let sendPromise!: Promise<void>;
+    act(() => {
+      sendPromise = result.current.sendMessage("Run the tests");
+    });
+
+    await waitFor(() => {
+      expect(useToolApprovalStore.getState().prompts["agent-1:session-1"])
+        .toMatchObject({ request_id: "approval-standalone", tool_name: "run_command" });
+    });
+
+    act(() => {
+      approvalHandler?.onEvent({
+        type: EventType.ToolApprovalResolved,
+        content: { request_id: "approval-standalone" },
+      } as AuraEvent);
+    });
+    expect(useToolApprovalStore.getState().prompts["agent-1:session-1"]).toBeUndefined();
+    finishStream();
+    await act(async () => {
+      await sendPromise;
+    });
   });
 
   it("sends a message and creates a user message in the store", async () => {
