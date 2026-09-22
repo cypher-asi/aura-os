@@ -285,6 +285,12 @@ The first Aura slice now implements that boundary:
   from reappearing after another kill. Queues are user/environment-scoped,
   bounded to 50, expire after 24 hours, and never mirror prompt data into localStorage. This adopts
   T3's safe restart-hold invariant without pretending Aura's client queue is a server worker.
+  Android production-WebView QA confirmed the force-stop hold and same-id outbox handoff, then
+  exposed two mobile-only composer gaps: an active turn rendered Stop without a way to submit a
+  follow-up, and a failed IndexedDB queue write hid its inline error. The mobile composer now
+  offers a separate touch-sized Queue control beside Stop, accepts Enter for that same intent, and
+  renders external queue-persistence errors without clearing the draft. Automation-only busy state
+  still cannot create a chat follow-up queue.
 - The mobile agent library now has an explicit touch-sized refresh action for agents, projects,
   canonical sessions, approvals, questions, and active runs. The attention hydration is
   independently fail-safe per endpoint: a transient failure preserves the last known slice, while

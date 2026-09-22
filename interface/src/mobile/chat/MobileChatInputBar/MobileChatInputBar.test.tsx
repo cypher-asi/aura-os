@@ -4,6 +4,7 @@ import { vi } from "vitest";
 import { MobileChatInputBar } from "./MobileChatInputBar";
 
 const mockStopVoiceDictation = vi.hoisted(() => vi.fn());
+const mockStreaming = vi.hoisted(() => ({ value: false }));
 const mockRefreshAuraRuntimeCapabilities = vi.hoisted(() => vi.fn(async () => undefined));
 const mockRefreshRemoteAgentStatus = vi.hoisted(() => vi.fn(async () => undefined));
 const mockOpenHostSettings = vi.hoisted(() => vi.fn());
@@ -82,7 +83,7 @@ vi.mock("../../../features/chat-ui/ChatInputBar/useFileAttachments", () => ({
 }));
 
 vi.mock("../../../hooks/stream/hooks", () => ({
-  useIsStreaming: () => false,
+  useIsStreaming: () => mockStreaming.value,
 }));
 
 vi.mock("../../../hooks/use-aura-capabilities", () => ({
@@ -139,6 +140,7 @@ describe("MobileChatInputBar", () => {
     mockOpenHostSettings.mockClear();
     mockCapabilities.remoteOnly = false;
     mockCapabilities.supportsHostRetargeting = false;
+    mockStreaming.value = false;
   });
 
   it("keeps a local conversation readable while its desktop runtime is unavailable", () => {
@@ -195,6 +197,20 @@ describe("MobileChatInputBar", () => {
     expect(screen.getByTestId("agent-environment")).toHaveTextContent("Remote");
   });
 
+  it("shows an external queue-persistence failure inline without losing the draft", () => {
+    renderInputBar({
+      input: "Keep this unsent prompt",
+      externalValidationMessage: "Could not save the queued follow-up. Your draft is still here.",
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Could not save the queued follow-up");
+    expect(screen.getByRole("alert")).toHaveAttribute(
+      "data-agent-surface",
+      "mobile-chat-input-validation-hint",
+    );
+    expect(screen.getByPlaceholderText("Message agent")).toHaveValue("Keep this unsent prompt");
+  });
+
   it("submits exactly once when the mobile send button is tapped", async () => {
     const user = userEvent.setup();
     const onSend = vi.fn();
@@ -216,5 +232,34 @@ describe("MobileChatInputBar", () => {
 
     expect(onSend).toHaveBeenCalledTimes(1);
     expect(onSend).toHaveBeenCalledWith("Keyboard send", undefined, undefined);
+  });
+
+  it("queues a follow-up by touch or Enter during an active chat turn", async () => {
+    const user = userEvent.setup();
+    const onSend = vi.fn();
+    mockStreaming.value = true;
+    renderInputBar({ input: "Follow up after this turn", onSend });
+
+    expect(screen.getByRole("button", { name: "Queue follow-up" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Stop" })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "Queue follow-up" }));
+    expect(onSend).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByPlaceholderText("Message agent"));
+    await user.keyboard("{Enter}");
+    expect(onSend).toHaveBeenCalledTimes(2);
+    expect(onSend).toHaveBeenLastCalledWith("Follow up after this turn", undefined, undefined);
+  });
+
+  it("does not offer a chat follow-up queue for an unrelated automation", async () => {
+    const user = userEvent.setup();
+    const onSend = vi.fn();
+    renderInputBar({ input: "Do not queue this", isExternallyBusy: true, onSend });
+
+    expect(screen.queryByRole("button", { name: "Queue follow-up" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Stop automation" })).toBeInTheDocument();
+    await user.click(screen.getByPlaceholderText("Message agent"));
+    await user.keyboard("{Enter}");
+    expect(onSend).not.toHaveBeenCalled();
   });
 });

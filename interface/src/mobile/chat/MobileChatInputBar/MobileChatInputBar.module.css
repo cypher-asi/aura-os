@@ -237,6 +237,14 @@
   grid-template-columns: 44px minmax(0, 1fr) 36px 44px 44px;
 }
 
+.inputRowQueue {
+  grid-template-columns: 44px minmax(0, 1fr) 36px 44px 44px;
+}
+
+.inputRowQueueVoice {
+  grid-template-columns: 44px minmax(0, 1fr) 36px 44px 44px 44px;
+}
+
 .stashButton {
   width: 36px;
   height: 44px;
@@ -316,6 +324,14 @@
 
 .sendButton:disabled {
   opacity: 0.34;
+}
+
+.queueButton {
+  flex-direction: column;
+  gap: 1px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .stopButton {
