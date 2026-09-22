@@ -243,7 +243,12 @@ describe("useAgentChatStream", () => {
     expect(event.deliveryStatus).toBeUndefined();
   });
 
-  it("marks a command not sent when no acceptance receipt arrives", async () => {
+  it("keeps a command queued when the stream ends before acceptance", async () => {
+    vi.mocked(api.agents.sendEventStream).mockImplementation(
+      async (_id, _content, _action, _model, _attachments, handler) => {
+        handler?.onDone?.();
+      },
+    );
     const { result } = renderHook(() => useAgentChatStream({ agentId: "agent-1" }));
 
     await act(async () => {
@@ -251,7 +256,7 @@ describe("useAgentChatStream", () => {
     });
 
     const event = useStreamStore.getState().entries[result.current.streamKey].events[0];
-    expect(event.deliveryStatus).toBe("failed");
+    expect(event.deliveryStatus).toBe("queued");
   });
 
   it("promotes a queued prompt without changing its transcript identity", async () => {

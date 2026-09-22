@@ -784,7 +784,6 @@ export function useChatStream({
         // microtask-deferred `finally` would clobber the new send's
         // latch.
         if (ctrl.currentController === controller) {
-          if (!_generationMode && !commandAccepted) updateCommandDelivery("failed");
           partitionSetters.setIsStreaming(false);
           sidekickRef.current.setAgentStreaming(capturedInstanceId, false);
           controller.abort();

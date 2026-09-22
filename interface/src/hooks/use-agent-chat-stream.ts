@@ -1010,7 +1010,6 @@ export function useAgentChatStream({
         // otherwise clobber that new latch even though `abortRef`
         // has moved on.
         if (partitionAbortRef.current === controller) {
-          if (!_generationMode && !commandAccepted) updateCommandDelivery("failed");
           partitionSetters.setIsStreaming(false);
           controller.abort();
           partitionAbortRef.current = null;

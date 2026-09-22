@@ -232,7 +232,12 @@ describe("useChatStream", () => {
     expect(event.deliveryStatus).toBeUndefined();
   });
 
-  it("marks a project command not sent when no acceptance receipt arrives", async () => {
+  it("keeps a project command queued when the stream ends before acceptance", async () => {
+    vi.mocked(api.sendEventStream).mockImplementation(
+      async (_projectId, _instanceId, _content, _action, _model, _attachments, handler) => {
+        handler?.onDone?.();
+      },
+    );
     const { result } = renderHook(() =>
       useChatStream({ projectId: "p-1", agentInstanceId: "ai-1" }),
     );
@@ -242,7 +247,7 @@ describe("useChatStream", () => {
     });
 
     const event = useStreamStore.getState().entries[result.current.streamKey].events[0];
-    expect(event.deliveryStatus).toBe("failed");
+    expect(event.deliveryStatus).toBe("queued");
   });
 
   it("promotes a queued prompt without changing its transcript identity", async () => {
