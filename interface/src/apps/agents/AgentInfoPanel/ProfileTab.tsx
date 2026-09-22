@@ -160,7 +160,7 @@ function MobileRemoteRuntimeSection({
               <Text size="xs" variant="muted">{remoteStateError}</Text>
             </div>
           ) : null}
-          {vmState.error_message ? (
+          {vmState.error_message && !remoteStateError ? (
             <div className={`${styles.mobileStatusMessage} ${styles.mobileStatusWarning}`}>
               <AlertTriangle size={12} className={styles.mobileStatusRowIcon} />
               <Text size="xs" variant="muted">{vmState.error_message}</Text>

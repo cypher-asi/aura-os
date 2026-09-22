@@ -196,6 +196,7 @@ describe("ProfileTab", () => {
         active_sessions: 2,
         endpoint: "vm.example.com",
         runtime_version: "1.2.3",
+        error_message: "Your session expired. Sign in again.",
       },
       remoteStateError: "Your session expired. Sign in again.",
       remoteStateRecoverable: false,
@@ -208,7 +209,7 @@ describe("ProfileTab", () => {
 
     render(<ProfileTab {...baseProps} isMobileStandalone />);
 
-    expect(screen.getByText("Your session expired. Sign in again.")).toBeInTheDocument();
+    expect(screen.getAllByText("Your session expired. Sign in again.")).toHaveLength(1);
     expect(screen.queryByRole("group", { name: "Remote runtime controls" }))
       .not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Recovery" })).not.toBeInTheDocument();
