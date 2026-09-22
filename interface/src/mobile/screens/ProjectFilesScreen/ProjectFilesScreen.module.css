@@ -87,7 +87,8 @@
 
 .changesArea :global([data-source-control-mode="review"] [class*="fileRow"]),
 .changesArea :global([data-source-control-mode="review"] [class*="groupHeader"]),
-.changesArea :global([data-source-control-mode="review"] [class*="diffHeader"]) {
+.changesArea :global([data-source-control-mode="review"] [class*="diffHeader"]),
+.changesArea :global([data-source-control-mode="review"] [class*="diffLineButton"]) {
   min-height: 44px;
 }
 

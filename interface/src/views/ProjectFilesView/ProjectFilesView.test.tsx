@@ -95,17 +95,38 @@ vi.mock("../../components/SourceControlWorkbench", () => ({
     projectId,
     agentInstanceId,
     readOnly,
+    onDiscussChange,
   }: {
     projectId: string;
     agentInstanceId?: string;
     readOnly?: boolean;
+    onDiscussChange?: (context: {
+      path: string;
+      area: "worktree";
+      line: string;
+      oldLine: null;
+      newLine: number;
+    }) => void;
   }) => (
-    <div
-      data-testid="source-control-workbench"
-      data-project-id={projectId}
-      data-agent-instance-id={agentInstanceId ?? ""}
-      data-read-only={String(Boolean(readOnly))}
-    />
+    <div>
+      <div
+        data-testid="source-control-workbench"
+        data-project-id={projectId}
+        data-agent-instance-id={agentInstanceId ?? ""}
+        data-read-only={String(Boolean(readOnly))}
+      />
+      {onDiscussChange ? (
+        <button type="button" onClick={() => onDiscussChange({
+          path: "src/app.ts",
+          area: "worktree",
+          line: "+const mobile = true;",
+          oldLine: null,
+          newLine: 42,
+        })}>
+          Discuss changed line
+        </button>
+      ) : null}
+    </div>
   ),
 }));
 
@@ -265,6 +286,25 @@ describe("ProjectFilesView", () => {
     )).toMatch(/review the current workspace changes/i);
     expect(mockNavigate).toHaveBeenCalledWith(
       "/agents/remote-agent-1?project=proj-1&instance=remote-inst-1&session=session-most-recent",
+    );
+  });
+
+  it("hands an exact changed line back to the canonical agent draft", () => {
+    mockUseAuraCapabilities.mockReturnValue(capabilities({ isMobileLayout: true, isMobileClient: true }));
+    currentSearchParams = new URLSearchParams(
+      "instance=remote-inst-1&agent=agent-1&session=session-1&view=changes",
+    );
+
+    render(<MobileProjectFilesScreen />);
+    screen.getByRole("button", { name: "Discuss changed line" }).click();
+
+    const draft = useChatUIStore.getState().getDraft(
+      keyForProjectSession("proj-1", "remote-inst-1", "session-1"),
+    );
+    expect(draft).toContain("`src/app.ts` (worktree, new line 42)");
+    expect(draft).toContain("+const mobile = true;");
+    expect(mockNavigate).toHaveBeenCalledWith(
+      "/agents/agent-1?project=proj-1&instance=remote-inst-1&session=session-1",
     );
   });
 

@@ -144,6 +144,42 @@ describe("SourceControlWorkbench", () => {
     expect(sourceControl.commit).not.toHaveBeenCalled();
   });
 
+  it("hands an exact changed line to the review callback", async () => {
+    const user = userEvent.setup();
+    const onDiscussChange = vi.fn();
+    render(
+      <SourceControlWorkbench
+        projectId="project-1"
+        agentInstanceId="agent-1"
+        readOnly
+        onDiscussChange={onDiscussChange}
+      />,
+    );
+
+    await user.click(await screen.findByRole("button", {
+      name: "Ask agent about src/app.ts new line 1",
+    }));
+
+    expect(onDiscussChange).toHaveBeenCalledWith({
+      path: "src/app.ts",
+      area: "worktree",
+      line: "+next",
+      oldLine: null,
+      newLine: 1,
+    });
+
+    await user.click(screen.getByRole("button", {
+      name: "Ask agent about src/app.ts old line 1",
+    }));
+    expect(onDiscussChange).toHaveBeenLastCalledWith({
+      path: "src/app.ts",
+      area: "worktree",
+      line: "-old",
+      oldLine: 1,
+      newLine: null,
+    });
+  });
+
   it("explains when the workspace is not a repository", async () => {
     sourceControl.getStatus.mockResolvedValue({
       available: false,

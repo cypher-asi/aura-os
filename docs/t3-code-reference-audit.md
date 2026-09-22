@@ -188,7 +188,10 @@ The first Aura slice now implements that boundary:
   or a workspace-change review request to that conversation's existing client-owned draft and
   return to the exact chat. The action never auto-sends, never replaces an unfinished draft, and
   does not put file contents in navigation state. This is the first Aura-native version of T3's
-  “send code/review context to the agent” loop; line/range review requests remain a later increment.
+  “send code/review context to the agent” loop. Changed lines in the read-only mobile diff are also
+  actionable: Aura tracks unified-diff old/new line positions and adds the selected bounded diff
+  line, file, area, and position to the same canonical draft. Range selection and provider-hosted
+  review-comment synchronization remain later increments.
 - Regular project and standalone-agent chat now enqueue the request intent in an IndexedDB outbox
   before opening the POST. The authenticated shell drains retryable commands on boot, connectivity
   restoration, and foreground using the original command id, never repeats `new_session=true`, and

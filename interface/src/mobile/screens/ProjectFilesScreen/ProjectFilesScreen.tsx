@@ -5,7 +5,10 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../../../api/client";
 import { FileExplorer } from "../../../components/FileExplorer";
 import { PanelSearch } from "../../../components/PanelSearch";
-import { SourceControlWorkbench } from "../../../components/SourceControlWorkbench";
+import {
+  SourceControlWorkbench,
+  type SourceControlReviewContext,
+} from "../../../components/SourceControlWorkbench";
 import { keyForProjectSession } from "../../../hooks/stream/store";
 import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../../hooks/use-terminal-target";
@@ -180,6 +183,16 @@ function MobileProjectFilesContent({
     );
   }, [openAgentDraft]);
 
+  const discussChangedLine = useCallback((context: SourceControlReviewContext) => {
+    const location = context.newLine !== null
+      ? `new line ${context.newLine}`
+      : `old line ${context.oldLine}`;
+    const boundedLine = context.line.slice(0, 500);
+    openAgentDraft(
+      `Please review \`${context.path}\` (${context.area}, ${location}) and inspect the surrounding code before responding.\n\n\`\`\`diff\n${boundedLine}\n\`\`\``,
+    );
+  }, [openAgentDraft]);
+
   const handleFileSelect = useCallback((filePath: string) => {
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
@@ -337,6 +350,7 @@ function MobileProjectFilesContent({
               projectId={projectId}
               agentInstanceId={sourceControlAgentInstanceId}
               readOnly
+              onDiscussChange={discussChangedLine}
             />
           </div>
         </>
