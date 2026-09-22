@@ -397,14 +397,13 @@ fn fcm_messages_endpoint(project_id: &str) -> Result<url::Url, String> {
     Ok(endpoint)
 }
 
-fn google_oauth_token_endpoint(configured: &str) -> Result<url::Url, String> {
+fn validate_google_oauth_token_endpoint(configured: &str) -> Result<(), String> {
     if configured != DEFAULT_TOKEN_URI {
         return Err(format!(
             "Firebase token_uri must be the trusted Google OAuth endpoint {DEFAULT_TOKEN_URI}"
         ));
     }
-    url::Url::parse(DEFAULT_TOKEN_URI)
-        .map_err(|error| format!("invalid built-in Google OAuth endpoint: {error}"))
+    Ok(())
 }
 
 #[derive(Clone)]
@@ -455,7 +454,7 @@ impl FcmClient {
             warn!(%error, "invalid Firebase service account configuration");
             return None;
         }
-        if let Err(error) = google_oauth_token_endpoint(&account.token_uri) {
+        if let Err(error) = validate_google_oauth_token_endpoint(&account.token_uri) {
             warn!(%error, "invalid Firebase service account configuration");
             return None;
         }
@@ -502,7 +501,7 @@ impl FcmClient {
                 return Ok(token.value.clone());
             }
         }
-        let token_uri = google_oauth_token_endpoint(&self.account.token_uri)?;
+        validate_google_oauth_token_endpoint(&self.account.token_uri)?;
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|error| error.to_string())?
@@ -512,7 +511,7 @@ impl FcmClient {
             &ServiceAccountClaims {
                 iss: &self.account.client_email,
                 scope: FCM_SCOPE,
-                aud: token_uri.as_str(),
+                aud: DEFAULT_TOKEN_URI,
                 iat: now,
                 exp: now + 3_600,
             },
@@ -526,7 +525,7 @@ impl FcmClient {
             .finish();
         let response = self
             .http
-            .post(token_uri)
+            .post(DEFAULT_TOKEN_URI)
             .header("content-type", "application/x-www-form-urlencoded")
             .body(form)
             .send()
@@ -706,12 +705,11 @@ mod tests {
 
     #[test]
     fn oauth_assertions_only_use_the_fixed_google_https_endpoint() {
-        let endpoint = google_oauth_token_endpoint(DEFAULT_TOKEN_URI).expect("OAuth endpoint");
-        assert_eq!(endpoint.scheme(), "https");
-        assert_eq!(endpoint.host_str(), Some("oauth2.googleapis.com"));
-
-        assert!(google_oauth_token_endpoint("http://oauth2.googleapis.com/token").is_err());
-        assert!(google_oauth_token_endpoint("https://attacker.example/token").is_err());
+        assert!(validate_google_oauth_token_endpoint(DEFAULT_TOKEN_URI).is_ok());
+        assert!(
+            validate_google_oauth_token_endpoint("http://oauth2.googleapis.com/token").is_err()
+        );
+        assert!(validate_google_oauth_token_endpoint("https://attacker.example/token").is_err());
     }
 
     #[test]
