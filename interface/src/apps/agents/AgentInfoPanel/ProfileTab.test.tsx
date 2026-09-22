@@ -1,10 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { ReactNode } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { Agent } from "../../../shared/types";
 
-const { mockListAgentSkills, mockUseRemoteAgentState } = vi.hoisted(() => ({
+const { mockListAgentSkills, mockUseRemoteAgentState, mockUseRemoteAgentVm, mockHandleAction } = vi.hoisted(() => ({
   mockListAgentSkills: vi.fn(),
   mockUseRemoteAgentState: vi.fn(),
+  mockUseRemoteAgentVm: vi.fn(),
+  mockHandleAction: vi.fn(async () => {}),
 }));
 
 vi.mock("@cypher-asi/zui", () => ({
@@ -18,7 +21,7 @@ vi.mock("@cypher-asi/zui", () => ({
 vi.mock("../../../api/client", () => ({
   api: {
     harnessSkills: {
-      listAgentSkills: (...args: any[]) => mockListAgentSkills(...args),
+      listAgentSkills: (...args: unknown[]) => mockListAgentSkills(...args),
     },
     channels: {
       listChannels: vi.fn().mockResolvedValue({ channels: [] }),
@@ -27,7 +30,11 @@ vi.mock("../../../api/client", () => ({
 }));
 
 vi.mock("../../../hooks/use-remote-agent-state", () => ({
-  useRemoteAgentState: (...args: any[]) => mockUseRemoteAgentState(...args),
+  useRemoteAgentState: (...args: unknown[]) => mockUseRemoteAgentState(...args),
+}));
+
+vi.mock("../components/AgentEnvironment/useRemoteAgentVm", () => ({
+  useRemoteAgentVm: (...args: unknown[]) => mockUseRemoteAgentVm(...args),
 }));
 
 vi.mock("../../../components/Avatar", () => ({
@@ -65,7 +72,7 @@ const baseProps = {
     profile_id: "profile-1",
     tags: [],
     system_prompt: "",
-  } as any,
+  } as Agent,
   isOwnAgent: true,
   onViewSkill: vi.fn(),
 };
@@ -94,6 +101,22 @@ describe("ProfileTab", () => {
       },
       loading: false,
       error: null,
+    });
+    mockUseRemoteAgentVm.mockReturnValue({
+      vmState: {
+        state: "running",
+        uptime_seconds: 3660,
+        active_sessions: 2,
+        endpoint: "vm.example.com",
+        runtime_version: "1.2.3",
+      },
+      remoteStateError: null,
+      remoteStateRecoverable: true,
+      recoveryNotice: null,
+      pendingRecovery: false,
+      actionLoading: null,
+      actionError: null,
+      handleAction: mockHandleAction,
     });
   });
 
@@ -141,5 +164,35 @@ describe("ProfileTab", () => {
     // (the profile spec card shows only the section count now).
     expect(screen.getAllByText("deploy")).toHaveLength(1);
     expect(screen.getByRole("button", { name: /deploy/i })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Remote runtime controls" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Hibernate/i }));
+    expect(mockHandleAction).toHaveBeenCalledWith("hibernate");
+  });
+
+  it("offers recovery on mobile when the remote runtime is unavailable", () => {
+    mockUseRemoteAgentVm.mockReturnValue({
+      vmState: null,
+      remoteStateError: "Gateway unavailable",
+      remoteStateRecoverable: true,
+      recoveryNotice: null,
+      pendingRecovery: false,
+      actionLoading: null,
+      actionError: null,
+      handleAction: mockHandleAction,
+    });
+
+    render(<ProfileTab {...baseProps} isMobileStandalone />);
+
+    expect(screen.getByText("Remote agent unavailable")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Recovery" }));
+    expect(mockHandleAction).toHaveBeenCalledWith("recover");
+  });
+
+  it("keeps remote runtime controls read-only for an agent the viewer does not own", () => {
+    render(<ProfileTab {...baseProps} isOwnAgent={false} isMobileStandalone />);
+
+    expect(screen.getByText("Remote agent is running")).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Remote runtime controls" }))
+      .not.toBeInTheDocument();
   });
 });

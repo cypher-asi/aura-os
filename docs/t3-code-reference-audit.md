@@ -265,6 +265,12 @@ The first Aura slice now implements that boundary:
   independently fail-safe per endpoint: a transient failure preserves the last known slice, while
   a successful empty response clears it. This adopts T3's refresh/reconnect recovery without making
   an offline request erase known desktop-started work or treating cached state as newly confirmed.
+- Remote-agent details on mobile now expose the environment-owned lifecycle controls Aura already
+  supported on desktop: hibernate, restart, stop, wake, start, and recovery, chosen from the live VM
+  state and restricted to the agent owner. Provisioning/recovery progress, runtime errors, uptime,
+  active sessions, endpoint, and runtime version remain visible in the same touch-oriented card.
+  This borrows T3 mobile's principle that a phone should control the agent-owned environment, while
+  keeping Aura's confidential swarm lifecycle rather than copying T3's interactive device-stream UI.
 - Deferred sends now have a distinct `Waiting to resend` state instead of sharing the ordinary
   in-turn `Queued` label. Live chat bubbles expose touch-friendly `Retry now` and `Stop retrying`
   controls; both operate only on the authenticated user's current environment-scoped outbox. A
