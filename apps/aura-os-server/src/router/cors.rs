@@ -60,3 +60,48 @@ pub fn build_local_api_cors_layer() -> CorsLayer {
             HeaderName::from_static("x-aura-attach-id"),
         ]))
 }
+
+#[cfg(test)]
+mod tests {
+    use axum::{
+        body::Body,
+        http::{Request, StatusCode},
+        routing::get,
+        Router,
+    };
+    use tower::ServiceExt;
+
+    use super::build_local_api_cors_layer;
+
+    #[tokio::test]
+    async fn capacitor_webview_can_read_chat_execution_status_receipt() {
+        let app = Router::new()
+            .route("/", get(|| async { StatusCode::OK }))
+            .layer(build_local_api_cors_layer());
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/")
+                    .header("origin", "capacitor://localhost")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response
+                .headers()
+                .get("access-control-allow-origin")
+                .unwrap(),
+            "capacitor://localhost"
+        );
+        assert!(response
+            .headers()
+            .get("access-control-expose-headers")
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .contains("x-aura-chat-execution-status"));
+    }
+}
