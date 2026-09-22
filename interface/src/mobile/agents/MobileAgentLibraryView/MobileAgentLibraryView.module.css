@@ -16,12 +16,19 @@
   border-bottom: 1px solid color-mix(in srgb, var(--color-border) 24%, transparent);
 }
 
-.recallButton {
+.libraryActions {
   display: flex;
-  min-height: 44px;
   align-items: center;
   gap: 8px;
   margin: 0 10px;
+}
+
+.recallButton,
+.refreshButton {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
   padding: 0 8px;
   border: 0;
   background: transparent;
@@ -29,4 +36,29 @@
   font: inherit;
   font-size: 13px;
   font-weight: 600;
+}
+
+.recallButton {
+  flex: 1;
+  justify-content: flex-start;
+}
+
+.refreshButton {
+  width: 44px;
+  flex: 0 0 44px;
+  border-radius: 10px;
+}
+
+.refreshButton:disabled {
+  opacity: 0.65;
+}
+
+.refreshingIcon {
+  animation: refresh-spin 700ms linear infinite;
+}
+
+@keyframes refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

@@ -149,6 +149,59 @@ describe("agent-attention-store", () => {
     });
   });
 
+  it("preserves known attention slices when a mobile refresh partially fails", async () => {
+    useAgentAttentionStore.setState({
+      pendingApprovals: {
+        "approval-known": {
+          kind: "approval",
+          requestId: "approval-known",
+          toolName: "write_file",
+          agentId: "agent-1",
+          startedAt: 1,
+        },
+      },
+      pendingInputs: {
+        "input-stale": {
+          kind: "input",
+          requestId: "input-stale",
+          questions: [{
+            id: "choice",
+            header: "Choice",
+            question: "Continue?",
+            options: [
+              { label: "Yes", description: "Continue" },
+              { label: "No", description: "Stop" },
+            ],
+            multi_select: false,
+          }],
+          agentId: "agent-1",
+          startedAt: 1,
+        },
+      },
+      activeRuns: {
+        "known-run": {
+          agentId: "agent-1",
+          sessionId: "session-1",
+          startedAt: 1,
+          activity: "Editing code",
+        },
+      },
+      hydrated: true,
+    });
+    listPendingToolApprovals.mockRejectedValue(new Error("offline"));
+    listPendingUserInputs.mockResolvedValue({ requests: [] });
+    listActiveStreams.mockRejectedValue(new Error("offline"));
+
+    await hydrateAgentAttention();
+
+    expect(useAgentAttentionStore.getState().pendingApprovals["approval-known"])
+      .toBeDefined();
+    expect(useAgentAttentionStore.getState().pendingInputs["input-stale"])
+      .toBeUndefined();
+    expect(Object.values(useAgentAttentionStore.getState().activeRuns)[0]?.activity)
+      .toBe("Editing code");
+  });
+
   it("refreshes redacted activity without replacing approval or input state", async () => {
     useAgentAttentionStore.setState({
       pendingApprovals: {

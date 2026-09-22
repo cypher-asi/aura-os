@@ -1,10 +1,13 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   setQuery: vi.fn(),
   navigate: vi.fn(),
   loadUserSessions: vi.fn(async () => {}),
+  fetchAgents: vi.fn(async () => {}),
+  refreshProjects: vi.fn(async () => {}),
+  hydrateAgentAttention: vi.fn(async () => {}),
 }));
 
 const recallResult = {
@@ -56,7 +59,12 @@ vi.mock("../../../apps/agents/AgentList", () => ({
 vi.mock("../../../apps/agents/stores", () => ({
   useAgents: () => ({
     agents: [{ agent_id: "agent-1", name: "Builder Bot" }],
+    fetchAgents: mocks.fetchAgents,
   }),
+}));
+
+vi.mock("../../../stores/agent-attention-store", () => ({
+  hydrateAgentAttention: mocks.hydrateAgentAttention,
 }));
 
 vi.mock("../../../apps/chat-app/components/RecallModal/RecallModal", () => ({
@@ -97,8 +105,10 @@ vi.mock("../../../components/SessionsList", () => ({
 vi.mock("../../../stores/projects-list-store", () => ({
   useProjectsListStore: (selector: (state: {
     projects: Array<{ project_id: string; name: string }>;
+    refreshProjects: typeof mocks.refreshProjects;
   }) => unknown) => selector({
     projects: [{ project_id: "project-1", name: "Aura Mobile" }],
+    refreshProjects: mocks.refreshProjects,
   }),
 }));
 
@@ -129,6 +139,19 @@ vi.mock("../PendingAgentSends", () => ({
 import { MobileAgentLibraryView } from "./MobileAgentLibraryView";
 
 describe("MobileAgentLibraryView", () => {
+  it("refreshes cross-client agents, sessions, projects, and attention together", async () => {
+    render(<MobileAgentLibraryView />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Refresh agents and activity" }));
+
+    await waitFor(() => {
+      expect(mocks.fetchAgents).toHaveBeenCalledWith({ force: true });
+      expect(mocks.refreshProjects).toHaveBeenCalled();
+      expect(mocks.loadUserSessions).toHaveBeenCalled();
+      expect(mocks.hydrateAgentAttention).toHaveBeenCalled();
+    });
+  });
+
   it("opens server-backed recall and routes to the exact source session", () => {
     render(<MobileAgentLibraryView />);
 

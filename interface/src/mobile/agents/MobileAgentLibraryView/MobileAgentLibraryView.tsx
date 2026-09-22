@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from "react";
-import { History } from "lucide-react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { History, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AgentList } from "../../../apps/agents/AgentList";
 import { useAgents } from "../../../apps/agents/stores";
@@ -10,6 +10,7 @@ import { deriveSessionLabel } from "../../../components/SessionsList";
 import { useSidebarSearch } from "../../../hooks/use-sidebar-search";
 import type { RecallSearchResult } from "../../../shared/api/agents";
 import { buildAgentSessionRoute } from "../../../shared/lib/agent-session-route";
+import { hydrateAgentAttention } from "../../../stores/agent-attention-store";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
 import {
   USER_SESSIONS_SURFACE_KEY,
@@ -22,13 +23,16 @@ import styles from "./MobileAgentLibraryView.module.css";
 export function MobileAgentLibraryView() {
   const { query, setQuery } = useSidebarSearch("agents");
   const navigate = useNavigate();
-  const { agents } = useAgents();
+  const { agents, fetchAgents } = useAgents();
   const projects = useProjectsListStore((state) => state.projects);
+  const refreshProjects = useProjectsListStore((state) => state.refreshProjects);
   const sessions = useSessionsListStore(
     (state) => state.sessionsBySurface[USER_SESSIONS_SURFACE_KEY] ?? [],
   );
   const { loadUserSessions } = useSessionsListActions();
   const [recallOpen, setRecallOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshPendingRef = useRef(false);
 
   const agentNames = useMemo(
     () => new Map(agents.map((agent) => [agent.agent_id, agent.name])),
@@ -43,6 +47,23 @@ export function MobileAgentLibraryView() {
     setRecallOpen(true);
     void loadUserSessions();
   }, [loadUserSessions]);
+
+  const refreshAgentLibrary = useCallback(async () => {
+    if (refreshPendingRef.current) return;
+    refreshPendingRef.current = true;
+    setRefreshing(true);
+    try {
+      await Promise.allSettled([
+        fetchAgents({ force: true }),
+        refreshProjects(),
+        loadUserSessions(),
+        hydrateAgentAttention(),
+      ]);
+    } finally {
+      refreshPendingRef.current = false;
+      setRefreshing(false);
+    }
+  }, [fetchAgents, loadUserSessions, refreshProjects]);
 
   const openRecallSource = useCallback((result: RecallSearchResult) => {
     const route = buildAgentSessionRoute({
@@ -83,10 +104,25 @@ export function MobileAgentLibraryView() {
           value={query}
           onChange={setQuery}
         />
-        <button type="button" className={styles.recallButton} onClick={openRecall}>
-          <History size={16} aria-hidden="true" />
-          Search all completed chats
-        </button>
+        <div className={styles.libraryActions}>
+          <button type="button" className={styles.recallButton} onClick={openRecall}>
+            <History size={16} aria-hidden="true" />
+            Search all completed chats
+          </button>
+          <button
+            type="button"
+            className={styles.refreshButton}
+            onClick={() => void refreshAgentLibrary()}
+            disabled={refreshing}
+            aria-label="Refresh agents and activity"
+          >
+            <RefreshCw
+              size={16}
+              aria-hidden="true"
+              className={refreshing ? styles.refreshingIcon : undefined}
+            />
+          </button>
+        </div>
       </div>
       <div className={styles.list}>
         <AgentList mode="mobile-library" />

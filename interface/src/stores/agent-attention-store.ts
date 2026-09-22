@@ -314,22 +314,35 @@ export function hydrateAgentAttention(): Promise<void> {
   if (hydratePromise) return hydratePromise;
   const startedAtVersion = liveMutationVersion;
   const startedAtResetEpoch = resetEpoch;
-  const hydration = Promise.all([
-    streamsApi.listPendingToolApprovals().catch(() => ({ approvals: [] })),
-    streamsApi.listPendingUserInputs().catch(() => ({ requests: [] })),
-    streamsApi.listActiveStreams().catch(() => ({ streams: [] })),
+  const hydration = Promise.allSettled([
+    streamsApi.listPendingToolApprovals(),
+    streamsApi.listPendingUserInputs(),
+    streamsApi.listActiveStreams(),
   ])
-    .then(([{ approvals }, { requests }, { streams }]) => {
+    .then(([approvalsResult, inputsResult, streamsResult]) => {
       if (startedAtResetEpoch !== resetEpoch) return;
-      const fetched = approvals
-        .map(fromSummary)
-        .filter((item): item is AgentAttentionItem => item !== null)
-        .filter((item) => !resolvedRequestIds.has(item.requestId));
-      const fetchedInputs = requests
-        .map(inputFromSummary)
-        .filter((item): item is AgentUserInputItem => item !== null)
-        .filter((item) => !resolvedInputRequestIds.has(item.requestId));
-      const fetchedRuns = activeRunsFromStreams(streams, startedAtVersion);
+      const state = useAgentAttentionStore.getState();
+      // A mobile refresh can cross a tunnel handoff or a brief radio outage.
+      // Preserve the last known value for each failed endpoint independently;
+      // only a successful empty snapshot is evidence that the slice cleared.
+      const fetched = approvalsResult.status === "fulfilled"
+        ? approvalsResult.value.approvals
+          .map(fromSummary)
+          .filter((item): item is AgentAttentionItem => item !== null)
+          .filter((item) => !resolvedRequestIds.has(item.requestId))
+        : Object.values(state.pendingApprovals)
+          .filter((item): item is AgentAttentionItem => item !== undefined);
+      const fetchedInputs = inputsResult.status === "fulfilled"
+        ? inputsResult.value.requests
+          .map(inputFromSummary)
+          .filter((item): item is AgentUserInputItem => item !== null)
+          .filter((item) => !resolvedInputRequestIds.has(item.requestId))
+        : Object.values(state.pendingInputs)
+          .filter((item): item is AgentUserInputItem => item !== undefined);
+      const fetchedRuns = streamsResult.status === "fulfilled"
+        ? activeRunsFromStreams(streamsResult.value.streams, startedAtVersion)
+        : Object.values(state.activeRuns)
+          .filter((item): item is AgentActiveRunItem => item !== undefined);
       if (startedAtVersion === liveMutationVersion) {
         useAgentAttentionStore.getState().replace(fetched, fetchedInputs, fetchedRuns);
         return;

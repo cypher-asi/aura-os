@@ -260,6 +260,11 @@ The first Aura slice now implements that boundary:
   last-send payload still supports an explicit retry while the app remains open. This complements
   T3's reconnect-aware upload queue: Aura's failed object upload already falls back to the inline
   attachment, while the command outbox protects the resulting prompt across mobile suspension.
+- The mobile agent library now has an explicit touch-sized refresh action for agents, projects,
+  canonical sessions, approvals, questions, and active runs. The attention hydration is
+  independently fail-safe per endpoint: a transient failure preserves the last known slice, while
+  a successful empty response clears it. This adopts T3's refresh/reconnect recovery without making
+  an offline request erase known desktop-started work or treating cached state as newly confirmed.
 - Deferred sends now have a distinct `Waiting to resend` state instead of sharing the ordinary
   in-turn `Queued` label. Live chat bubbles expose touch-friendly `Retry now` and `Stop retrying`
   controls; both operate only on the authenticated user's current environment-scoped outbox. A
