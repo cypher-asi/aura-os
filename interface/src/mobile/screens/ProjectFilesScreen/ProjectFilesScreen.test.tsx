@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 const mockSourceControlWorkbench = vi.hoisted(() => vi.fn());
+const mockFileExplorer = vi.hoisted(() => vi.fn());
 
 vi.mock("../../../hooks/use-aura-capabilities", () => ({
   useAuraCapabilities: () => ({ hostedLocalHarness: false }),
@@ -36,7 +37,10 @@ vi.mock("../../../stores/sessions-list-store", () => ({
   }),
 }));
 vi.mock("../../../components/FileExplorer", () => ({
-  FileExplorer: () => <div>Remote file tree</div>,
+  FileExplorer: (props: unknown) => {
+    mockFileExplorer(props);
+    return <div>Remote file tree</div>;
+  },
 }));
 vi.mock("../../../components/SourceControlWorkbench", () => ({
   SourceControlWorkbench: (props: unknown) => {
@@ -56,6 +60,21 @@ function LocationProbe() {
 }
 
 describe("mobile remote workspace changes", () => {
+  it("offers an explicit touch-sized refresh for remote file listings", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/projects/project-1/files?instance=instance-1&agent=agent-1"]}>
+        <Routes>
+          <Route path="/projects/:projectId/files" element={<MobileProjectFilesScreen />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(mockFileExplorer).toHaveBeenCalledWith(expect.objectContaining({ refreshTrigger: 0 }));
+    await user.click(screen.getByRole("button", { name: "Refresh files" }));
+    expect(mockFileExplorer).toHaveBeenLastCalledWith(expect.objectContaining({ refreshTrigger: 1 }));
+  });
+
   it("opens the remote agent's read-only Git changes for the canonical workspace", async () => {
     const user = userEvent.setup();
     render(

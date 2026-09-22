@@ -135,6 +135,7 @@ function MobileProjectFilesContent({
 }: ProjectFilesContentProps) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const [filesRefreshTrigger, setFilesRefreshTrigger] = useState(0);
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedFilePath = searchParams.get("file");
   const activeView = searchParams.get("view") === "changes" ? "changes" : "files";
@@ -368,11 +369,22 @@ function MobileProjectFilesContent({
       ) : (
         <>
           <div className={styles.searchHeader}>
-            <PanelSearch
-              placeholder="Search files"
-              value={searchQuery}
-              onChange={setSearchQuery}
-            />
+            <div className={styles.fileSearchRow}>
+              <PanelSearch
+                placeholder="Search files"
+                value={searchQuery}
+                onChange={setSearchQuery}
+              />
+              <button
+                type="button"
+                className={styles.filesRefreshButton}
+                onClick={() => setFilesRefreshTrigger((value) => value + 1)}
+                aria-label="Refresh files"
+                title="Refresh files"
+              >
+                <RefreshCw size={16} aria-hidden="true" />
+              </button>
+            </div>
           </div>
           <div className={styles.explorerArea}>
             <FileExplorer
@@ -381,6 +393,7 @@ function MobileProjectFilesContent({
               hostedWorkspace={hostedWorkspace}
               rootLabel={hostedWorkspace ? "Project files" : undefined}
               searchQuery={searchQuery}
+              refreshTrigger={filesRefreshTrigger}
               onFileSelect={handleFileSelect}
             />
           </div>

@@ -102,7 +102,9 @@ The first Aura slice now implements that boundary:
   when both use the same pod path. A transient remote refresh failure can retain only that same
   agent's in-memory listing with a visible stale-data warning; denied or missing workspaces clear
   it. Remote full-tree polling backs off to 30 seconds while foreground/file-operation signals
-  still refresh promptly, reducing needless mobile network and battery use.
+  still refresh promptly, reducing needless mobile network and battery use. The mobile Files header
+  also provides an explicit 44px refresh action so a user need not wait for that interval after
+  changing code from desktop.
 - The agent library warms and displays recent shared conversation previews rather than only profile
   biography text. Its mobile search now matches agent identity/profile fields, live attention, and
   those cross-device conversation previews, with an explicit no-results state instead of a blank
@@ -336,6 +338,14 @@ Android devices, including warm/cold notification activation. Persist accepted c
 question waits so a server restart can reconstruct status or explicitly fail the original
 environment-owned turn instead of relying on an in-memory channel. Do not make the cloud relay an
 execution proxy or present an unacknowledged prompt as accepted work.
+
+The remaining command-recovery gap is concrete: Aura persists a user-message event before opening
+the harness turn, and replay can find that event after a restart, but the live command receipt and
+turn executor are in memory. A replay with no attachable stream currently returns a `done` SSE
+without proving that a terminal assistant/error event was persisted. If the server exited between
+the user-message write and the turn's terminal event, mobile can see a saved prompt whose execution
+status is unknown. The next slice needs durable accepted/running/terminal state and a startup or
+on-demand reconciliation path; an empty `done` response must not be treated as proof of completion.
 
 Remote source-control inspection now has that real cross-service addition in branches: the Harness
 pod exposes bounded, sandbox-scoped, read-only Git status/diff; Swarm verifies agent ownership and
