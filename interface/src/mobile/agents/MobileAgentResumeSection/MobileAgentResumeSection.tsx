@@ -84,7 +84,7 @@ export function MobileAgentResumeSection({ agentId }: { agentId: string }) {
 
       <div className={styles.recentChats}>
         <Text size="xs" variant="muted" weight="medium">Recent chats</Text>
-        <ChatsTab />
+        <ChatsTab showActionButtons />
       </div>
     </section>
   );

@@ -4,7 +4,9 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../../../apps/agents/AgentInfoPanel/ChatsTab", () => ({
-  ChatsTab: () => <div>Shared recent sessions</div>,
+  ChatsTab: ({ showActionButtons }: { showActionButtons?: boolean }) => (
+    <div data-touch-actions={String(Boolean(showActionButtons))}>Shared recent sessions</div>
+  ),
 }));
 
 vi.mock("../../../stores/sessions-list-store", () => ({
@@ -60,6 +62,7 @@ describe("MobileAgentResumeSection", () => {
     renderSection("/agents/agent-1?view=details");
 
     expect(screen.getByText("Shared recent sessions")).toBeInTheDocument();
+    expect(screen.getByText("Shared recent sessions")).toHaveAttribute("data-touch-actions", "true");
     await user.click(screen.getByRole("button", { name: "Browse code" }));
 
     expect(screen.getByTestId("location")).toHaveTextContent(

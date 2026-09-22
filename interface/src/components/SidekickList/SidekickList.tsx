@@ -7,6 +7,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
+import { MoreHorizontal } from "lucide-react";
 import { EmptyState } from "../EmptyState";
 import { ListItem } from "../ListItem";
 import { SidekickCollapsibleRow } from "../SidekickCollapsibleRow";
@@ -87,6 +88,11 @@ export interface SidekickListProps {
     | ((row: SidekickListRow) => SidekickMenuAction[]);
   /** Fired when a context-menu action is chosen for a given row id. */
   onMenuAction?: (actionId: string, rowId: string) => void;
+  /**
+   * Render a touch-accessible menu trigger on every actionable row. Desktop
+   * surfaces can keep the compact right-click interaction by leaving this off.
+   */
+  showMenuButtons?: boolean;
   className?: string;
 }
 
@@ -94,12 +100,14 @@ interface SidekickListItemProps {
   row: SidekickListRow;
   selected: boolean;
   onSelectRow?: (id: string) => void;
+  onOpenMenu?: (row: SidekickListRow, anchor: HTMLButtonElement) => void;
 }
 
 function SidekickListItem({
   row,
   selected,
   onSelectRow,
+  onOpenMenu,
 }: SidekickListItemProps): ReactElement {
   const wrapRef = useRef<HTMLDivElement>(null);
   const { onVisibilityChange } = row;
@@ -132,6 +140,26 @@ function SidekickListItem({
     onSelectRow?.(row.id);
   }, [row, onSelectRow]);
 
+  const menuButton = onOpenMenu ? (
+    <button
+      type="button"
+      className={styles.menuButton}
+      aria-label={typeof row.label === "string" ? `More actions for ${row.label}` : "More actions"}
+      aria-haspopup="menu"
+      title="More actions"
+      onClick={(event) => onOpenMenu(row, event.currentTarget)}
+    >
+      <MoreHorizontal size={18} aria-hidden="true" />
+    </button>
+  ) : null;
+
+  const trailingAction = row.trailingAction || menuButton ? (
+    <span className={styles.trailingActions}>
+      {row.trailingAction}
+      {menuButton}
+    </span>
+  ) : undefined;
+
   return (
     <div ref={wrapRef}>
       <ListItem
@@ -141,7 +169,7 @@ function SidekickListItem({
         icon={row.icon}
         leading={row.leadingIndicator}
         status={row.suffix}
-        trailing={row.trailingAction}
+        trailing={trailingAction}
         selected={selected}
         disabled={row.disabled}
         onSelect={handleClick}
@@ -156,12 +184,14 @@ interface SidekickListSectionViewProps {
   section: SidekickListSection;
   selectedId?: string | null;
   onSelectRow?: (id: string) => void;
+  onOpenMenu?: (row: SidekickListRow, anchor: HTMLButtonElement) => void;
 }
 
 function SidekickListSectionView({
   section,
   selectedId,
   onSelectRow,
+  onOpenMenu,
 }: SidekickListSectionViewProps): ReactElement {
   const [expanded, setExpanded] = useState(section.defaultExpanded ?? true);
   const toggle = useCallback(() => setExpanded((v) => !v), []);
@@ -178,6 +208,7 @@ function SidekickListSectionView({
               row={row}
               selected={selectedId === row.id}
               onSelectRow={onSelectRow}
+              onOpenMenu={onOpenMenu}
             />
           ))}
     </div>
@@ -213,6 +244,7 @@ export function SidekickList({
   empty,
   menuActions,
   onMenuAction,
+  showMenuButtons = false,
   className,
 }: SidekickListProps): ReactElement {
   const rowsById = useMemo(() => {
@@ -227,7 +259,7 @@ export function SidekickList({
     (nodeId: string): SidekickListRow | null => rowsById.get(nodeId) ?? null,
     [rowsById],
   );
-  const { menu, menuRef, handleContextMenu, closeMenu } =
+  const { menu, menuRef, handleContextMenu, openMenu, closeMenu } =
     useSidekickItemContextMenu<SidekickListRow>({ resolveItem });
 
   const handleMenuAction = useCallback(
@@ -249,6 +281,27 @@ export function SidekickList({
       ? menuActions(menu.item)
       : menuActions
     : undefined;
+
+  const handleOpenMenu = useCallback(
+    (row: SidekickListRow, anchor: HTMLButtonElement) => {
+      const actions = typeof menuActions === "function"
+        ? menuActions(row)
+        : menuActions ?? [];
+      if (actions.length === 0) return;
+      const rect = anchor.getBoundingClientRect();
+      const menuWidth = 160;
+      const estimatedHeight = Math.min(16 + actions.length * 36, 280);
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const x = Math.max(8, Math.min(rect.right - menuWidth, viewportWidth - menuWidth - 8));
+      const preferredY = rect.bottom + 4;
+      const y = preferredY + estimatedHeight <= viewportHeight - 8
+        ? preferredY
+        : Math.max(8, rect.top - estimatedHeight - 4);
+      openMenu(row, x, y);
+    },
+    [menuActions, openMenu],
+  );
 
   if (loading && totalRows === 0) {
     return <div className={styles.loading}>{loadingLabel}</div>;
@@ -279,6 +332,7 @@ export function SidekickList({
             section={section}
             selectedId={selectedId}
             onSelectRow={onSelectRow}
+            onOpenMenu={showMenuButtons && menuEnabled ? handleOpenMenu : undefined}
           />
         ))}
       </div>
