@@ -159,6 +159,12 @@ The first Aura slice now implements that boundary:
   navigation. Release Firebase client/server credentials remain deployment configuration, and real
   warm/cold delivery still needs production-device verification; missing credentials fail closed
   without blocking app boot.
+- Native mobile now remembers the last authenticated Aura shell route with the full canonical
+  agent/project-instance/session query, scoped to the signed-in user. On a generic bundled-app cold
+  launch it restores that validated internal route before React Router mounts; explicit launch and
+  notification routes still win, while login, public, malformed, external, and oversized routes
+  are never stored. This closes normal Android process-recreation continuity without treating the
+  route cache as execution state or conversation truth.
 - Chat lifecycle and approval firehose events are now stamped with the authenticated owner and
   filtered during both replay and live delivery. Legacy unscoped events retain their existing
   behavior, while new account-scoped control signals cannot appear in another user's mobile agent
