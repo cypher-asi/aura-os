@@ -50,15 +50,18 @@ async fn resolve_remote_context(
     Ok((base_url, jwt.to_string()))
 }
 
-fn map_gateway_status(status: u16, body: &str) -> (axum::http::StatusCode, Json<ApiError>) {
+fn map_gateway_status(status: u16) -> (axum::http::StatusCode, Json<ApiError>) {
     match status {
-        404 => ApiError::not_found("remote agent not found on swarm gateway"),
         401 => ApiError::unauthorized("swarm gateway rejected auth token"),
-        _ => ApiError::bad_gateway(format!("swarm gateway returned {status}: {body}")),
+        403 => ApiError::forbidden("remote workspace access denied"),
+        404 => ApiError::not_found("remote agent or workspace path not found"),
+        400 => ApiError::bad_request("remote workspace rejected the path"),
+        503 => ApiError::service_unavailable("remote agent workspace is unavailable"),
+        _ => ApiError::bad_gateway(format!("swarm gateway returned {status}")),
     }
 }
 
-fn map_write_gateway_status(status: u16, body: &str) -> (axum::http::StatusCode, Json<ApiError>) {
+fn map_write_gateway_status(status: u16) -> (axum::http::StatusCode, Json<ApiError>) {
     match status {
         400 => ApiError::bad_request("remote workspace rejected the file write"),
         403 => ApiError::forbidden("remote workspace denied access to the file"),
@@ -72,7 +75,7 @@ fn map_write_gateway_status(status: u16, body: &str) -> (axum::http::StatusCode,
                 data: None,
             }),
         ),
-        _ => map_gateway_status(status, body),
+        _ => map_gateway_status(status),
     }
 }
 
@@ -149,10 +152,9 @@ pub(crate) async fn list_remote_directory(
 
     if !resp.status().is_success() {
         let status = resp.status().as_u16();
-        let body = resp.text().await.unwrap_or_default();
         // Keep user-derived workspace and agent identifiers out of logs.
         warn!(status, "remote list_directory failed");
-        return Err(map_gateway_status(status, &body));
+        return Err(map_gateway_status(status));
     }
 
     let body: serde_json::Value = resp
@@ -195,10 +197,9 @@ pub(crate) async fn read_remote_file(
 
     if !resp.status().is_success() {
         let status = resp.status().as_u16();
-        let body = resp.text().await.unwrap_or_default();
         // Keep user-derived workspace and agent identifiers out of logs.
         warn!(status, "remote read_file failed");
-        return Err(map_gateway_status(status, &body));
+        return Err(map_gateway_status(status));
     }
 
     let body: serde_json::Value = resp
@@ -243,10 +244,9 @@ pub(crate) async fn write_remote_file(
 
     if !resp.status().is_success() {
         let status = resp.status().as_u16();
-        let body = resp.text().await.unwrap_or_default();
         // Keep user-derived workspace and agent identifiers out of logs.
         warn!(status, "remote write_file failed");
-        return Err(map_write_gateway_status(status, &body));
+        return Err(map_write_gateway_status(status));
     }
 
     let body = resp.json().await.map_err(|error| {
@@ -261,16 +261,23 @@ mod tests {
 
     #[test]
     fn write_conflicts_are_preserved_for_the_web_editor() {
-        let (status, Json(error)) = map_write_gateway_status(409, "ignored");
+        let (status, Json(error)) = map_write_gateway_status(409);
         assert_eq!(status, axum::http::StatusCode::CONFLICT);
         assert_eq!(error.code, "conflict");
     }
 
     #[test]
-    fn ordinary_file_proxy_errors_keep_the_existing_mapping() {
-        let (status, Json(error)) = map_gateway_status(400, "pod rejected request");
-        assert_eq!(status, axum::http::StatusCode::BAD_GATEWAY);
-        assert_eq!(error.code, "bad_gateway");
+    fn ordinary_file_proxy_errors_preserve_remote_failure_types() {
+        for (upstream, expected) in [
+            (400, axum::http::StatusCode::BAD_REQUEST),
+            (403, axum::http::StatusCode::FORBIDDEN),
+            (404, axum::http::StatusCode::NOT_FOUND),
+            (503, axum::http::StatusCode::SERVICE_UNAVAILABLE),
+        ] {
+            assert_eq!(map_gateway_status(upstream).0, expected);
+        }
+        let (_, Json(error)) = map_gateway_status(500);
+        assert_eq!(error.error, "swarm gateway returned 500");
     }
 
     #[test]

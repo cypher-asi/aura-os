@@ -20,6 +20,7 @@ import {
   projectSessionsSurfaceKey,
   useSessionsListStore,
 } from "../../../stores/sessions-list-store";
+import { getRemoteFileErrorDescription } from "./remote-file-error";
 import styles from "./ProjectFilesScreen.module.css";
 
 const MAX_ACTIONABLE_PREVIEW_LINES = 1_000;
@@ -138,6 +139,7 @@ function MobileProjectFilesContent({
   const selectedFilePath = searchParams.get("file");
   const activeView = searchParams.get("view") === "changes" ? "changes" : "files";
   const canBrowseWorkspace = Boolean(hostedWorkspace) || (Boolean(rootPath) && Boolean(remoteAgentId));
+  const remoteChangesUnavailable = Boolean(remoteAgentId) && !hostedWorkspace;
 
   const openAgentDraft = useCallback((prompt: string) => {
     if (!sourceControlAgentInstanceId || !conversationContextReady) return;
@@ -277,9 +279,35 @@ function MobileProjectFilesContent({
             <Text size="sm" weight="medium">{projectName}</Text>
             <Text size="sm" variant="muted">Waiting for a live workspace.</Text>
           </div>
-          {sourceControlAgentInstanceId ? (
+          {sourceControlAgentInstanceId && !remoteChangesUnavailable ? (
             <Button variant="secondary" onClick={() => selectView("changes")}>
               Review changes
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  if (activeView === "changes" && remoteChangesUnavailable) {
+    return (
+      <div className={styles.remoteRoot}>
+        <div className={styles.remoteCard}>
+          <div className={styles.remoteHeader}>
+            <Text size="xs" variant="muted" className={styles.eyebrow}>Changes</Text>
+            <Text size="lg" weight="medium">Remote Git changes are not available yet.</Text>
+            <Text size="sm" variant="muted">
+              Aura can browse this agent’s live workspace files, but its remote environment does not yet expose a read-only Git diff.
+            </Text>
+          </div>
+          <Button variant="secondary" onClick={() => selectView("files")}>Browse files</Button>
+          {sourceControlAgentInstanceId ? (
+            <Button
+              variant="secondary"
+              disabled={!conversationContextReady}
+              onClick={discussChanges}
+            >
+              Ask agent to review changes
             </Button>
           ) : null}
         </div>
@@ -327,15 +355,17 @@ function MobileProjectFilesContent({
           >
             Files
           </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeView === "changes"}
-            className={`${styles.viewTab}${activeView === "changes" ? ` ${styles.viewTabActive}` : ""}`}
-            onClick={() => selectView("changes")}
-          >
-            Changes
-          </button>
+          {!remoteChangesUnavailable ? (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeView === "changes"}
+              className={`${styles.viewTab}${activeView === "changes" ? ` ${styles.viewTabActive}` : ""}`}
+              onClick={() => selectView("changes")}
+            >
+              Changes
+            </button>
+          ) : null}
         </div>
       </div>
       {activeView === "changes" ? (
@@ -477,9 +507,9 @@ function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, hostedWorkspa
         }
         setState({ loading: false, content: null, error: getRemoteFileErrorDescription() });
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         if (cancelled) return;
-        setState({ loading: false, content: null, error: getRemoteFileErrorDescription() });
+        setState({ loading: false, content: null, error: getRemoteFileErrorDescription(error) });
       });
 
     return () => {
@@ -581,8 +611,4 @@ function isMobilePreviewableTextFile(path: string): boolean {
     /\.(txt|md|markdown|json|yml|yaml|toml|ini|cfg|conf|env|log|csv|ts|tsx|js|jsx|mjs|cjs|css|scss|html|xml|sh|bash|zsh|py|go|rs|java|kt|swift|sql)$/.test(lower)
     || !lower.includes(".")
   );
-}
-
-function getRemoteFileErrorDescription(): string {
-  return "This workspace file is temporarily unavailable. Try again in a moment.";
 }

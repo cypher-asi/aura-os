@@ -85,9 +85,16 @@ The first Aura slice now implements that boundary:
   by a profile-only screen.
 - Agent details move to `?view=details`, preserving the canonical `project`, `instance`, and
   `session` query identity when moving between chat and controls.
-- The mobile details surface adds Continue chat, recent canonical sessions, Browse code, and Review
-  changes when a project workspace is known. Workspace navigation carries the exact canonical
-  agent-instance identity instead of resolving whichever project runtime happens to be newest.
+- The mobile details surface adds Continue chat, recent canonical sessions, Browse code, and local
+  Review changes when a project workspace is known. Workspace navigation carries the exact
+  canonical agent-instance identity instead of resolving whichever project runtime happens to be
+  newest. Remote agents retain live file browsing but no longer advertise server-local Git review
+  as though it could inspect their pod. A direct remote Changes link explains the missing
+  capability and offers file browsing or an agent-review draft.
+- Remote file proxies now preserve a pod's authorization, missing-path, and unavailable-agent
+  failures instead of converting them into HTTP 200. Aura sanitizes gateway error bodies, and
+  mobile file preview distinguishes those states without exposing pod paths. This fixes the
+  diagnostic boundary for cross-device code browsing; it does not make an offline pod readable.
 - The agent library warms and displays recent shared conversation previews rather than only profile
   biography text. Its mobile search now matches agent identity/profile fields, live attention, and
   those cross-device conversation previews, with an explicit no-results state instead of a blank
