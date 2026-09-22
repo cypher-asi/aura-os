@@ -103,6 +103,37 @@ export interface StreamEventHandler {
   onEvent: (event: AuraEvent) => void;
   onError: (error: unknown) => void;
   onDone?: () => void;
+  onAccepted?: (receipt: ChatCommandReceipt) => void;
+}
+
+export interface ChatCommandReceipt {
+  commandId: string;
+  sessionId: string | null;
+  projectId: string | null;
+}
+
+const CHAT_PERSISTED_HEADER = "x-aura-chat-persisted";
+const CHAT_COMMAND_ID_HEADER = "x-aura-chat-command-id";
+const CHAT_SESSION_ID_HEADER = "x-aura-chat-session-id";
+const CHAT_PROJECT_ID_HEADER = "x-aura-chat-project-id";
+
+function commandReceiptCallback(
+  expectedCommandId: string | undefined,
+  handler: StreamEventHandler,
+): ((response: Response) => void) | undefined {
+  if (!expectedCommandId) return undefined;
+  return (response) => {
+    const persisted = response.headers.get(CHAT_PERSISTED_HEADER);
+    const commandId = response.headers.get(CHAT_COMMAND_ID_HEADER);
+    if (persisted !== "true" || commandId !== expectedCommandId) {
+      throw new Error("Aura could not confirm that this message was saved");
+    }
+    handler.onAccepted?.({
+      commandId,
+      sessionId: response.headers.get(CHAT_SESSION_ID_HEADER),
+      projectId: response.headers.get(CHAT_PROJECT_ID_HEADER),
+    });
+  };
 }
 
 /* ── SSE helpers ─────────────────────────────────────────────────── */
@@ -341,8 +372,10 @@ export function sendAgentEventStream(
    * distinct request shape and UI presentation.
    */
   mixture?: MixtureRequest,
+  clientCommandId?: string,
 ) {
   const body: Record<string, unknown> = { content, action };
+  if (clientCommandId) body.client_command_id = clientCommandId;
   if (model) {
     body.model = model;
     // Reasoning effort is persisted per-model by the picker's effort
@@ -382,6 +415,7 @@ export function sendAgentEventStream(
     },
     createChatStreamHandler(handler),
     signal,
+    { onResponse: commandReceiptCallback(clientCommandId, handler) },
   );
 }
 
@@ -617,8 +651,10 @@ export function sendEventStream(
    * filesystem checkpoint before the turn.
    */
   safeWorkspace?: boolean,
+  clientCommandId?: string,
 ) {
   const body: Record<string, unknown> = { content, action };
+  if (clientCommandId) body.client_command_id = clientCommandId;
   if (model) {
     body.model = model;
     // See `sendAgentEventStream` — effort is resolved from the persisted
@@ -656,5 +692,6 @@ export function sendEventStream(
     },
     createChatStreamHandler(handler),
     signal,
+    { onResponse: commandReceiptCallback(clientCommandId, handler) },
   );
 }

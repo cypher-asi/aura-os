@@ -485,6 +485,7 @@ pub(crate) async fn send_event_stream(
             harness_mode: instance.harness_mode(),
             session_config: config,
             user_content: body.content,
+            client_command_id: body.client_command_id,
             requested_model: body.model,
             persist_ctx,
             attachments: body.attachments,

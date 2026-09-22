@@ -144,9 +144,16 @@ test("native mobile creates a hosted web agent without provisioning a remote VM"
     const pathname = new URL(route.request().url()).pathname;
     if (pathname.endsWith("/events/stream") && route.request().method() === "POST") {
       promptPayload = route.request().postDataJSON() as Record<string, unknown>;
+      const commandId = String(promptPayload.client_command_id ?? "");
       await route.fulfill({
         status: 200,
         contentType: "text/event-stream",
+        headers: {
+          "x-aura-chat-persisted": "true",
+          "x-aura-chat-command-id": commandId,
+          "x-aura-chat-session-id": "session-mobile-hosted",
+          "x-aura-chat-project-id": "proj-1",
+        },
         body: "event: done\ndata: {}\n\n",
       });
       return;
@@ -181,6 +188,7 @@ test("native mobile creates a hosted web agent without provisioning a remote VM"
   await page.getByRole("button", { name: "Send", exact: true }).click();
   await expect.poll(() => promptPayload).toMatchObject({
     content: "Reply with Android hosted runtime ready",
+    client_command_id: expect.any(String),
   });
 
   await page.goto("/projects/proj-1/agents/create");

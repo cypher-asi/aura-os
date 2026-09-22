@@ -432,6 +432,7 @@ pub(crate) async fn send_agent_event_stream(
             harness_mode: agent.harness_mode(),
             session_config: config,
             user_content: body.content,
+            client_command_id: body.client_command_id,
             requested_model: body.model,
             persist_ctx,
             attachments: body.attachments,

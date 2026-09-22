@@ -341,6 +341,12 @@ pub(crate) struct ChatAttachmentDto {
 #[derive(Debug, Deserialize)]
 pub(crate) struct SendChatRequest {
     pub content: String,
+    /// Client-generated identity for this send attempt. The chat route
+    /// persists it with the user message and echoes it in the accepted
+    /// response headers, allowing mobile/web clients to distinguish an
+    /// accepted command from one that failed before durable persistence.
+    #[serde(default)]
+    pub client_command_id: Option<String>,
     pub action: Option<String>,
     pub model: Option<String>,
     pub commands: Option<Vec<String>>,
@@ -845,5 +851,13 @@ mod tests {
             req.originating_agent_id.is_none(),
             "missing field must default to None for wire compat with older harness builds"
         );
+    }
+
+    #[test]
+    fn send_chat_request_accepts_client_command_id() {
+        let req: SendChatRequest =
+            serde_json::from_str(r#"{ "content": "ship it", "client_command_id": "mobile-123" }"#)
+                .expect("client_command_id decodes");
+        assert_eq!(req.client_command_id.as_deref(), Some("mobile-123"));
     }
 }

@@ -44,7 +44,10 @@ import {
 } from "../stream/store";
 import { STUCK_THRESHOLD_MS } from "../stream/use-stream-health";
 import { useMessageQueueStore } from "../../stores/message-queue-store";
-import { buildUserChatMessage } from "../attachment-helpers";
+import {
+  buildUserChatMessage,
+  updateUserMessageDeliveryStatus,
+} from "../attachment-helpers";
 import { buildStreamHandler } from "./build-stream-handler";
 import {
   getPartitionSendControl,
@@ -299,16 +302,27 @@ export function useChatStream({
 
       ctrl.inFlight = true;
 
-      const userMsg = buildUserChatMessage(
-        trimmed,
-        attachments,
-        action === "generate_specs"
-          ? "Generate specs for this project"
-          : is3DModelStep
-            ? "Generate 3D model"
-            : undefined,
-        clientMessageId,
-      );
+      const userMsg = {
+        ...buildUserChatMessage(
+          trimmed,
+          attachments,
+          action === "generate_specs"
+            ? "Generate specs for this project"
+            : is3DModelStep
+              ? "Generate 3D model"
+              : undefined,
+          clientMessageId,
+        ),
+        ...(!_generationMode ? { deliveryStatus: "sending" as const } : {}),
+      };
+      let commandAccepted = false;
+      const updateCommandDelivery = (
+        status: (typeof userMsg)["deliveryStatus"] | undefined,
+      ) => {
+        partitionSetters.setEvents((events) =>
+          updateUserMessageDeliveryStatus(events, userMsg.clientId ?? userMsg.id, status),
+        );
+      };
       partitionSetters.setEvents((prev) => [...prev, userMsg]);
       partitionSetters.setIsStreaming(true);
       sidekickRef.current.setAgentStreaming(capturedInstanceId, true);
@@ -451,6 +465,7 @@ export function useChatStream({
         },
         onError: (error) => {
           if (controller.signal.aborted) return;
+          if (!_generationMode && !commandAccepted) updateCommandDelivery("failed");
           innerHandler.onError(error);
         },
         onDone: innerHandler.onDone
@@ -459,6 +474,11 @@ export function useChatStream({
               innerHandler.onDone?.();
             }
           : undefined,
+        onAccepted: (receipt) => {
+          if (receipt.commandId !== (userMsg.clientId ?? userMsg.id)) return;
+          commandAccepted = true;
+          updateCommandDelivery(undefined);
+        },
       };
 
       try {
@@ -691,9 +711,11 @@ export function useChatStream({
           mixture,
           agentMentions,
           safeWorkspaceRef.current,
+          userMsg.clientId ?? userMsg.id,
         );
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
+        if (!_generationMode && !commandAccepted) updateCommandDelivery("failed");
         handleStreamError(partitionRefs, partitionSetters, err, breadcrumbContext);
       } finally {
         // Partition-scoped finalization sentinel. The legacy
@@ -714,6 +736,7 @@ export function useChatStream({
         // microtask-deferred `finally` would clobber the new send's
         // latch.
         if (ctrl.currentController === controller) {
+          if (!_generationMode && !commandAccepted) updateCommandDelivery("failed");
           partitionSetters.setIsStreaming(false);
           sidekickRef.current.setAgentStreaming(capturedInstanceId, false);
           controller.abort();
