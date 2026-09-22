@@ -88,6 +88,8 @@ import {
 } from "../stores/tool-approval-store";
 import {
   enqueueChatCommand,
+  markChatCommandAccepted,
+  markChatCommandExecutionFailed,
   recordChatCommandFailure,
   removeChatCommand,
   shouldReplayChatCommandError,
@@ -727,8 +729,21 @@ export function useAgentChatStream({
             useSessionsListStore.getState().bumpVersion();
           }
           commandAccepted = true;
-          void removeChatCommand(receipt.commandId);
-          updateCommandDelivery(undefined);
+          if (receipt.executionStatus === "completed") {
+            void removeChatCommand(receipt.commandId);
+          } else if (receipt.executionStatus === "failed") {
+            void markChatCommandExecutionFailed(receipt.commandId, receipt.sessionId);
+          } else {
+            void markChatCommandAccepted(
+              receipt.commandId,
+              receipt.executionStatus === "unconfirmed" ? "unconfirmed" : "attached",
+              receipt.sessionId,
+            );
+          }
+          updateCommandDelivery(
+            receipt.executionStatus === "unconfirmed" ? "unconfirmed" :
+              receipt.executionStatus === "failed" ? "executionFailed" : undefined,
+          );
         },
       };
 

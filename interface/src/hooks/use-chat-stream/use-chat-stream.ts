@@ -59,6 +59,8 @@ import {
 import type { ActiveStreamSummary } from "../../shared/api/streams";
 import {
   enqueueChatCommand,
+  markChatCommandAccepted,
+  markChatCommandExecutionFailed,
   recordChatCommandFailure,
   removeChatCommand,
   shouldReplayChatCommandError,
@@ -507,8 +509,21 @@ export function useChatStream({
             } as unknown as import("../../shared/types/aura-events").AuraEvent);
           }
           commandAccepted = true;
-          void removeChatCommand(receipt.commandId);
-          updateCommandDelivery(undefined);
+          if (receipt.executionStatus === "completed") {
+            void removeChatCommand(receipt.commandId);
+          } else if (receipt.executionStatus === "failed") {
+            void markChatCommandExecutionFailed(receipt.commandId, receipt.sessionId);
+          } else {
+            void markChatCommandAccepted(
+              receipt.commandId,
+              receipt.executionStatus === "unconfirmed" ? "unconfirmed" : "attached",
+              receipt.sessionId,
+            );
+          }
+          updateCommandDelivery(
+            receipt.executionStatus === "unconfirmed" ? "unconfirmed" :
+              receipt.executionStatus === "failed" ? "executionFailed" : undefined,
+          );
         },
       };
 

@@ -112,6 +112,8 @@ export interface ChatCommandReceipt {
   projectId: string | null;
   attachId: string | null;
   replayed: boolean;
+  /** Durable execution result on replay; absent on older Aura servers. */
+  executionStatus?: "attached" | "completed" | "failed" | "unconfirmed";
 }
 
 const CHAT_PERSISTED_HEADER = "x-aura-chat-persisted";
@@ -120,6 +122,7 @@ const CHAT_SESSION_ID_HEADER = "x-aura-chat-session-id";
 const CHAT_PROJECT_ID_HEADER = "x-aura-chat-project-id";
 const CHAT_ATTACH_ID_HEADER = "x-aura-attach-id";
 const CHAT_COMMAND_REPLAYED_HEADER = "x-aura-chat-command-replayed";
+const CHAT_EXECUTION_STATUS_HEADER = "x-aura-chat-execution-status";
 
 function commandReceiptCallback(
   expectedCommandId: string | undefined,
@@ -132,12 +135,17 @@ function commandReceiptCallback(
     if (persisted !== "true" || commandId !== expectedCommandId) {
       throw new Error("Aura could not confirm that this message was saved");
     }
+    const executionStatus = response.headers.get(CHAT_EXECUTION_STATUS_HEADER);
     handler.onAccepted?.({
       commandId,
       sessionId: response.headers.get(CHAT_SESSION_ID_HEADER),
       projectId: response.headers.get(CHAT_PROJECT_ID_HEADER),
       attachId: response.headers.get(CHAT_ATTACH_ID_HEADER),
       replayed: response.headers.get(CHAT_COMMAND_REPLAYED_HEADER) === "true",
+      ...(executionStatus === "attached" || executionStatus === "completed" ||
+      executionStatus === "failed" || executionStatus === "unconfirmed"
+        ? { executionStatus }
+        : {}),
     });
   };
 }
@@ -380,6 +388,7 @@ export function sendAgentEventStream(
   mixture?: MixtureRequest,
   clientCommandId?: string,
   isCommandReplay?: boolean,
+  wasPreviouslyAccepted?: boolean,
 ) {
   const body: Record<string, unknown> = { content, action };
   if (clientCommandId) body.client_command_id = clientCommandId;
@@ -414,6 +423,7 @@ export function sendAgentEventStream(
     headers["X-Aura-Client-Retry"] = String(Math.floor(clientRetryAttempt));
   }
   if (isCommandReplay) headers["X-Aura-Command-Replay"] = "1";
+  if (wasPreviouslyAccepted) headers["X-Aura-Command-Previously-Accepted"] = "1";
   return streamSSE<string>(
     `${BASE_URL}/api/agents/${agentId}/events/stream`,
     {
@@ -661,6 +671,7 @@ export function sendEventStream(
   safeWorkspace?: boolean,
   clientCommandId?: string,
   isCommandReplay?: boolean,
+  wasPreviouslyAccepted?: boolean,
 ) {
   const body: Record<string, unknown> = { content, action };
   if (clientCommandId) body.client_command_id = clientCommandId;
@@ -693,6 +704,7 @@ export function sendEventStream(
     headers["X-Aura-Client-Retry"] = String(Math.floor(clientRetryAttempt));
   }
   if (isCommandReplay) headers["X-Aura-Command-Replay"] = "1";
+  if (wasPreviouslyAccepted) headers["X-Aura-Command-Previously-Accepted"] = "1";
   return streamSSE<string>(
     `${BASE_URL}/api/projects/${projectId}/agents/${agentInstanceId}/events/stream`,
     {

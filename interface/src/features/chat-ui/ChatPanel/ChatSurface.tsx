@@ -28,6 +28,11 @@ import { appendQueuedDisplayMessages } from "./queued-display-message";
 import { useChatUIStore } from "../../../stores/chat-ui-store";
 import { clearQueuedMessages } from "../../../stores/message-queue-store";
 import {
+  cancelChatCommandReplay,
+  retryChatCommandNow,
+  useChatCommandOutboxStore,
+} from "../../../stores/chat-command-outbox";
+import {
   useStreamHealth,
   useStuckStreamAutoTimeout,
 } from "../../../hooks/stream/use-stream-health";
@@ -458,6 +463,27 @@ export function ChatSurface({
 
   const hasBridgeFrame = bridgeMessages.length > 0;
   const renderedMessages = messages.length > 0 ? messages : bridgeMessages;
+  const pendingCommands = useChatCommandOutboxStore((state) => state.commands);
+  const unconfirmedCommands = useMemo(
+    () => pendingCommands.filter((command) =>
+      command.executionStatus === "unconfirmed" &&
+      (command.surface === "project"
+        ? Boolean(currentAgentInstanceId) &&
+          command.agentInstanceId === currentAgentInstanceId
+        : Boolean(agentId) && command.agentId === agentId),
+    ),
+    [pendingCommands, currentAgentInstanceId, agentId],
+  );
+  const failedCommands = useMemo(
+    () => pendingCommands.filter((command) =>
+      command.executionStatus === "failed" &&
+      (command.surface === "project"
+        ? Boolean(currentAgentInstanceId) &&
+          command.agentInstanceId === currentAgentInstanceId
+        : Boolean(agentId) && command.agentId === agentId),
+    ),
+    [pendingCommands, currentAgentInstanceId, agentId],
+  );
   const transcriptMessages = useMemo(
     () => appendQueuedDisplayMessages(renderedMessages, queue),
     [queue, renderedMessages],
@@ -862,6 +888,43 @@ export function ChatSurface({
     >
       {header}
       <div className={styles.chatArea} ref={chatAreaRef}>
+        {failedCommands.length > 0 && (
+          <div className={styles.commandExecutionWarning} role="alert">
+            <span>
+              {failedCommands.length === 1 ? "A prompt was" : `${failedCommands.length} prompts were`}
+              {" "}saved, but the agent run failed. Review this conversation before trying a new prompt.
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                for (const command of failedCommands) {
+                  void cancelChatCommandReplay(command.commandId);
+                }
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+        {unconfirmedCommands.length > 0 && (
+          <div className={styles.commandExecutionWarning} role="alert">
+            <span>
+              {unconfirmedCommands.length === 1 ? "A prompt was" : `${unconfirmedCommands.length} prompts were`}
+              {" "}saved, but the agent run could not be confirmed after reconnecting.
+              Check this agent before sending the prompt again.
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                for (const command of unconfirmedCommands) {
+                  void retryChatCommandNow(command.commandId);
+                }
+              }}
+            >
+              Check again
+            </button>
+          </div>
+        )}
         <div className={styles.messageAreaShell}>
           <div
             className={`${styles.messageArea}${isAutoFollowing ? ` ${styles.messageAreaFollowing}` : ` ${styles.messageAreaReading}`}`}

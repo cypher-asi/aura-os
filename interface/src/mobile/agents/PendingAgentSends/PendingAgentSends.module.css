@@ -41,7 +41,7 @@
 .openButton {
   display: flex;
   width: 100%;
-  min-height: 36px;
+  min-height: 44px;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
@@ -82,9 +82,15 @@
   gap: var(--space-1);
 }
 
+.status {
+  padding: 0 var(--space-2) var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+}
+
 .action {
   display: inline-flex;
-  min-height: 36px;
+  min-height: 44px;
   align-items: center;
   gap: 5px;
   padding: var(--space-1) var(--space-2);

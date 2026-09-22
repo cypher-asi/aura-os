@@ -9,7 +9,7 @@ use aura_os_core::HarnessMode;
 use aura_os_harness::{
     CouncilPresentation, ErrorMsg, HarnessOutbound, SessionBridgeTurn, SessionConfig,
 };
-use axum::response::sse::{Event, KeepAlive, Sse};
+use axum::response::sse::{KeepAlive, Sse};
 use tokio::sync::broadcast;
 use tracing::{debug, error, warn};
 
@@ -23,6 +23,7 @@ use crate::handlers::agents::session_identity::{
 use crate::live_streams::{ChatCommandMatch, StreamKind, StreamScope};
 use crate::state::AppState;
 
+use super::super::constants::HEADER_CHAT_EXECUTION_STATUS;
 use super::super::event_bus::publish_user_message_event;
 use super::super::maybe_spawn_subagent_capture;
 use super::super::persist::{persist_user_message, ChatPersistCtx, ForkInfo};
@@ -47,6 +48,7 @@ pub(in super::super) struct OpenChatStreamArgs {
     pub(in super::super) user_content: String,
     pub(in super::super) client_command_id: Option<String>,
     pub(in super::super) is_command_replay: bool,
+    pub(in super::super) was_previously_accepted: bool,
     /// Billing is deferred only for explicit replays so an already-persisted
     /// command can recover its receipt after a balance change. If no receipt
     /// exists, this source is checked before persistence or harness execution.
@@ -94,6 +96,7 @@ pub(in super::super) async fn open_harness_chat_stream(
         user_content,
         client_command_id,
         is_command_replay,
+        was_previously_accepted,
         replay_auth_source,
         requested_model,
         persist_ctx,
@@ -123,6 +126,11 @@ pub(in super::super) async fn open_harness_chat_stream(
     let ctx = require_persist_ctx(&session_key, persist_ctx)?;
     let err_ctx = persist_error_ctx(&ctx);
     let client_command_id = normalize_client_command_id(client_command_id)?;
+    if was_previously_accepted && (!is_command_replay || client_command_id.is_none()) {
+        return Err(ApiError::bad_request(
+            "Previously accepted command checks require replay and client_command_id",
+        ));
+    }
 
     // A retry carrying the same client command id must never persist or run
     // the prompt twice. Serialize identical ids within this server process,
@@ -133,7 +141,7 @@ pub(in super::super) async fn open_harness_chat_stream(
             .live_streams
             .chat_command_lock(ctx.user_id.as_deref(), command_id);
         let guard = lock.lock_owned().await;
-        if let Some(command) = find_replayed_chat_command(
+        if let Some((command, execution_status)) = find_replayed_chat_command(
             state,
             &ctx,
             command_id,
@@ -143,7 +151,19 @@ pub(in super::super) async fn open_harness_chat_stream(
         )
         .await?
         {
-            return Ok(replayed_chat_command_response(command, command_id));
+            return Ok(replayed_chat_command_response(
+                command,
+                command_id,
+                execution_status,
+            ));
+        }
+        if was_previously_accepted {
+            // A status check after a confirmed save must not fall through
+            // into a new harness turn just because storage cannot currently
+            // locate the original command (e.g. lag or stale session list).
+            return Err(ApiError::conflict(
+                "Previously accepted chat command could not be found; execution remains unconfirmed",
+            ));
         }
         Some(guard)
     } else {
@@ -395,6 +415,7 @@ pub(in super::super) async fn open_harness_chat_stream(
         state.event_broadcast.clone(),
         persist_model,
         ChatPersistTaskExtras {
+            client_command_id: client_command_id.clone(),
             http_client: state.http_client.clone(),
             router_url: state.router_url.clone(),
             auto_fork_threshold: state.chat_auto_fork_threshold,
@@ -466,13 +487,30 @@ async fn find_replayed_chat_command(
     content: &str,
     is_command_replay: bool,
     err_ctx: crate::error::ChatPersistErrorCtx,
-) -> ApiResult<Option<ChatCommandMatch>> {
-    if let Some(command) = state
+) -> ApiResult<Option<(ChatCommandMatch, &'static str)>> {
+    if let Some(mut command) = state
         .live_streams
         .find_chat_command(ctx.user_id.as_deref(), command_id)
     {
         ensure_command_content_matches(&command, content)?;
-        return Ok(Some(command));
+        if command
+            .stream
+            .as_ref()
+            .is_some_and(|stream| !stream.is_terminated())
+        {
+            return Ok(Some((command, "attached")));
+        }
+        // A terminated replay ring is not an executing agent. Query the
+        // durable terminal marker instead of repeatedly advertising an
+        // attachable run for its entire in-memory retention window.
+        command.stream = None;
+        let events = ctx
+            .storage
+            .list_events(&command.session_id, &ctx.jwt, None, None)
+            .await
+            .map_err(|error| crate::error::map_chat_persist_storage_error(error, err_ctx))?;
+        let status = find_command_terminal(&events, command_id).unwrap_or("unconfirmed");
+        return Ok(Some((command, status)));
     }
     if !is_command_replay {
         return Ok(None);
@@ -489,8 +527,15 @@ async fn find_replayed_chat_command(
         .list_events(&current_session_id, &ctx.jwt, None, None)
         .await
         .map_err(|error| crate::error::map_chat_persist_storage_error(error, err_ctx.clone()))?;
-    let mut matched = find_persisted_command(current_events, command_id)
-        .map(|event| (current_session_id.clone(), ctx.project_id.clone(), event));
+    let current_status = find_command_terminal(&current_events, command_id);
+    let mut matched = find_persisted_command(current_events, command_id).map(|event| {
+        (
+            current_session_id.clone(),
+            ctx.project_id.clone(),
+            event,
+            current_status,
+        )
+    });
 
     if matched.is_none() {
         let mut sessions = ctx
@@ -512,14 +557,15 @@ async fn find_replayed_chat_command(
                 .map_err(|error| {
                     crate::error::map_chat_persist_storage_error(error, err_ctx.clone())
                 })?;
+            let status = find_command_terminal(&events, command_id);
             if let Some(persisted) = find_persisted_command(events, command_id) {
                 let project_id = session.project_id.unwrap_or_else(|| ctx.project_id.clone());
-                matched = Some((session.id, project_id, persisted));
+                matched = Some((session.id, project_id, persisted, status));
                 break;
             }
         }
     }
-    let Some((session_id, project_id, persisted)) = matched else {
+    let Some((session_id, project_id, persisted, status)) = matched else {
         return Ok(None);
     };
     let persisted_content = persisted
@@ -540,7 +586,27 @@ async fn find_replayed_chat_command(
         .find_chat_command(ctx.user_id.as_deref(), command_id)
         .expect("recorded chat command receipt must be readable");
     ensure_command_content_matches(&command, content)?;
-    Ok(Some(command))
+    Ok(Some((command, status.unwrap_or("unconfirmed"))))
+}
+
+fn find_command_terminal(
+    events: &[aura_os_storage::StorageSessionEvent],
+    command_id: &str,
+) -> Option<&'static str> {
+    events.iter().rev().find_map(|event| {
+        if event.event_type.as_deref() != Some("chat_command_terminal") {
+            return None;
+        }
+        let content = event.content.as_ref()?;
+        if content.get("client_command_id")?.as_str()? != command_id {
+            return None;
+        }
+        match content.get("status")?.as_str()? {
+            "completed" => Some("completed"),
+            "failed" => Some("failed"),
+            _ => None,
+        }
+    })
 }
 
 fn find_persisted_command(
@@ -567,27 +633,34 @@ fn ensure_command_content_matches(command: &ChatCommandMatch, content: &str) -> 
     ))
 }
 
-fn replayed_chat_command_response(command: ChatCommandMatch, command_id: &str) -> SseResponse {
+fn replayed_chat_command_response(
+    command: ChatCommandMatch,
+    command_id: &str,
+    execution_status: &'static str,
+) -> SseResponse {
     let attach_id = command
         .stream
         .as_ref()
         .map(|stream| stream.attach_id.clone());
     let stream: SseStream = match command.stream {
         Some(stream) => Box::pin(crate::handlers::streams::attach_sse(stream, 0)),
-        None => Box::pin(futures_util::stream::once(async {
-            Ok(Event::default().event("done").data("{}"))
-        })),
+        // A saved prompt with no attachable stream is not proof the agent
+        // finished. The execution header carries the durable outcome (or
+        // "unconfirmed"), and an empty stream avoids a false done event.
+        None => Box::pin(futures_util::stream::empty()),
     };
     let snapshot = (command.session_id, command.project_id);
-    (
-        sse_response_headers(
-            Some(&snapshot),
-            Some(command_id),
-            true,
-            attach_id.as_deref(),
-        ),
-        Sse::new(stream).keep_alive(KeepAlive::default()),
-    )
+    let mut headers = sse_response_headers(
+        Some(&snapshot),
+        Some(command_id),
+        true,
+        attach_id.as_deref(),
+    );
+    headers.insert(
+        HEADER_CHAT_EXECUTION_STATUS,
+        axum::http::HeaderValue::from_static(execution_status),
+    );
+    (headers, Sse::new(stream).keep_alive(KeepAlive::default()))
 }
 
 fn normalize_client_command_id(value: Option<String>) -> ApiResult<Option<String>> {
@@ -609,7 +682,8 @@ fn normalize_client_command_id(value: Option<String>) -> ApiResult<Option<String
 #[cfg(test)]
 mod command_id_tests {
     use super::{
-        ensure_command_content_matches, find_persisted_command, normalize_client_command_id,
+        ensure_command_content_matches, find_command_terminal, find_persisted_command,
+        normalize_client_command_id, replayed_chat_command_response,
     };
     use crate::live_streams::ChatCommandMatch;
 
@@ -662,6 +736,45 @@ mod command_id_tests {
         };
         assert!(ensure_command_content_matches(&command, "first").is_ok());
         assert!(ensure_command_content_matches(&command, "different").is_err());
+    }
+
+    #[test]
+    fn terminal_marker_must_match_the_exact_command() {
+        let event = |command_id: &str, status: &str| aura_os_storage::StorageSessionEvent {
+            id: uuid::Uuid::new_v4().to_string(),
+            session_id: None,
+            user_id: None,
+            agent_id: None,
+            sender: Some("agent".into()),
+            project_id: None,
+            org_id: None,
+            event_type: Some("chat_command_terminal".into()),
+            content: Some(serde_json::json!({
+                "client_command_id": command_id,
+                "status": status,
+            })),
+            created_at: None,
+        };
+        let events = vec![event("other", "completed"), event("wanted", "failed")];
+        assert_eq!(find_command_terminal(&events, "wanted"), Some("failed"));
+        assert_eq!(find_command_terminal(&events, "absent"), None);
+    }
+
+    #[test]
+    fn detached_replay_exposes_unconfirmed_execution_without_an_attach_id() {
+        let command = ChatCommandMatch {
+            session_id: "session-1".into(),
+            project_id: "project-1".into(),
+            content: "hello".into(),
+            stream: None,
+        };
+        let (headers, _) = replayed_chat_command_response(command, "command-1", "unconfirmed");
+        assert_eq!(headers.get("x-aura-chat-persisted").unwrap(), "true");
+        assert_eq!(
+            headers.get("x-aura-chat-execution-status").unwrap(),
+            "unconfirmed"
+        );
+        assert!(headers.get("x-aura-attach-id").is_none());
     }
 }
 

@@ -160,6 +160,33 @@ describe("MobileAgentActivityBanner", () => {
     );
   });
 
+  it("labels a saved but unconfirmed agent run without calling it an unsent message", () => {
+    useChatCommandOutboxStore.setState({
+      commands: [{
+        surface: "agent",
+        commandId: "command-uncertain",
+        ownerId: "user-1",
+        hostOrigin: "https://aura.example",
+        content: "Check the deploy",
+        action: null,
+        agentId: "agent-1",
+        projectId: "proj-1",
+        sessionId: "session-1",
+        originallyStartedNewSession: false,
+        createdAt: 10,
+        attempts: 1,
+        nextAttemptAt: 20,
+        accepted: true,
+        executionStatus: "unconfirmed",
+      }],
+      hydrated: true,
+    });
+    renderBanner();
+    expect(screen.getByRole("button", {
+      name: "1 agent run unconfirmed. Open unconfirmed agent run",
+    })).toBeInTheDocument();
+  });
+
   it("does not duplicate activity for the conversation already on screen", () => {
     useAgentAttentionStore.setState({
       pendingApprovals: {},

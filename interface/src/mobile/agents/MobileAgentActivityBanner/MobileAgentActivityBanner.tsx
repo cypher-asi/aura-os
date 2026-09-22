@@ -88,8 +88,17 @@ export function MobileAgentActivityBanner() {
     );
     const waitingCommands = commands
       .map((command) => ({ command, route: commandRoute(command) }))
-      .filter(({ route }) => !isAgentSessionRouteCurrent(route, currentUrl))
-      .sort((a, b) => a.command.createdAt - b.command.createdAt);
+      .filter(({ command, route }) =>
+        !isAgentSessionRouteCurrent(route, currentUrl) &&
+        (!command.accepted || command.executionStatus === "unconfirmed" ||
+          command.executionStatus === "failed"))
+      .sort((a, b) => {
+        const rank = (command: PendingChatCommand) =>
+          command.executionStatus === "failed" ? 0 :
+          command.executionStatus === "unconfirmed" ? 1 : 2;
+        return rank(a.command) - rank(b.command) ||
+          a.command.createdAt - b.command.createdAt;
+      });
     const runs = Object.values(activeRuns)
       .filter(
         (item): item is AgentActiveRunItem => Boolean(
@@ -102,7 +111,11 @@ export function MobileAgentActivityBanner() {
 
     const inputCount = inputs.length;
     const approvalCount = approvals.length;
-    const waitingCount = waitingCommands.length;
+    const waitingCount = waitingCommands.filter(({ command }) => !command.accepted).length;
+    const unconfirmedCount = waitingCommands.filter(({ command }) =>
+      command.executionStatus === "unconfirmed").length;
+    const failedCount = waitingCommands.filter(({ command }) =>
+      command.executionStatus === "failed").length;
     const runCount = runs.length;
     const currentActivity = runs[0]?.activity;
     const activeSubagentCount = runs.reduce(
@@ -113,6 +126,8 @@ export function MobileAgentActivityBanner() {
       countLabel(inputCount, "answer needed", "answers needed"),
       countLabel(approvalCount, "approval waiting", "approvals waiting"),
       countLabel(waitingCount, "message waiting to send", "messages waiting to send"),
+      countLabel(unconfirmedCount, "agent run unconfirmed", "agent runs unconfirmed"),
+      countLabel(failedCount, "agent run failed", "agent runs failed"),
       countLabel(runCount, "agent working", "agents working"),
       countLabel(activeSubagentCount, "child agent active", "child agents active"),
       currentActivity ?? null,
@@ -136,10 +151,13 @@ export function MobileAgentActivityBanner() {
       };
     }
     if (waitingCommands[0]) {
+      const firstStatus = waitingCommands[0].command.executionStatus;
       return {
         route: waitingCommands[0].route ?? "/agents",
         label: labels.join(" · "),
-        action: "Open pending message",
+        action: firstStatus === "failed" ? "Open failed agent run" :
+          firstStatus === "unconfirmed" ? "Open unconfirmed agent run" :
+          "Open pending message",
         kind: "outbox" as const,
       };
     }

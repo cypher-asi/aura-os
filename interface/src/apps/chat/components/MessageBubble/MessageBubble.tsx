@@ -679,6 +679,10 @@ export const MessageBubble = memo(function MessageBubble({
                 ? "Sending…"
                 : message.deliveryStatus === "retrying"
                   ? "Waiting to resend"
+                  : message.deliveryStatus === "unconfirmed"
+                    ? "Saved, agent run unconfirmed"
+                    : message.deliveryStatus === "executionFailed"
+                      ? "Saved, agent run failed"
                   : message.deliveryStatus === "cancelled"
                     ? "Canceled"
                     : "Not sent"}

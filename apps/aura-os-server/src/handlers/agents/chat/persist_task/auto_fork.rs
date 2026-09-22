@@ -161,6 +161,7 @@ mod tests {
     async fn maybe_spawn_auto_fork_marker_increments_triggered_counter_when_over_threshold() {
         let metrics = Arc::new(StabilityMetrics::new());
         let extras = ChatPersistTaskExtras {
+            client_command_id: None,
             http_client: reqwest::Client::new(),
             router_url: "http://localhost:9999".to_string(),
             auto_fork_threshold: 0.8,
@@ -209,6 +210,7 @@ mod tests {
     async fn maybe_spawn_auto_fork_marker_skips_increment_when_below_threshold() {
         let metrics = Arc::new(StabilityMetrics::new());
         let extras = ChatPersistTaskExtras {
+            client_command_id: None,
             http_client: reqwest::Client::new(),
             router_url: "http://localhost:9999".to_string(),
             auto_fork_threshold: 0.8,

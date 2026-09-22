@@ -275,8 +275,9 @@ The first Aura slice now implements that boundary:
 - Regular project and standalone-agent chat now enqueue the request intent in an IndexedDB outbox
   before opening the POST. The authenticated shell drains retryable commands on boot, connectivity
   restoration, and foreground using the original command id, never repeats `new_session=true`, and
-  removes an entry only after the persistence receipt. Entries are user- and environment-scoped,
-  bounded to 50, expire after 24 hours, and are never mirrored into localStorage. Validation,
+  keeps accepted commands until the server confirms a durable terminal marker. Unaccepted entries
+  expire after 24 hours; accepted entries remain available for seven days. Entries are user- and
+  environment-scoped, bounded to 50, and never mirrored into localStorage. Validation,
   permission, and credit failures are removed instead of surprising the user with a later send.
   Media-generation requests are intentionally outside this first outbox slice.
 - Attachment-bearing sends use that same outbox and replay the exact attachment payload after a
@@ -339,6 +340,18 @@ The first Aura slice now implements that boundary:
   longer mounted, users can still see unconfirmed prompts, reopen the exact canonical project or
   standalone-agent session, retry with the original command id, or remove future replay attempts.
   A mobile browser test covers this across a full navigation away from the conversation.
+- Accepted project and standalone-agent chat commands now remain in the device outbox after their
+  save receipt and are checked again with the same command id after reconnecting. The server writes
+  a `chat_command_terminal` storage event after the persistence drain finishes, and marks success
+  only when terminal assistant history was persisted;
+  replay returns `attached`, `completed`, `failed`, or `unconfirmed` execution status and no longer
+  fabricates a `done` SSE when no live stream can be attached. A terminated in-memory stream is
+  classified from storage rather than advertised as still running. Mobile surfaces a scoped
+  warning for saved-but-unconfirmed execution with a Check again action, and retains a saved-but-
+  failed run for review rather than silently removing it. Unit tests cover the terminal marker,
+  replay receipt, and accepted-command outbox lifecycle; Android restart/real-backend QA remains.
+  Status checks for commands already acknowledged by the server also assert prior acceptance; if
+  storage cannot find that command, Aura fails closed instead of opening a duplicate harness turn.
 
 Next: formalize `runtimeId`/environment ownership in session metadata and move accepted command
 execution behind a durable status/worker boundary. Verify configured FCM delivery on production
@@ -348,12 +361,12 @@ environment-owned turn instead of relying on an in-memory channel. Do not make t
 execution proxy or present an unacknowledged prompt as accepted work.
 
 The remaining command-recovery gap is concrete: Aura persists a user-message event before opening
-the harness turn, and replay can find that event after a restart, but the live command receipt and
-turn executor are in memory. A replay with no attachable stream currently returns a `done` SSE
-without proving that a terminal assistant/error event was persisted. If the server exited between
-the user-message write and the turn's terminal event, mobile can see a saved prompt whose execution
-status is unknown. The next slice needs durable accepted/running/terminal state and a startup or
-on-demand reconciliation path; an empty `done` response must not be treated as proof of completion.
+the harness turn, and replay can find that event after a restart, but the executor is in memory.
+The new durable terminal marker makes an interrupted run visibly unconfirmed, not resumable. If the
+server exits between the user-message write and the turn's terminal event, no worker reconstructs
+the original command payload or execution. The next slice needs a durable accepted/running command
+record with an environment-owned startup/on-demand reconciler or worker; `unconfirmed` is truthful
+recovery UX, not proof the agent completed the requested work.
 
 Remote source-control inspection now has that real cross-service addition in branches: the Harness
 pod exposes bounded, sandbox-scoped, read-only Git status/diff; Swarm verifies agent ownership and

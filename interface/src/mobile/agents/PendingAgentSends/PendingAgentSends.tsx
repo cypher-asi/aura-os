@@ -31,6 +31,13 @@ function commandPreview(command: PendingChatCommand): string {
   return content.length <= 72 ? content : `${content.slice(0, 71)}…`;
 }
 
+function commandStatus(command: PendingChatCommand): string {
+  if (command.executionStatus === "failed") return "Agent run failed";
+  if (command.executionStatus === "unconfirmed") return "Agent run unconfirmed";
+  if (command.accepted) return "Checking agent run";
+  return "Waiting to send";
+}
+
 export function PendingAgentSends() {
   const navigate = useNavigate();
   const commands = useChatCommandOutboxStore((state) => state.commands);
@@ -50,9 +57,9 @@ export function PendingAgentSends() {
       <div className={styles.header}>
         <div>
           <div className={styles.title}>
-            {commands.length} {commands.length === 1 ? "message" : "messages"} waiting
+            {commands.length} {commands.length === 1 ? "message" : "messages"} to check
           </div>
-          <div className={styles.subtitle}>Saved on this device until Aura confirms delivery.</div>
+          <div className={styles.subtitle}>Saved on this device until Aura confirms the agent run.</div>
         </div>
       </div>
       <div className={styles.list}>
@@ -72,8 +79,9 @@ export function PendingAgentSends() {
                 <span className={styles.preview}>{preview}</span>
                 <ExternalLink size={14} aria-hidden="true" />
               </button>
+              <div className={styles.status} role="status">{commandStatus(command)}</div>
               <div className={styles.actions}>
-                <button
+                {command.executionStatus !== "failed" && <button
                   type="button"
                   className={styles.action}
                   disabled={isBusy}
@@ -81,11 +89,11 @@ export function PendingAgentSends() {
                     command.commandId,
                     () => retryChatCommandNow(command.commandId),
                   )}
-                  aria-label={`Retry now: ${preview}`}
+                  aria-label={`${command.accepted ? "Check run" : "Retry now"}: ${preview}`}
                 >
                   <RefreshCw size={14} aria-hidden="true" />
-                  Retry
-                </button>
+                  {command.accepted ? "Check" : "Retry"}
+                </button>}
                 <button
                   type="button"
                   className={styles.action}
@@ -94,10 +102,10 @@ export function PendingAgentSends() {
                     command.commandId,
                     () => cancelChatCommandReplay(command.commandId),
                   )}
-                  aria-label={`Stop retrying: ${preview}`}
+                  aria-label={`${command.accepted ? "Dismiss run status" : "Stop retrying"}: ${preview}`}
                 >
                   <X size={14} aria-hidden="true" />
-                  Remove
+                  {command.accepted ? "Dismiss" : "Remove"}
                 </button>
               </div>
             </article>

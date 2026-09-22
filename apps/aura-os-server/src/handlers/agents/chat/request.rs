@@ -4,11 +4,22 @@
 use aura_os_core::SessionEvent;
 use serde::{Deserialize, Serialize};
 
-use super::constants::{HEADER_CHAT_COMMAND_REPLAY, MAX_AGENT_HISTORY_WINDOW_LIMIT};
+use super::constants::{
+    HEADER_CHAT_COMMAND_PREVIOUSLY_ACCEPTED, HEADER_CHAT_COMMAND_REPLAY,
+    MAX_AGENT_HISTORY_WINDOW_LIMIT,
+};
 
 pub(super) fn header_indicates_command_replay(headers: &axum::http::HeaderMap) -> bool {
     headers
         .get(HEADER_CHAT_COMMAND_REPLAY)
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        == Some("1")
+}
+
+pub(super) fn header_indicates_previously_accepted(headers: &axum::http::HeaderMap) -> bool {
+    headers
+        .get(HEADER_CHAT_COMMAND_PREVIOUSLY_ACCEPTED)
         .and_then(|value| value.to_str().ok())
         .map(str::trim)
         == Some("1")
@@ -101,7 +112,7 @@ pub(super) fn apply_cursor_filter(
 
 #[cfg(test)]
 mod command_replay_header_tests {
-    use super::header_indicates_command_replay;
+    use super::{header_indicates_command_replay, header_indicates_previously_accepted};
     use axum::http::HeaderMap;
 
     #[test]
@@ -112,5 +123,18 @@ mod command_replay_header_tests {
         assert!(header_indicates_command_replay(&headers));
         headers.insert("x-aura-command-replay", "true".parse().unwrap());
         assert!(!header_indicates_command_replay(&headers));
+    }
+
+    #[test]
+    fn previously_accepted_assertion_requires_explicit_one() {
+        let mut headers = HeaderMap::new();
+        assert!(!header_indicates_previously_accepted(&headers));
+        headers.insert("x-aura-command-previously-accepted", "1".parse().unwrap());
+        assert!(header_indicates_previously_accepted(&headers));
+        headers.insert(
+            "x-aura-command-previously-accepted",
+            "true".parse().unwrap(),
+        );
+        assert!(!header_indicates_previously_accepted(&headers));
     }
 }
