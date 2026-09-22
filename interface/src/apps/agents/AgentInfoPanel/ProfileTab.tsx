@@ -93,8 +93,10 @@ function MobileRemoteRuntimeSection({
     return null;
   }
 
-  const actions = remoteStateError && remoteStateRecoverable
-    ? [{ action: "recover" as const, label: "Recovery", primary: true, danger: true }]
+  const actions = remoteStateError
+    ? remoteStateRecoverable
+      ? [{ action: "recover" as const, label: "Recovery", primary: true, danger: true }]
+      : []
     : vmState
       ? getActionsForState(vmState.state)
       : [];
@@ -151,6 +153,12 @@ function MobileRemoteRuntimeSection({
                 ? (pendingRecovery ? "Recovery requested. Starting up…" : provisioningPhaseLabel(vmState))
                 : "Shutting down…"}
             </Text>
+          ) : null}
+          {remoteStateError ? (
+            <div className={`${styles.mobileStatusMessage} ${styles.mobileStatusWarning}`} role="alert">
+              <AlertTriangle size={12} className={styles.mobileStatusRowIcon} />
+              <Text size="xs" variant="muted">{remoteStateError}</Text>
+            </div>
           ) : null}
           {vmState.error_message ? (
             <div className={`${styles.mobileStatusMessage} ${styles.mobileStatusWarning}`}>

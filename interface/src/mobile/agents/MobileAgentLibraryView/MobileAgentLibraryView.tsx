@@ -6,7 +6,7 @@ import { useAgents } from "../../../apps/agents/stores";
 import { RecallModal } from "../../../apps/chat-app/components/RecallModal/RecallModal";
 import type { RecallResultMetadata } from "../../../apps/chat-app/components/RecallModal/RecallModal";
 import { PanelSearch } from "../../../components/PanelSearch";
-import { deriveSessionLabel } from "../../../components/SessionsList";
+import { deriveSessionLabel, type AnnotatedSession } from "../../../components/SessionsList";
 import { useSidebarSearch } from "../../../hooks/use-sidebar-search";
 import type { RecallSearchResult } from "../../../shared/api/agents";
 import { buildAgentSessionRoute } from "../../../shared/lib/agent-session-route";
@@ -20,6 +20,8 @@ import {
 import { PendingAgentSends } from "../PendingAgentSends";
 import styles from "./MobileAgentLibraryView.module.css";
 
+const EMPTY_SESSIONS: AnnotatedSession[] = [];
+
 export function MobileAgentLibraryView() {
   const { query, setQuery } = useSidebarSearch("agents");
   const navigate = useNavigate();
@@ -27,7 +29,7 @@ export function MobileAgentLibraryView() {
   const projects = useProjectsListStore((state) => state.projects);
   const refreshProjects = useProjectsListStore((state) => state.refreshProjects);
   const sessions = useSessionsListStore(
-    (state) => state.sessionsBySurface[USER_SESSIONS_SURFACE_KEY] ?? [],
+    (state) => state.sessionsBySurface[USER_SESSIONS_SURFACE_KEY] ?? EMPTY_SESSIONS,
   );
   const { loadUserSessions } = useSessionsListActions();
   const [recallOpen, setRecallOpen] = useState(false);

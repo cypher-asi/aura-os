@@ -188,6 +188,33 @@ describe("ProfileTab", () => {
     expect(mockHandleAction).toHaveBeenCalledWith("recover");
   });
 
+  it("hides stale runtime controls after a non-recoverable state error", () => {
+    mockUseRemoteAgentVm.mockReturnValue({
+      vmState: {
+        state: "error",
+        uptime_seconds: 3660,
+        active_sessions: 2,
+        endpoint: "vm.example.com",
+        runtime_version: "1.2.3",
+      },
+      remoteStateError: "Your session expired. Sign in again.",
+      remoteStateRecoverable: false,
+      recoveryNotice: null,
+      pendingRecovery: false,
+      actionLoading: null,
+      actionError: null,
+      handleAction: mockHandleAction,
+    });
+
+    render(<ProfileTab {...baseProps} isMobileStandalone />);
+
+    expect(screen.getByText("Your session expired. Sign in again.")).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Remote runtime controls" }))
+      .not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Recovery" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Stop" })).not.toBeInTheDocument();
+  });
+
   it("keeps remote runtime controls read-only for an agent the viewer does not own", () => {
     render(<ProfileTab {...baseProps} isOwnAgent={false} isMobileStandalone />);
 
