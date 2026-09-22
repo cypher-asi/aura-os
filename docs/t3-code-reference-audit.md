@@ -109,6 +109,10 @@ The first Aura slice now implements that boundary:
   switching remote agents at the same path, and a physical touch refresh request without 320px
   overflow. QA also found 39px file rows and misleading temporary-outage copy on 403; the follow-up
   raises rows to 44px and distinguishes denied, expired-auth, and missing-workspace responses.
+  Android WebView retest on `bb7abe0fb` measured a 44px file row and confirmed a touch selected the
+  file route; injected 401/403/404 responses removed the prior file row, showed distinct sanitized
+  copy, and did not overflow at 320px. Those injected failures verify client behavior, not live
+  production authorization or pod availability.
 - The agent library warms and displays recent shared conversation previews rather than only profile
   biography text. Its mobile search now matches agent identity/profile fields, live attention, and
   those cross-device conversation previews, with an explicit no-results state instead of a blank
