@@ -424,6 +424,11 @@ export function connectEventSocket() {
       initialDelay: 1000,
       maxDelay: 30000,
       backoffMultiplier: 2,
+      // A mobile WebView can thaw with a socket that still reports OPEN even
+      // though the OS discarded its network path. Replace it immediately on
+      // foreground and ask the server to replay from `_lastSeq` rather than
+      // waiting through the normal exponential backoff.
+      resumeOnForeground: true,
     },
     (data: string) => {
       try {
@@ -475,7 +480,6 @@ export function connectEventSocket() {
           (window as unknown as { __AURA_DEBUG_CROSS_AGENT__?: unknown })
             .__AURA_DEBUG_CROSS_AGENT__
         ) {
-          // eslint-disable-next-line no-console -- gated behind window flag
           console.debug("[aura.cross-agent] ws raw", { raw, parsed: event });
         }
         handleSocketEngineEvent(event);

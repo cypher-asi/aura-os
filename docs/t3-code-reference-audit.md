@@ -94,6 +94,9 @@ The first Aura slice now implements that boundary:
   reachability. Local and remote runtime failures use truthful read-only copy, preserve the runtime
   identity in the footer, and offer an immediate status recheck; disconnected local clients also
   expose Host settings without leaving the conversation.
+- The shared event connection now replaces even an apparently-open WebSocket when the app returns
+  to the foreground. It mints a fresh connection ticket and resumes from the last event cursor, so
+  mobile does not wait through exponential backoff to learn that an agent completed or failed.
 
 Next: formalize `runtimeId`/environment ownership in session metadata, add server command receipts
 before persisting or replaying a native prompt outbox, and deliver push deep links for completion,
