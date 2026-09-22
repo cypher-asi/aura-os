@@ -32,7 +32,11 @@ function reset() {
   useProfileStatusStore.setState({ statuses: {}, machineTypes: {} });
   useChatHistoryStore.setState({ previewLastMessages: {} });
   useAgentStore.setState({ pinnedAgentIds: new Set<string>() });
-  useAgentAttentionStore.setState({ pendingApprovals: {}, hydrated: false });
+  useAgentAttentionStore.setState({
+    pendingApprovals: {},
+    activeRuns: {},
+    hydrated: false,
+  });
 }
 
 function modelFor(includePreview = true) {
@@ -168,6 +172,30 @@ describe("useAgentRowModels", () => {
       toolName: "run_command",
       route: "/agents/agent-1?session=session-2",
       startedAt: 20,
+    });
+  });
+
+  it("projects a desktop-started run as busy and directly navigable", () => {
+    reset();
+    useAgentAttentionStore.setState({
+      hydrated: true,
+      activeRuns: {
+        "run-1": {
+          agentId: "agent-1",
+          projectId: "project-1",
+          agentInstanceId: "instance-1",
+          sessionId: "session-1",
+          route: "/projects/project-1/agents/instance-1?session=session-1",
+          startedAt: 10,
+        },
+      },
+    });
+
+    expect(modelFor()).toMatchObject({
+      busy: true,
+      activeRun: {
+        route: "/projects/project-1/agents/instance-1?session=session-1",
+      },
     });
   });
 });

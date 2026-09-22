@@ -359,6 +359,8 @@ const DISPATCH: Partial<Record<EventType, EngineHandler>> = {
   [EventType.LoopActivityChanged]: handleLoopActivityChanged,
   [EventType.LoopEnded]: handleLoopEnded,
   [EventType.SessionSummaryUpdated]: handleSessionSummaryUpdated,
+  [EventType.UserMessage]: handleAgentAttention,
+  [EventType.AssistantMessageEnd]: handleAgentAttention,
   [EventType.ToolApprovalPrompt]: handleAgentAttention,
   [EventType.ToolApprovalResolved]: handleAgentAttention,
 };

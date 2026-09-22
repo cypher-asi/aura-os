@@ -202,12 +202,32 @@ describe("AgentConversationRow", () => {
           toolName: "write_file",
           route: "/agents/agent-1?session=session-1",
         }}
+        activeRun={{ route: "/agents/agent-1?session=session-1" }}
         {...noopHandlers}
       />,
     );
 
     expect(screen.getByText("Needs you")).toBeInTheDocument();
     expect(screen.getByText("Approval needed · write file")).toBeInTheDocument();
+    expect(screen.queryByText("Working")).not.toBeInTheDocument();
     expect(screen.getByRole("button")).toHaveAttribute("data-agent-attention", "approval");
+  });
+
+  it("surfaces a desktop-started run when no approval is pending", () => {
+    render(
+      <AgentConversationRow
+        agent={baseAgent}
+        lastMessage={lastMessage}
+        showMetadataOnly
+        isSelected={false}
+        busy
+        activeRun={{ route: "/agents/agent-1?session=session-1" }}
+        {...noopHandlers}
+      />,
+    );
+
+    expect(screen.getByText("Working")).toBeInTheDocument();
+    expect(screen.getByText("Agent is working · Tap to follow")).toBeInTheDocument();
+    expect(screen.getByRole("button")).toHaveAttribute("data-agent-activity", "running");
   });
 });

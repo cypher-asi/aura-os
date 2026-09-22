@@ -1,5 +1,5 @@
 import { memo, useEffect } from "react";
-import { Pin, ShieldAlert } from "lucide-react";
+import { Activity, Pin, ShieldAlert } from "lucide-react";
 import { formatChatTime } from "../../../shared/utils/format";
 import { stripEmojis } from "../../../shared/utils/text-normalize";
 import type { Agent } from "../../../shared/types";
@@ -43,6 +43,9 @@ interface AgentConversationRowProps {
     toolName: string;
     route?: string;
   };
+  activeRun?: {
+    route?: string;
+  };
   onClick: () => void;
   onContextMenu: (e: React.MouseEvent) => void;
   onMouseEnter: () => void;
@@ -59,6 +62,7 @@ function AgentConversationRowBase({
   loopActivity = null,
   isPinned = false,
   attention,
+  activeRun,
   onClick,
   onContextMenu,
   onMouseEnter,
@@ -72,9 +76,11 @@ function AgentConversationRowBase({
   const fallback = agentRole || "Open this agent";
   const preview = attention
     ? `${attention.count > 1 ? `${attention.count} approvals` : "Approval needed"} · ${attention.toolName.replaceAll("_", " ")}`
-    : showMetadataOnly
-      ? agentDescription || fallback
-      : messagePreview || agentDescription || fallback;
+    : activeRun
+      ? "Agent is working · Tap to follow"
+      : showMetadataOnly
+        ? agentDescription || fallback
+        : messagePreview || agentDescription || fallback;
   const isCeo = isSuperAgent(agent);
 
   // Defer the avatar image to the frame after the row paints so the heavy
@@ -98,6 +104,7 @@ function AgentConversationRowBase({
       data-agent-agent-role={agent.role}
       data-agent-selected={isSelected ? "true" : "false"}
       data-agent-attention={attention?.kind ?? "none"}
+      data-agent-activity={activeRun ? "running" : "idle"}
     >
       <Avatar
         avatarUrl={avatarUrl}
@@ -126,6 +133,11 @@ function AgentConversationRowBase({
                 <ShieldAlert size={11} aria-hidden="true" />
                 Needs you
               </span>
+            ) : activeRun ? (
+              <span className={styles.activityBadge}>
+                <Activity size={11} aria-hidden="true" />
+                Working
+              </span>
             ) : null}
           </span>
           <span className={styles.time}>
@@ -137,7 +149,15 @@ function AgentConversationRowBase({
             {formatChatTime(agent.updated_at)}
           </span>
         </span>
-        <span className={attention ? styles.attentionPreview : styles.preview}>{preview}</span>
+        <span
+          className={attention
+            ? styles.attentionPreview
+            : activeRun
+              ? styles.activityPreview
+              : styles.preview}
+        >
+          {preview}
+        </span>
       </span>
     </button>
   );

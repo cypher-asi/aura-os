@@ -122,8 +122,8 @@ function AgentRow({
   onContextMenu,
 }: AgentRowProps) {
   const handleClick = useCallback(
-    () => onSelect(agent.agent_id, model?.attention?.route),
-    [onSelect, agent.agent_id, model?.attention?.route],
+    () => onSelect(agent.agent_id, model?.attention?.route ?? model?.activeRun?.route),
+    [onSelect, agent.agent_id, model?.attention?.route, model?.activeRun?.route],
   );
   const handleMouseEnter = useCallback(() => onHover(agent.agent_id), [onHover, agent.agent_id]);
 
@@ -139,6 +139,7 @@ function AgentRow({
       loopActivity={model?.loopActivity ?? null}
       isPinned={model?.isPinned}
       attention={model?.attention}
+      activeRun={model?.activeRun}
       onClick={handleClick}
       onContextMenu={onContextMenu}
       onMouseEnter={handleMouseEnter}

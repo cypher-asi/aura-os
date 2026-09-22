@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { listPendingToolApprovals } = vi.hoisted(() => ({
+const { listPendingToolApprovals, listActiveStreams } = vi.hoisted(() => ({
   listPendingToolApprovals: vi.fn(),
+  listActiveStreams: vi.fn(),
 }));
 
 vi.mock("../shared/api/streams", () => ({
-  streamsApi: { listPendingToolApprovals },
+  streamsApi: { listPendingToolApprovals, listActiveStreams },
 }));
 
 import {
@@ -36,6 +37,7 @@ describe("agent-attention-store", () => {
   beforeEach(() => {
     clearAgentAttention();
     listPendingToolApprovals.mockReset();
+    listActiveStreams.mockReset().mockResolvedValue({ streams: [] });
   });
 
   it("tracks and resolves a live approval with its canonical route", () => {
@@ -80,6 +82,65 @@ describe("agent-attention-store", () => {
       .toBe("/agents/agent-2?session=session-2");
   });
 
+  it("hydrates and follows a desktop-started active run", async () => {
+    listPendingToolApprovals.mockResolvedValue({ approvals: [] });
+    listActiveStreams.mockResolvedValue({
+      streams: [{
+        attach_id: "attach-1",
+        kind: "chat_turn",
+        scope: {
+          agent_id: "agent-1",
+          project_id: "project-1",
+          agent_instance_id: "instance-1",
+          session_id: "session-1",
+        },
+        latest_seq: 4,
+        terminated: false,
+        started_at_ms: 50,
+      }],
+    });
+
+    await hydrateAgentAttention();
+
+    expect(Object.values(useAgentAttentionStore.getState().activeRuns)[0]).toMatchObject({
+      agentId: "agent-1",
+      route: "/projects/project-1/agents/instance-1?session=session-1",
+    });
+  });
+
+  it("tracks live run start and completion events", () => {
+    applyAgentAttentionEvent(event(EventType.UserMessage, { text: "keep going" }));
+    expect(Object.values(useAgentAttentionStore.getState().activeRuns)).toHaveLength(1);
+
+    applyAgentAttentionEvent(event(EventType.AssistantMessageEnd, {}));
+    expect(Object.values(useAgentAttentionStore.getState().activeRuns)).toHaveLength(0);
+  });
+
+  it("accepts a newer turn in the same session from a reconnect snapshot", async () => {
+    applyAgentAttentionEvent(event(EventType.UserMessage, { text: "first turn" }));
+    applyAgentAttentionEvent(event(EventType.AssistantMessageEnd, {}));
+    listPendingToolApprovals.mockResolvedValue({ approvals: [] });
+    listActiveStreams.mockResolvedValue({
+      streams: [{
+        attach_id: "attach-new-turn",
+        kind: "chat_turn",
+        scope: {
+          agent_id: "agent-1",
+          project_id: "project-1",
+          agent_instance_id: "instance-1",
+          session_id: "session-1",
+        },
+        latest_seq: 1,
+        terminated: false,
+        started_at_ms: 100,
+      }],
+    });
+
+    await hydrateAgentAttention();
+
+    expect(Object.values(useAgentAttentionStore.getState().activeRuns)).toHaveLength(1);
+  });
+
   it("does not restore a previous account's snapshot after logout", async () => {
     let resolveFirst: ((value: { approvals: [] }) => void) | undefined;
     listPendingToolApprovals
@@ -87,6 +148,7 @@ describe("agent-attention-store", () => {
         resolveFirst = resolve;
       }))
       .mockResolvedValueOnce({ approvals: [] });
+    listActiveStreams.mockResolvedValue({ streams: [] });
 
     const staleHydration = hydrateAgentAttention();
     clearAgentAttention();

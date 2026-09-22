@@ -35,6 +35,9 @@ export interface AgentRowModel {
     toolName: string;
     route?: string;
   };
+  activeRun?: {
+    route?: string;
+  };
 }
 
 interface UseAgentRowModelsOptions {
@@ -84,6 +87,7 @@ export function useAgentRowModels(
   const streamingAgentInstanceIds = useSidekickStore((s) => s.streamingAgentInstanceIds);
   const instanceIdsByTemplateId = useProjectsListStore((s) => s.instanceIdsByTemplateId);
   const pendingApprovals = useAgentAttentionStore((s) => s.pendingApprovals);
+  const activeRuns = useAgentAttentionStore((s) => s.activeRuns);
 
   // One pass over the (small) live-loop map groups rows by template agent id so
   // per-agent aggregation below is an O(1) lookup instead of an O(loops) scan.
@@ -129,6 +133,18 @@ export function useAgentRowModels(
     return result;
   }, [pendingApprovals]);
 
+  const activeRunByAgentId = useMemo(() => {
+    const result = new Map<string, { route?: string; startedAt: number }>();
+    for (const item of Object.values(activeRuns)) {
+      if (!item) continue;
+      const existing = result.get(item.agentId);
+      if (!existing || item.startedAt > existing.startedAt) {
+        result.set(item.agentId, { route: item.route, startedAt: item.startedAt });
+      }
+    }
+    return result;
+  }, [activeRuns]);
+
   return useMemo(() => {
     const models = new Map<string, AgentRowModel>();
     for (const agent of agents) {
@@ -144,11 +160,16 @@ export function useAgentRowModels(
       models.set(id, {
         status,
         isLocal,
-        busy: hasActiveLoop || standaloneStreaming || projectStreaming,
+        busy:
+          hasActiveLoop ||
+          standaloneStreaming ||
+          projectStreaming ||
+          activeRunByAgentId.has(id),
         loopActivity,
         lastMessage: includePreview ? previewLastMessages[agentHistoryKey(id)] : undefined,
         isPinned: agent.is_pinned || pinnedAgentIds.has(id),
         attention: attentionByAgentId.get(id),
+        activeRun: activeRunByAgentId.get(id),
       });
     }
     return models;
@@ -164,5 +185,6 @@ export function useAgentRowModels(
     instanceIdsByTemplateId,
     includePreview,
     attentionByAgentId,
+    activeRunByAgentId,
   ]);
 }

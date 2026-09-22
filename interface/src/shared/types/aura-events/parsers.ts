@@ -54,7 +54,7 @@ export function parseAuraEvent(
   return {
     event_id: crypto.randomUUID(),
     session_id: context.session_id ?? (d.session_id as string) ?? "",
-    user_id: context.user_id ?? "",
+    user_id: context.user_id ?? (d.user_id as string) ?? "",
     agent_id: context.agent_id ?? (d.agent_id as string) ?? "",
     project_agent_id: context.project_agent_id ?? rawProjectAgentId ?? null,
     sender: context.sender ?? (eventType === EventType.UserMessage ? "user" : "agent"),

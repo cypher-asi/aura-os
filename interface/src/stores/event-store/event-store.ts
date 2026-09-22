@@ -275,6 +275,8 @@ let _engineEventFrame: number | null = null;
 const queuedEngineEvents: AuraEvent[] = [];
 
 const IMMEDIATE_ENGINE_EVENTS = new Set<EventType>([
+  EventType.UserMessage,
+  EventType.AssistantMessageEnd,
   EventType.TaskStarted,
   EventType.TaskCompleted,
   EventType.TaskFailed,

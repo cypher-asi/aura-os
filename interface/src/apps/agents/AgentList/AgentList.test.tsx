@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   entries: {} as Record<string, unknown>,
   previewLastMessages: {} as Record<string, unknown>,
   attentionRoute: null as string | null,
+  activeRunRoute: null as string | null,
   useChatHistoryStore: Object.assign(
     (selector: (state: {
       entries: Record<string, unknown>;
@@ -305,6 +306,9 @@ vi.mock("./use-agent-row-models", () => ({
               route: mocks.attentionRoute,
             }
           : undefined,
+        activeRun: mocks.activeRunRoute
+          ? { route: mocks.activeRunRoute }
+          : undefined,
       });
     }
     return map;
@@ -341,6 +345,7 @@ describe("AgentList", () => {
     mocks.entries = {};
     mocks.previewLastMessages = {};
     mocks.attentionRoute = null;
+    mocks.activeRunRoute = null;
     mocks.sessionsBySurface = {};
     mocks.loadAgentSessions = vi.fn(async () => {});
     mocks.storeFetchAgents = vi.fn();
@@ -406,6 +411,18 @@ describe("AgentList", () => {
     await user.click(screen.getByRole("button", { name: "Builder Bot" }));
 
     expect(mocks.navigate).toHaveBeenCalledWith(mocks.attentionRoute);
+  });
+
+  it("opens the exact desktop-started session that is still working", async () => {
+    mocks.useParams.mockReturnValue({ agentId: undefined });
+    mocks.activeRunRoute =
+      "/projects/project-1/agents/instance-1?session=session-1";
+    const user = userEvent.setup();
+
+    render(<AgentList mode="mobile-library" />);
+    await user.click(screen.getByRole("button", { name: "Builder Bot" }));
+
+    expect(mocks.navigate).toHaveBeenCalledWith(mocks.activeRunRoute);
   });
 
   it("does not navigate when clicking the already selected agent", async () => {

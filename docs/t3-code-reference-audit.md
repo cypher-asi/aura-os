@@ -115,9 +115,14 @@ The first Aura slice now implements that boundary:
   resolution deltas, labels the affected persistent agent as `Needs you`, and opens the exact
   canonical session when tapped. This makes a desktop-started run actionable after a mobile cold
   start even if the original notification was missed.
-- Approval firehose events are now stamped with the authenticated owner and filtered during both
-  replay and live delivery. Legacy unscoped events retain their existing behavior, while new
-  account-scoped control signals cannot appear in another user's mobile agent list.
+- The same projection now discovers active desktop/web chat turns without mounting each chat,
+  labels the persistent agent as `Working`, and routes a tap to the exact running session. Live
+  user-message and assistant-end events keep the state current; approval state takes precedence
+  over running state, matching T3's operator-oriented agent-awareness hierarchy.
+- Chat lifecycle and approval firehose events are now stamped with the authenticated owner and
+  filtered during both replay and live delivery. Legacy unscoped events retain their existing
+  behavior, while new account-scoped control signals cannot appear in another user's mobile agent
+  list.
 
 Next: formalize `runtimeId`/environment ownership in session metadata, add server command receipts
 before persisting or replaying a native prompt outbox, and add device registration plus background

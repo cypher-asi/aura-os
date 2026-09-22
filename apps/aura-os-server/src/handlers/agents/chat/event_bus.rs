@@ -9,7 +9,7 @@
 //! `serde_json::json!` builders had drifted apart in the past
 //! (different field sets, casing, optional vs required) and the
 //! frontend matcher (Phase 5) keys on this exact wire shape, so the
-//! drift was a silent UI bug. Tests below pin the canonical 5-key
+//! drift was a silent UI bug. Tests below pin the canonical scoped
 //! payload.
 //!
 //! Tracing target across all WS-related logs is **`aura::ws`** —
@@ -30,9 +30,10 @@ use super::persist::ChatPersistCtx;
 /// `publish_assistant_message_end_event` produce **exactly** these
 /// keys; the structural-equality regression test in this module
 /// flags any future divergence between the two publishers. The
-/// frontend matcher (Phase 5) and the live-refresh hook
-/// (`useChatHistorySync`) both key on this shape, so adding or
-/// renaming a field here is a cross-repo wire change.
+/// `user_id` is ownership metadata consumed by the authenticated WS
+/// filter before delivery. The frontend matcher (Phase 5) and the
+/// live-refresh hook (`useChatHistorySync`) both key on this shape, so
+/// adding or renaming a field here is a cross-repo wire change.
 ///
 /// The three id fields are `Option<&str>` deliberately: callers may
 /// not have every id (e.g. project-scoped sessions have no org-level
@@ -52,6 +53,7 @@ use super::persist::ChatPersistCtx;
 struct ChatEventPayload<'a> {
     #[serde(rename = "type")]
     event_type: &'a str,
+    user_id: Option<&'a str>,
     session_id: &'a str,
     project_id: Option<&'a str>,
     project_agent_id: Option<&'a str>,
@@ -68,6 +70,7 @@ struct ChatEventPayload<'a> {
 /// reachable via this constructor).
 fn build_chat_event_payload(
     event_type: &str,
+    user_id: Option<&str>,
     session_id: &str,
     project_id: Option<&str>,
     project_agent_id: Option<&str>,
@@ -76,6 +79,7 @@ fn build_chat_event_payload(
 ) -> serde_json::Value {
     let payload = ChatEventPayload {
         event_type,
+        user_id,
         session_id,
         project_id,
         project_agent_id,
@@ -136,6 +140,7 @@ fn publish_chat_event(
     let session_id_str = ctx.session_id.to_string();
     let payload = build_chat_event_payload(
         event_type,
+        ctx.user_id.as_deref(),
         &session_id_str,
         project_id,
         project_agent_id,
@@ -239,6 +244,7 @@ pub(crate) fn publish_session_summary_updated_event(
 ) {
     let _ = bus.send(serde_json::json!({
         "type": "session_summary_updated",
+        "user_id": ctx.user_id,
         "session_id": ctx.session_id,
         "project_id": ctx.project_id,
         "project_agent_id": ctx.project_agent_id,
@@ -267,6 +273,7 @@ pub(super) fn publish_assistant_turn_progress_event(
 ) {
     let _ = bus.send(serde_json::json!({
         "type": "assistant_turn_progress",
+        "user_id": ctx.user_id,
         "message_id": message_id,
         "session_id": ctx.session_id,
         "project_id": ctx.project_id,
@@ -325,8 +332,7 @@ mod tests {
     }
 
     /// Pin the canonical wire shape for `user_message`. The Phase 5
-    /// frontend matcher keys on this exact field set; gaining a key
-    /// here ships a wire-shape change to the UI.
+    /// frontend matcher keys on this exact field set.
     #[tokio::test]
     async fn user_message_event_payload_shape_is_pinned() {
         let (tx, mut rx) = broadcast::channel::<serde_json::Value>(64);
@@ -363,8 +369,8 @@ mod tests {
         );
         assert_eq!(
             obj.len(),
-            5,
-            "canonical chat-event payload must have exactly five keys when \
+            6,
+            "canonical chat-event payload must have exactly six keys when \
              from_agent_id is absent (skip_serializing_if elides it); got: {:?}",
             obj.keys().collect::<Vec<_>>()
         );
@@ -380,7 +386,11 @@ mod tests {
         assert!(
             !obj.contains_key("from_agent_id"),
             "from_agent_id must be elided on regular user prompts so the wire shape \
-             matches the historical 5-key payload existing matchers expect"
+             remains stable for existing matchers"
+        );
+        assert_eq!(
+            obj.get("user_id").and_then(|v| v.as_str()),
+            Some("user-owner")
         );
     }
 
@@ -416,8 +426,8 @@ mod tests {
         );
         assert_eq!(
             obj.len(),
-            6,
-            "with from_agent_id set, canonical payload gains exactly one key (=6); got: {:?}",
+            7,
+            "with from_agent_id set, canonical payload gains exactly one key (=7); got: {:?}",
             obj.keys().collect::<Vec<_>>()
         );
     }
@@ -431,7 +441,8 @@ mod tests {
     /// path is only reachable via the typed-payload constructor.
     #[test]
     fn user_message_event_payload_serializes_missing_ids_as_null() {
-        let value = build_chat_event_payload("user_message", "sess-1", None, None, None, None);
+        let value =
+            build_chat_event_payload("user_message", None, "sess-1", None, None, None, None);
         let obj = value.as_object().expect("payload must be a JSON object");
 
         // Keys present...
@@ -447,11 +458,16 @@ mod tests {
             obj.contains_key("agent_id"),
             "agent_id must always be present"
         );
+        assert!(
+            obj.contains_key("user_id"),
+            "user_id must always be present"
+        );
 
         // ...with explicit JSON null values.
         assert_eq!(obj["project_id"], serde_json::Value::Null);
         assert_eq!(obj["project_agent_id"], serde_json::Value::Null);
         assert_eq!(obj["agent_id"], serde_json::Value::Null);
+        assert_eq!(obj["user_id"], serde_json::Value::Null);
 
         // The non-id fields are still well-formed.
         assert_eq!(
@@ -462,7 +478,7 @@ mod tests {
             obj["session_id"],
             serde_json::Value::String("sess-1".into())
         );
-        assert_eq!(obj.len(), 5);
+        assert_eq!(obj.len(), 6);
     }
 
     /// Structural-drift guard: the two canonical publishers must
