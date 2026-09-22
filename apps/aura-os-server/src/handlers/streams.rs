@@ -145,9 +145,27 @@ pub(crate) async fn respond_to_tool_approval(
         .find_chat_tool_approval(&session.user_id, &request_id)
         .ok_or_else(|| ApiError::not_found("live tool approval request not found"))?;
     stream
-        .respond_to_tool_approval(request_id, body.decision, body.remember)
+        .respond_to_tool_approval(request_id.clone(), body.decision, body.remember)
         .map_err(ApiError::bad_request)?;
+    let _ = state.event_broadcast.send(serde_json::json!({
+        "type": "tool_approval_resolved",
+        "user_id": session.user_id,
+        "request_id": request_id,
+    }));
     Ok(Json(serde_json::json!({ "accepted": true })))
+}
+
+/// `GET /api/streams/tool-approvals` — authoritative cold-start snapshot of
+/// unresolved requests across the caller's live chat turns.
+pub(crate) async fn list_pending_tool_approvals(
+    State(state): State<AppState>,
+    AuthSession(session): AuthSession,
+) -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "approvals": state
+            .live_streams
+            .list_pending_tool_approvals(&session.user_id),
+    }))
 }
 
 /// Build the SSE [`Event`] for a sequenced harness frame, using its

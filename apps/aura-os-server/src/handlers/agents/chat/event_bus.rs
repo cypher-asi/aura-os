@@ -201,6 +201,7 @@ pub(super) fn publish_tool_approval_prompt_event(
 ) {
     let _ = bus.send(serde_json::json!({
         "type": "tool_approval_prompt",
+        "user_id": ctx.user_id,
         "session_id": ctx.session_id,
         "project_id": ctx.project_id,
         "project_agent_id": ctx.project_agent_id,
@@ -312,6 +313,7 @@ mod tests {
                 "http://localhost:9999",
             )),
             jwt: "jwt".to_string(),
+            user_id: Some("user-owner".to_string()),
             session_id,
             project_agent_id: project_agent_id.to_string(),
             project_id: project_id.to_string(),
@@ -558,5 +560,6 @@ mod tests {
         assert_eq!(event["project_agent_id"], "instance-y");
         assert_eq!(event["agent_id"], "agent-z");
         assert_eq!(event["request_id"], "approval-1");
+        assert_eq!(event["user_id"], "user-owner");
     }
 }

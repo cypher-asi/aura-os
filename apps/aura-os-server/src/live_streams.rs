@@ -76,6 +76,11 @@ pub enum StreamKind {
 pub struct StreamScope {
     pub user_id: Option<String>,
     pub project_id: Option<String>,
+    /// Stable template-agent identity shared by desktop and mobile.
+    /// This is intentionally separate from `agent_instance_id`, which
+    /// addresses the project-local runtime instance.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_id: Option<String>,
     pub agent_instance_id: Option<String>,
     pub session_id: Option<String>,
     /// Originating parent `task` tool-use id for a
@@ -258,6 +263,60 @@ impl LiveStream {
         Ok(())
     }
 
+    fn pending_tool_approvals(&self) -> Vec<PendingToolApprovalSummary> {
+        let mut pending = HashMap::<String, PendingToolApprovalSummary>::new();
+        for value in self.events.snapshot_values() {
+            match value.get("type").and_then(|entry| entry.as_str()) {
+                Some("tool_approval_prompt") => {
+                    let Some(request_id) = value
+                        .get("request_id")
+                        .and_then(|entry| entry.as_str())
+                        .filter(|entry| !entry.is_empty())
+                    else {
+                        continue;
+                    };
+                    let Some(tool_name) = value
+                        .get("tool_name")
+                        .and_then(|entry| entry.as_str())
+                        .filter(|entry| !entry.is_empty())
+                    else {
+                        continue;
+                    };
+                    let agent_id = self.scope.agent_id.as_deref().or_else(|| {
+                        value
+                            .get("agent_id")
+                            .and_then(|entry| entry.as_str())
+                            .filter(|entry| !entry.is_empty())
+                    });
+                    let Some(agent_id) = agent_id else {
+                        continue;
+                    };
+                    pending.insert(
+                        request_id.to_string(),
+                        PendingToolApprovalSummary {
+                            request_id: request_id.to_string(),
+                            tool_name: tool_name.to_string(),
+                            agent_id: agent_id.to_string(),
+                            project_id: self.scope.project_id.clone(),
+                            agent_instance_id: self.scope.agent_instance_id.clone(),
+                            session_id: self.scope.session_id.clone(),
+                            started_at_ms: self.started_at_ms,
+                        },
+                    );
+                }
+                Some("tool_approval_resolved") => {
+                    if let Some(request_id) =
+                        value.get("request_id").and_then(|entry| entry.as_str())
+                    {
+                        pending.remove(request_id);
+                    }
+                }
+                _ => {}
+            }
+        }
+        pending.into_values().collect()
+    }
+
     /// Send a follow-up user message into the underlying run. Only
     /// possible while this stream still owns a live [`HarnessSession`]
     /// (i.e. it was registered via [`LiveStreamRegistry::register`] and
@@ -306,6 +365,18 @@ pub struct ActiveStreamSummary {
     pub scope: StreamScope,
     pub latest_seq: u64,
     pub terminated: bool,
+    pub started_at_ms: i64,
+}
+
+/// User-facing identity for an unresolved protected-tool request.
+#[derive(Clone, Debug, Serialize)]
+pub struct PendingToolApprovalSummary {
+    pub request_id: String,
+    pub tool_name: String,
+    pub agent_id: String,
+    pub project_id: Option<String>,
+    pub agent_instance_id: Option<String>,
+    pub session_id: Option<String>,
     pub started_at_ms: i64,
 }
 
@@ -501,6 +572,24 @@ impl LiveStreamRegistry {
                 matches.then(|| stream.clone())
             })
             .max_by_key(|stream| stream.started_at_ms)
+    }
+
+    /// Snapshot every unresolved protected-tool request owned by `user_id`.
+    pub fn list_pending_tool_approvals(&self, user_id: &str) -> Vec<PendingToolApprovalSummary> {
+        let mut approvals: Vec<_> = self
+            .inner
+            .iter()
+            .filter_map(|entry| {
+                let stream = entry.value();
+                (stream.kind == StreamKind::ChatTurn
+                    && !stream.is_terminated()
+                    && stream.scope.user_id.as_deref() == Some(user_id))
+                .then(|| stream.pending_tool_approvals())
+            })
+            .flatten()
+            .collect();
+        approvals.sort_by(|left, right| right.started_at_ms.cmp(&left.started_at_ms));
+        approvals
     }
 
     fn spawn_sweeper(self: Arc<Self>) {
@@ -968,6 +1057,7 @@ mod tests {
             StreamKind::ChatTurn,
             StreamScope {
                 user_id: Some("owner".to_string()),
+                agent_id: Some("template-agent-1".to_string()),
                 session_id: Some("desktop-session".to_string()),
                 ..Default::default()
             },
@@ -998,6 +1088,17 @@ mod tests {
                 .is_none(),
             "another account must not resolve the owner's approval"
         );
+        assert!(
+            registry
+                .list_pending_tool_approvals("someone-else")
+                .is_empty(),
+            "another account must not discover the owner's approval"
+        );
+        let pending = registry.list_pending_tool_approvals("owner");
+        assert_eq!(pending.len(), 1);
+        assert_eq!(pending[0].request_id, "approval-1");
+        assert_eq!(pending[0].agent_id, "template-agent-1");
+        assert_eq!(pending[0].session_id.as_deref(), Some("desktop-session"));
         let resolved = registry
             .find_chat_tool_approval("owner", "approval-1")
             .expect("the owning mobile client should resolve the desktop-started prompt");
@@ -1041,6 +1142,10 @@ mod tests {
         assert_eq!(
             events.last().unwrap().value["type"],
             "tool_approval_resolved"
+        );
+        assert!(
+            registry.list_pending_tool_approvals("owner").is_empty(),
+            "resolved approvals must disappear from cold-start snapshots"
         );
 
         let conflicting = resolved.respond_to_tool_approval(

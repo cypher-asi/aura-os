@@ -1,5 +1,5 @@
 import { memo, useEffect } from "react";
-import { Pin } from "lucide-react";
+import { Pin, ShieldAlert } from "lucide-react";
 import { formatChatTime } from "../../../shared/utils/format";
 import { stripEmojis } from "../../../shared/utils/text-normalize";
 import type { Agent } from "../../../shared/types";
@@ -37,6 +37,12 @@ interface AgentConversationRowProps {
   busy?: boolean;
   loopActivity?: LoopActivityPayload | null;
   isPinned?: boolean;
+  attention?: {
+    kind: "approval";
+    count: number;
+    toolName: string;
+    route?: string;
+  };
   onClick: () => void;
   onContextMenu: (e: React.MouseEvent) => void;
   onMouseEnter: () => void;
@@ -52,6 +58,7 @@ function AgentConversationRowBase({
   busy = false,
   loopActivity = null,
   isPinned = false,
+  attention,
   onClick,
   onContextMenu,
   onMouseEnter,
@@ -63,9 +70,11 @@ function AgentConversationRowBase({
     ? `${lastMessage.role === "user" ? "You: " : ""}${stripMarkdown(stripEmojis(lastMessage.content)).trim()}`
     : "";
   const fallback = agentRole || "Open this agent";
-  const preview = showMetadataOnly
-    ? agentDescription || fallback
-    : messagePreview || agentDescription || fallback;
+  const preview = attention
+    ? `${attention.count > 1 ? `${attention.count} approvals` : "Approval needed"} · ${attention.toolName.replaceAll("_", " ")}`
+    : showMetadataOnly
+      ? agentDescription || fallback
+      : messagePreview || agentDescription || fallback;
   const isCeo = isSuperAgent(agent);
 
   // Defer the avatar image to the frame after the row paints so the heavy
@@ -88,6 +97,7 @@ function AgentConversationRowBase({
       data-agent-agent-name={displayName}
       data-agent-agent-role={agent.role}
       data-agent-selected={isSelected ? "true" : "false"}
+      data-agent-attention={attention?.kind ?? "none"}
     >
       <Avatar
         avatarUrl={avatarUrl}
@@ -111,6 +121,12 @@ function AgentConversationRowBase({
             {isPinned && !isCeo && (
               <Pin size={11} className={styles.pinIcon} />
             )}
+            {attention ? (
+              <span className={styles.attentionBadge}>
+                <ShieldAlert size={11} aria-hidden="true" />
+                Needs you
+              </span>
+            ) : null}
           </span>
           <span className={styles.time}>
             <LoopProgressView
@@ -121,7 +137,7 @@ function AgentConversationRowBase({
             {formatChatTime(agent.updated_at)}
           </span>
         </span>
-        <span className={styles.preview}>{preview}</span>
+        <span className={attention ? styles.attentionPreview : styles.preview}>{preview}</span>
       </span>
     </button>
   );

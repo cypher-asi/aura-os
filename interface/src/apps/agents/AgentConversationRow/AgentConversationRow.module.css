@@ -102,6 +102,21 @@
   opacity: 0.6;
 }
 
+.attentionBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 2px 6px;
+  background: var(--color-warning-surface, var(--color-overlay-medium));
+  color: var(--color-warning-text, var(--color-text-primary));
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
 .time {
   font-size: 11px;
   color: var(--color-text-primary);
@@ -123,6 +138,12 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.attentionPreview {
+  composes: preview;
+  color: var(--color-warning-text, var(--color-text-primary));
+  font-weight: 600;
 }
 
 .role {

@@ -89,6 +89,7 @@ fn build_persist_ctx(ctx: &SubagentCaptureCtx, session_id: SessionId) -> ChatPer
     ChatPersistCtx {
         storage: ctx.storage.clone(),
         jwt: ctx.jwt.clone(),
+        user_id: ctx.user_id.clone(),
         session_id,
         project_agent_id: ctx.project_agent_id.clone(),
         project_id: ctx.project_id.clone(),

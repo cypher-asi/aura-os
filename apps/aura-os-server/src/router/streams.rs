@@ -11,6 +11,10 @@ pub(super) fn stream_routes() -> Router<AppState> {
     Router::new()
         .route("/api/streams/active", get(streams::list_active_streams))
         .route(
+            "/api/streams/tool-approvals",
+            get(streams::list_pending_tool_approvals),
+        )
+        .route(
             "/api/streams/tool-approvals/:request_id",
             post(streams::respond_to_tool_approval),
         )

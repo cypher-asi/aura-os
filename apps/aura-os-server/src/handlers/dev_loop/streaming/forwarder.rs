@@ -1051,6 +1051,7 @@ fn maybe_spawn_dev_loop_persist(
     let ctx = ChatPersistCtx {
         storage,
         jwt,
+        user_id: None,
         session_id,
         project_id: inputs.project_id.to_string(),
         project_agent_id: inputs.agent_instance_id.to_string(),

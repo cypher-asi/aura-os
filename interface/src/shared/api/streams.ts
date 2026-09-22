@@ -17,6 +17,7 @@ export type StreamKind =
 export interface StreamScope {
   user_id?: string | null;
   project_id?: string | null;
+  agent_id?: string | null;
   agent_instance_id?: string | null;
   session_id?: string | null;
 }
@@ -33,6 +34,16 @@ export interface ActiveStreamSummary {
 
 export interface ActiveStreamsResponse {
   streams: ActiveStreamSummary[];
+}
+
+export interface PendingToolApprovalSummary {
+  request_id: string;
+  tool_name: string;
+  agent_id: string;
+  project_id?: string | null;
+  agent_instance_id?: string | null;
+  session_id?: string | null;
+  started_at_ms: number;
 }
 
 export interface ActiveStreamsFilter {
@@ -56,6 +67,12 @@ export const streamsApi = {
       `/api/streams/active${qs ? `?${qs}` : ""}`,
     );
   },
+
+  /** Authoritative snapshot for agents currently waiting on this user. */
+  listPendingToolApprovals: () =>
+    apiFetch<{ approvals: PendingToolApprovalSummary[] }>(
+      "/api/streams/tool-approvals",
+    ),
 
   /** Request cancellation of a running stream's underlying harness run. */
   cancelStream: (attachId: string) =>

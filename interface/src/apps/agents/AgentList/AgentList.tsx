@@ -102,7 +102,7 @@ interface AgentRowProps {
   isMobileLibrary: boolean;
   isSelected: boolean;
   /** Id-arg callbacks so the list can pass referentially-stable handlers. */
-  onSelect: (agentId: string) => void;
+  onSelect: (agentId: string, attentionRoute?: string) => void;
   onHover: (agentId: string) => void;
   onContextMenu: (e: React.MouseEvent) => void;
 }
@@ -121,7 +121,10 @@ function AgentRow({
   onHover,
   onContextMenu,
 }: AgentRowProps) {
-  const handleClick = useCallback(() => onSelect(agent.agent_id), [onSelect, agent.agent_id]);
+  const handleClick = useCallback(
+    () => onSelect(agent.agent_id, model?.attention?.route),
+    [onSelect, agent.agent_id, model?.attention?.route],
+  );
   const handleMouseEnter = useCallback(() => onHover(agent.agent_id), [onHover, agent.agent_id]);
 
   return (
@@ -135,6 +138,7 @@ function AgentRow({
       busy={model?.busy}
       loopActivity={model?.loopActivity ?? null}
       isPinned={model?.isPinned}
+      attention={model?.attention}
       onClick={handleClick}
       onContextMenu={onContextMenu}
       onMouseEnter={handleMouseEnter}
@@ -261,7 +265,11 @@ export function AgentList({ mode = "default" }: AgentListProps) {
     }
   }, [navigate, shouldOpenMobileCreate]);
 
-  const handleAgentRowClick = useCallback((selectedAgentId: string) => {
+  const handleAgentRowClick = useCallback((selectedAgentId: string, attentionRoute?: string) => {
+    if (attentionRoute) {
+      navigate(attentionRoute);
+      return;
+    }
     if (selectedAgentId === agentId) return;
     // Warm the destination history on click too (not just hover): a direct
     // click — keyboard, touch, or a fast pointer that never fires a hover —

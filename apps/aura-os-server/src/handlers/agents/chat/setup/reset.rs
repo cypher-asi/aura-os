@@ -9,7 +9,7 @@ use axum::http::StatusCode;
 use tracing::{info, warn};
 
 use crate::error::ApiResult;
-use crate::state::{AppState, AuthJwt};
+use crate::state::{AppState, AuthJwt, AuthSession};
 
 use super::super::persist::ChatPersistRequest;
 use super::persistence::{setup_agent_chat_persistence, setup_project_chat_persistence};
@@ -18,6 +18,7 @@ use super::registry::remove_live_sessions_for_partition;
 pub(crate) async fn reset_agent_session(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<StatusCode> {
     // The bare-template partition string is exactly the prefix that
@@ -33,6 +34,7 @@ pub(crate) async fn reset_agent_session(
     // chain depth resets to 0.
     let request = ChatPersistRequest {
         jwt: &jwt,
+        user_id: Some(&session.user_id),
         preferred_project_id: None,
         force_new: true,
         pinned_session_id: None,
@@ -48,6 +50,7 @@ pub(crate) async fn reset_agent_session(
 pub(crate) async fn reset_instance_session(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
     Path((project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
 ) -> ApiResult<StatusCode> {
     // Resolve the parent template id so the in-memory session_key matches
@@ -96,6 +99,7 @@ pub(crate) async fn reset_instance_session(
     // a chat turn.
     let request = ChatPersistRequest {
         jwt: &jwt,
+        user_id: Some(&session.user_id),
         preferred_project_id: Some(project_id.to_string()),
         force_new: true,
         pinned_session_id: None,

@@ -110,12 +110,23 @@ The first Aura slice now implements that boundary:
   session identity. In-app/native notifications deep-link to the exact waiting conversation, and
   approval notifications have their own default-on preference. The live-stream registry remains
   the source of truth for the pending command; the notification is only a routing signal.
+- The agent library now has its own authenticated, reconnectable attention projection. It hydrates
+  unresolved protected-tool requests from the environment-owned streams, applies live prompt and
+  resolution deltas, labels the affected persistent agent as `Needs you`, and opens the exact
+  canonical session when tapped. This makes a desktop-started run actionable after a mobile cold
+  start even if the original notification was missed.
+- Approval firehose events are now stamped with the authenticated owner and filtered during both
+  replay and live delivery. Legacy unscoped events retain their existing behavior, while new
+  account-scoped control signals cannot appear in another user's mobile agent list.
 
 Next: formalize `runtimeId`/environment ownership in session metadata, add server command receipts
 before persisting or replaying a native prompt outbox, and add device registration plus background
 delivery for completion, failure, approval, and input-required events. Add the same durable,
-cross-client response path for structured agent questions/input requests. Do not make the cloud relay
-an execution proxy or present an unacknowledged prompt as accepted work.
+cross-client response path for structured agent questions/input requests. T3 models these as typed
+questions (`id`, header, prompt, options, and multi-select) answered through a dedicated
+`thread.user-input.respond` command; Aura still needs the equivalent harness protocol event and
+response command before its UI can honestly expose that feature. Do not make the cloud relay an
+execution proxy or present an unacknowledged prompt as accepted work.
 
 ### P0 — finish the safety foundation
 

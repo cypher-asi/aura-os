@@ -373,6 +373,7 @@ fn spec_stream_scope(
     StreamScope {
         user_id: Some(user_id.to_string()),
         project_id: Some(project_id.to_string()),
+        agent_id: None,
         agent_instance_id: agent_instance_id.map(|a| a.to_string()),
         session_id: None,
         parent_tool_use_id: None,

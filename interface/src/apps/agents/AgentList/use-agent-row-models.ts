@@ -13,6 +13,7 @@ import { useProjectsListStore } from "../../../stores/projects-list-store";
 import { useSidekickStore } from "../../../stores/sidekick-store";
 import { useStreamStore } from "../../../hooks/stream/store";
 import { useAgentStore } from "../stores";
+import { useAgentAttentionStore } from "../../../stores/agent-attention-store";
 import { isLoopActivityActive, type LoopActivityPayload } from "../../../shared/types/aura-events";
 import type { Agent } from "../../../shared/types";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";
@@ -28,6 +29,12 @@ export interface AgentRowModel {
   loopActivity: LoopActivityPayload | null;
   lastMessage?: DisplaySessionEvent;
   isPinned: boolean;
+  attention?: {
+    kind: "approval";
+    count: number;
+    toolName: string;
+    route?: string;
+  };
 }
 
 interface UseAgentRowModelsOptions {
@@ -76,6 +83,7 @@ export function useAgentRowModels(
   );
   const streamingAgentInstanceIds = useSidekickStore((s) => s.streamingAgentInstanceIds);
   const instanceIdsByTemplateId = useProjectsListStore((s) => s.instanceIdsByTemplateId);
+  const pendingApprovals = useAgentAttentionStore((s) => s.pendingApprovals);
 
   // One pass over the (small) live-loop map groups rows by template agent id so
   // per-agent aggregation below is an O(1) lookup instead of an O(loops) scan.
@@ -96,6 +104,31 @@ export function useAgentRowModels(
     [streamingAgentInstanceIds],
   );
 
+  const attentionByAgentId = useMemo(() => {
+    const result = new Map<string, NonNullable<AgentRowModel["attention"]> & { startedAt: number }>();
+    for (const item of Object.values(pendingApprovals)) {
+      if (!item) continue;
+      const existing = result.get(item.agentId);
+      if (!existing) {
+        result.set(item.agentId, {
+          kind: "approval",
+          count: 1,
+          toolName: item.toolName,
+          route: item.route,
+          startedAt: item.startedAt,
+        });
+        continue;
+      }
+      existing.count += 1;
+      if (item.startedAt > existing.startedAt) {
+        existing.toolName = item.toolName;
+        existing.route = item.route;
+        existing.startedAt = item.startedAt;
+      }
+    }
+    return result;
+  }, [pendingApprovals]);
+
   return useMemo(() => {
     const models = new Map<string, AgentRowModel>();
     for (const agent of agents) {
@@ -115,6 +148,7 @@ export function useAgentRowModels(
         loopActivity,
         lastMessage: includePreview ? previewLastMessages[agentHistoryKey(id)] : undefined,
         isPinned: agent.is_pinned || pinnedAgentIds.has(id),
+        attention: attentionByAgentId.get(id),
       });
     }
     return models;
@@ -129,5 +163,6 @@ export function useAgentRowModels(
     streamingInstanceIdSet,
     instanceIdsByTemplateId,
     includePreview,
+    attentionByAgentId,
   ]);
 }

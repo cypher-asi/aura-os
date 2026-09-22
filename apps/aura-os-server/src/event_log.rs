@@ -161,6 +161,17 @@ impl EventLog {
             .any(|event| predicate(&event.value))
     }
 
+    /// Clone the retained values in sequence order for bounded
+    /// control-plane snapshots.
+    pub fn snapshot_values(&self) -> Vec<Arc<serde_json::Value>> {
+        self.ring
+            .lock()
+            .expect("event log ring poisoned")
+            .iter()
+            .map(|event| event.value.clone())
+            .collect()
+    }
+
     /// Compute the delta a client needs to catch up from `since`.
     pub fn replay_since(&self, since: u64) -> ReplayResult {
         let ring = self.ring.lock().expect("event log ring poisoned");

@@ -21,7 +21,7 @@ use serde::Deserialize;
 use tracing::{debug, info, trace, warn};
 
 use crate::event_log::ReplayResult;
-use crate::state::AppState;
+use crate::state::{AppState, AuthSession};
 
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct WsEventsQuery {
@@ -37,9 +37,18 @@ pub(crate) async fn ws_events(
     ws: WebSocketUpgrade,
     Query(query): Query<WsEventsQuery>,
     State(state): State<AppState>,
+    AuthSession(session): AuthSession,
 ) -> impl IntoResponse {
     info!(target: "aura::ws", since = query.since.map(|s| s as i64).unwrap_or(-1), "ws upgrade requested");
-    ws.on_upgrade(move |socket| handle_ws(socket, state, query.since))
+    ws.on_upgrade(move |socket| handle_ws(socket, state, query.since, session.user_id))
+}
+
+fn visible_to_user(value: &serde_json::Value, user_id: &str) -> bool {
+    value
+        .get("user_id")
+        .and_then(|entry| entry.as_str())
+        .map(|owner| owner == user_id)
+        .unwrap_or(true)
 }
 
 /// Build the JSON text frame for an event, injecting its `seq` into the
@@ -56,7 +65,7 @@ fn frame_with_seq(value: &serde_json::Value, seq: u64) -> String {
     }
 }
 
-async fn handle_ws(mut socket: WebSocket, state: AppState, since: Option<u64>) {
+async fn handle_ws(mut socket: WebSocket, state: AppState, since: Option<u64>, user_id: String) {
     debug!(target: "aura::ws", since = ?since, "ws subscriber connected");
 
     // Subscribe BEFORE reading the replay backlog so any event appended
@@ -81,6 +90,10 @@ async fn handle_ws(mut socket: WebSocket, state: AppState, since: Option<u64>) {
                     "replaying missed events on reconnect"
                 );
                 for evt in events {
+                    if !visible_to_user(&evt.value, &user_id) {
+                        last_sent_seq = last_sent_seq.max(evt.seq);
+                        continue;
+                    }
                     let json = frame_with_seq(&evt.value, evt.seq);
                     if socket.send(Message::Text(json)).await.is_err() {
                         warn!(target: "aura::ws", "ws send failed during replay; closing");
@@ -120,6 +133,10 @@ async fn handle_ws(mut socket: WebSocket, state: AppState, since: Option<u64>) {
                     Ok(evt) => {
                         if evt.seq <= last_sent_seq {
                             // Already delivered during replay overlap.
+                            continue;
+                        }
+                        if !visible_to_user(&evt.value, &user_id) {
+                            last_sent_seq = evt.seq;
                             continue;
                         }
                         let json = frame_with_seq(&evt.value, evt.seq);
@@ -172,4 +189,20 @@ async fn handle_ws(mut socket: WebSocket, state: AppState, since: Option<u64>) {
         }
     }
     debug!(target: "aura::ws", "ws subscriber disconnected");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::visible_to_user;
+
+    #[test]
+    fn user_scoped_events_are_visible_only_to_their_owner() {
+        let scoped = serde_json::json!({ "type": "tool_approval_prompt", "user_id": "owner" });
+        assert!(visible_to_user(&scoped, "owner"));
+        assert!(!visible_to_user(&scoped, "someone-else"));
+        assert!(visible_to_user(
+            &serde_json::json!({ "type": "legacy_event" }),
+            "someone-else"
+        ));
+    }
 }

@@ -188,4 +188,26 @@ describe("AgentConversationRow", () => {
     );
     expect(screen.getByTestId("agent-avatar")).toHaveAttribute("data-busy", "true");
   });
+
+  it("prioritizes a pending approval over stale preview metadata", () => {
+    render(
+      <AgentConversationRow
+        agent={baseAgent}
+        lastMessage={lastMessage}
+        showMetadataOnly
+        isSelected={false}
+        attention={{
+          kind: "approval",
+          count: 1,
+          toolName: "write_file",
+          route: "/agents/agent-1?session=session-1",
+        }}
+        {...noopHandlers}
+      />,
+    );
+
+    expect(screen.getByText("Needs you")).toBeInTheDocument();
+    expect(screen.getByText("Approval needed · write file")).toBeInTheDocument();
+    expect(screen.getByRole("button")).toHaveAttribute("data-agent-attention", "approval");
+  });
 });

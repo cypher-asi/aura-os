@@ -7,6 +7,10 @@ import { resolveWsUrl } from "../../shared/lib/host-config";
 import { persistTaskOutputText } from "./task-output-cache";
 import { handleEngineEvent } from "./engine-event-handlers";
 import { startLoopActivityWatchdog, useLoopActivityStore } from "../loop-activity-store";
+import {
+  clearAgentAttention,
+  hydrateAgentAttention,
+} from "../agent-attention-store";
 
 export interface BuildStep {
   kind: "started" | "passed" | "failed" | "fix_attempt" | "skipped";
@@ -277,6 +281,8 @@ const IMMEDIATE_ENGINE_EVENTS = new Set<EventType>([
   EventType.LoopStopped,
   EventType.LoopFinished,
   EventType.LoopEnded,
+  EventType.ToolApprovalPrompt,
+  EventType.ToolApprovalResolved,
 ]);
 
 function canScheduleEngineEventFrame(): boolean {
@@ -375,6 +381,7 @@ export function disconnectEventSocket() {
   // streams live and rehydrates via HTTP rather than replaying a stale
   // seq from a previous session.
   _lastSeq = 0;
+  clearAgentAttention();
 }
 
 /**
@@ -393,7 +400,10 @@ async function resyncAfterGap(): Promise<void> {
   // closed, so the reconnect-driven refetch path won't fire.
   useEventStore.setState((s) => ({ resyncNonce: s.resyncNonce + 1 }));
   try {
-    await useLoopActivityStore.getState().hydrate();
+    await Promise.all([
+      useLoopActivityStore.getState().hydrate(),
+      hydrateAgentAttention(),
+    ]);
   } catch (error) {
     if (import.meta.env.DEV) {
       console.warn("ws resync hydrate failed", error);
@@ -496,6 +506,7 @@ export function connectEventSocket() {
       // missed a `loop_activity_changed` event during the disconnect.
       if (connected) {
         void useLoopActivityStore.getState().hydrate();
+        void hydrateAgentAttention();
         startLoopActivityWatchdog();
       }
     },

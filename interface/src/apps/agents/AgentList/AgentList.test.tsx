@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   }),
   entries: {} as Record<string, unknown>,
   previewLastMessages: {} as Record<string, unknown>,
+  attentionRoute: null as string | null,
   useChatHistoryStore: Object.assign(
     (selector: (state: {
       entries: Record<string, unknown>;
@@ -296,6 +297,14 @@ vi.mock("./use-agent-row-models", () => ({
         loopActivity: null,
         lastMessage: mocks.previewLastMessages[`agent:${a.agent_id}`],
         isPinned: false,
+        attention: mocks.attentionRoute
+          ? {
+              kind: "approval",
+              count: 1,
+              toolName: "write_file",
+              route: mocks.attentionRoute,
+            }
+          : undefined,
       });
     }
     return map;
@@ -331,6 +340,7 @@ describe("AgentList", () => {
     mocks.pendingCreateAgentHandoff = null;
     mocks.entries = {};
     mocks.previewLastMessages = {};
+    mocks.attentionRoute = null;
     mocks.sessionsBySurface = {};
     mocks.loadAgentSessions = vi.fn(async () => {});
     mocks.storeFetchAgents = vi.fn();
@@ -384,6 +394,18 @@ describe("AgentList", () => {
     await user.click(screen.getByRole("button", { name: "Builder Bot" }));
 
     expect(mocks.navigate).toHaveBeenCalledWith("/agents/agent-1");
+  });
+
+  it("opens the exact waiting session when the agent needs approval", async () => {
+    mocks.useParams.mockReturnValue({ agentId: undefined });
+    mocks.attentionRoute =
+      "/agents/agent-1?project=project-1&instance=instance-1&session=session-1";
+    const user = userEvent.setup();
+
+    render(<AgentList mode="mobile-library" />);
+    await user.click(screen.getByRole("button", { name: "Builder Bot" }));
+
+    expect(mocks.navigate).toHaveBeenCalledWith(mocks.attentionRoute);
   });
 
   it("does not navigate when clicking the already selected agent", async () => {
