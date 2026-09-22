@@ -23,6 +23,11 @@ import {
   _resetAllPartitionSendControl,
   getPartitionSendControl,
 } from "../../../hooks/use-chat-stream/partition-send-control";
+import {
+  markStreamInterrupted,
+  streamMetaMap,
+  useStreamStore,
+} from "../../../hooks/stream/store";
 
 const mockSubagentOnSend = vi.hoisted(() => vi.fn());
 const mockSubagentOnStop = vi.hoisted(() => vi.fn());
@@ -53,6 +58,9 @@ const sampleHistoryMessages: DisplaySessionEvent[] = [
 vi.mock("@cypher-asi/zui", () => ({
   Text: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
   Badge: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
+  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+    <button {...props}>{children}</button>
+  ),
 }));
 
 vi.mock("../../../hooks/use-subagent-chat-stream", () => ({
@@ -71,6 +79,14 @@ vi.mock("../../../hooks/stream/hooks", () => ({
 
 vi.mock("../../../hooks/use-aura-capabilities", () => ({
   useAuraCapabilities: () => mockUseAuraCapabilities(),
+}));
+
+vi.mock("./UserInputPromptCard", () => ({
+  UserInputPromptCard: () => null,
+}));
+
+vi.mock("../../../components/ReportBugButton", () => ({
+  ReportBugButton: () => <button type="button">Report bug</button>,
 }));
 
 vi.mock("../ChatMessageList", () => ({
@@ -244,6 +260,8 @@ describe("ChatPanel", () => {
     });
     mockModelPersistence.reset();
     _resetAllPartitionSendControl();
+    streamMetaMap.clear();
+    useStreamStore.setState({ entries: {} });
     useMessageStore.setState({ messages: {}, orderedIds: {} });
     useChatUIStore.setState({ streams: {}, drafts: {} });
     useChatViewStore.setState({ threads: {} });
@@ -972,6 +990,38 @@ describe("ChatPanel", () => {
       "image",
       undefined,
       undefined,
+    );
+  });
+
+  it("restarts an interrupted post-restart turn from its persisted prompt", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
+    const onSend = vi.fn();
+    const onStop = vi.fn();
+    markStreamInterrupted("stream-1");
+
+    renderPanel({
+      onSend,
+      onStop,
+      defaultModel: "gpt-5.4",
+      historyResolved: true,
+      historyMessages: [
+        { id: "user-1", role: "user", content: "Finish the migration" },
+        {
+          id: "assistant-1",
+          role: "assistant",
+          content: "I updated the schema…",
+          inFlight: true,
+        },
+      ],
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Restart turn" }));
+
+    expect(onStop).toHaveBeenCalledTimes(1);
+    expect(onSend).toHaveBeenCalledWith(
+      "Finish the migration",
+      null,
+      "gpt-5.4",
     );
   });
 

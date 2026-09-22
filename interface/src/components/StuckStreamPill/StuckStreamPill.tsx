@@ -14,6 +14,8 @@ export interface StuckStreamPillProps {
   stuckForMs: number | null;
   onStop: () => void;
   onRetry: () => void;
+  /** The persisted turn survived, but its environment-owned execution did not. */
+  interrupted?: boolean;
   /**
    * Phase 5: when set, the pill renders an inline `ReportBugButton`
    * pre-filled with the most recent `support_id` from the
@@ -64,6 +66,7 @@ export function StuckStreamPill({
   streamKey,
   agentId,
   sessionId,
+  interrupted = false,
 }: StuckStreamPillProps) {
   const stuckLabel = formatSeconds(stuckForMs);
   // The watchdog promotes a stream to "stuck" only after
@@ -91,12 +94,16 @@ export function StuckStreamPill({
       role="status"
     >
       <span className={styles.stuckStreamMessage}>
-        Agent paused for {stuckLabel} — last activity was {ageLabel} ago
+        {interrupted
+          ? "Run interrupted — the owning Aura runtime no longer has this turn"
+          : `Agent paused for ${stuckLabel} — last activity was ${ageLabel} ago`}
       </span>
       <div className={styles.stuckStreamActions}>
-        <Button variant="ghost" size="sm" onClick={onStop}>
-          Stop
-        </Button>
+        {!interrupted && (
+          <Button variant="ghost" size="sm" onClick={onStop}>
+            Stop
+          </Button>
+        )}
         <Button variant="ghost" size="sm" onClick={onRetry} title="Resend the original prompt from the start; this does not resume unfinished work.">
           Restart turn
         </Button>

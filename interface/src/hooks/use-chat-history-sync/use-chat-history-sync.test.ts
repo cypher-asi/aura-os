@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => {
     { id: "evt-1", role: "assistant", content: "Hello" },
   ];
   const streamMetaMap = new Map<string, { lastAccessedAt: number }>();
+  const markStreamInterrupted = vi.fn();
+  const clearStreamInterrupted = vi.fn();
   const state = {
     entries: {
       "agent:agent-1": {
@@ -66,6 +68,8 @@ const mocks = vi.hoisted(() => {
     useIsStreaming: vi.fn(() => false),
     getStreamEntry: vi.fn(() => ({ events: [] as DisplaySessionEvent[] })),
     getIsStreaming: vi.fn(() => false),
+    markStreamInterrupted,
+    clearStreamInterrupted,
     streamMetaMap,
     useEventStore: Object.assign(
       vi.fn((selector: (s: { subscribe: typeof subscribe }) => unknown) =>
@@ -90,7 +94,24 @@ vi.mock("../stream/hooks", () => ({
 vi.mock("../stream/store", () => ({
   getStreamEntry: mocks.getStreamEntry,
   getIsStreaming: mocks.getIsStreaming,
+  markStreamInterrupted: mocks.markStreamInterrupted,
+  clearStreamInterrupted: mocks.clearStreamInterrupted,
   streamMetaMap: mocks.streamMetaMap,
+}));
+
+const recoveryMocks = vi.hoisted(() => ({
+  listActiveStreams: vi.fn(async () => ({ streams: [] })),
+  selectReattachableChatStream: vi.fn(() => null),
+}));
+
+vi.mock("../../api/client", () => ({
+  api: {
+    streams: { listActiveStreams: recoveryMocks.listActiveStreams },
+  },
+}));
+
+vi.mock("../../api/streams", () => ({
+  selectReattachableChatStream: recoveryMocks.selectReattachableChatStream,
 }));
 
 vi.mock("../../stores/event-store/index", () => ({
@@ -210,6 +231,8 @@ describe("useChatHistorySync", () => {
       error: null,
     });
     mocks.getStreamEntry.mockReturnValue({ events: [] as DisplaySessionEvent[] });
+    recoveryMocks.listActiveStreams.mockReset().mockResolvedValue({ streams: [] });
+    recoveryMocks.selectReattachableChatStream.mockReset().mockReturnValue(null);
     screenshotBridgeMocks.isAuraCaptureSessionActive.mockReturnValue(false);
   });
 
@@ -715,6 +738,128 @@ describe("useChatHistorySync", () => {
         false,
       );
     });
+  });
+
+  it("marks a persisted in-flight turn interrupted when the runtime has no active stream", async () => {
+    const inFlight: DisplaySessionEvent[] = [
+      { id: "evt-user", role: "user", content: "finish the migration" },
+      {
+        id: "evt-assistant",
+        role: "assistant",
+        content: "I updated the schema…",
+        inFlight: true,
+      },
+    ];
+    mocks.useChatHistory.mockReturnValue({
+      events: inFlight,
+      status: "ready",
+      error: null,
+    });
+
+    renderHook(() =>
+      useChatHistorySync({
+        historyKey: "session:s-1",
+        streamKey: "project-1:pa-42:s-1",
+        fetchFn: vi.fn(async () => []),
+        resetEvents: vi.fn(),
+        watchAgentInstanceId: "pa-42",
+        watchSessionId: "s-1",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(mocks.markStreamInterrupted).toHaveBeenCalledWith(
+        "project-1:pa-42:s-1",
+      );
+    });
+    expect(recoveryMocks.listActiveStreams).toHaveBeenCalledWith({
+      agent_instance_id: "pa-42",
+    });
+    expect(sidekickMocks.state.setAgentStreaming).toHaveBeenLastCalledWith(
+      "pa-42",
+      false,
+    );
+  });
+
+  it("keeps an in-flight turn recoverable when stream discovery fails", async () => {
+    recoveryMocks.listActiveStreams.mockRejectedValue(
+      new Error("host temporarily unreachable"),
+    );
+    mocks.useChatHistory.mockReturnValue({
+      events: [
+        {
+          id: "evt-assistant",
+          role: "assistant",
+          content: "Still working…",
+          inFlight: true,
+        },
+      ],
+      status: "ready",
+      error: null,
+    });
+
+    renderHook(() =>
+      useChatHistorySync({
+        historyKey: "session:s-1",
+        streamKey: "project-1:pa-42:s-1",
+        fetchFn: vi.fn(async () => []),
+        resetEvents: vi.fn(),
+        watchAgentInstanceId: "pa-42",
+        watchSessionId: "s-1",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(recoveryMocks.listActiveStreams).toHaveBeenCalled();
+    });
+    expect(mocks.markStreamInterrupted).not.toHaveBeenCalled();
+    expect(sidekickMocks.state.setAgentStreaming).toHaveBeenCalledWith(
+      "pa-42",
+      true,
+    );
+  });
+
+  it("does not mark interruption while the canonical session is attachable", async () => {
+    const active = {
+      attach_id: "stream-1",
+      kind: "chat_turn",
+      scope: { session_id: "s-1" },
+      latest_seq: 4,
+      terminated: false,
+      started_at_ms: 1,
+    };
+    recoveryMocks.listActiveStreams.mockResolvedValue({ streams: [active] });
+    recoveryMocks.selectReattachableChatStream.mockReturnValue(active);
+    mocks.useChatHistory.mockReturnValue({
+      events: [
+        {
+          id: "evt-assistant",
+          role: "assistant",
+          content: "Still working…",
+          inFlight: true,
+        },
+      ],
+      status: "ready",
+      error: null,
+    });
+
+    renderHook(() =>
+      useChatHistorySync({
+        historyKey: "session:s-1",
+        streamKey: "project-1:pa-42:s-1",
+        fetchFn: vi.fn(async () => []),
+        resetEvents: vi.fn(),
+        watchAgentInstanceId: "pa-42",
+        watchSessionId: "s-1",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(mocks.clearStreamInterrupted).toHaveBeenCalledWith(
+        "project-1:pa-42:s-1",
+      );
+    });
+    expect(mocks.markStreamInterrupted).not.toHaveBeenCalled();
   });
 
   it("does not subscribe when neither watch param is set", async () => {

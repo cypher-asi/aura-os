@@ -547,6 +547,7 @@ export function useStandaloneAgentChat(
       // persists into the target agent's session but the chat panel
       // stays stale until the user hits F5.
       watchAgentId: agentId,
+      watchSessionId: pinnedSessionId ?? undefined,
     });
 
   const loadAgentSessions = useSessionsListStore((s) => s.loadAgentSessions);
