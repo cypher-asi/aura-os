@@ -1,4 +1,4 @@
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import { useAgentChatStream, _resetAgentChatStreamReplayMap } from "./use-agent-chat-stream";
 import { _resetAllPartitionSendControl } from "./stream/partition-state";
 import { useStreamStore, streamMetaMap } from "./stream/store";
@@ -137,6 +137,7 @@ describe("useAgentChatStream", () => {
 
   it("surfaces approval prompts replayed into a standalone agent session", async () => {
     let approvalHandler: import("../api/streams").StreamEventHandler | undefined;
+    let finishStream!: () => void;
     vi.mocked(api.agents.sendEventStream).mockImplementation(async (
       _agentId,
       _content,
@@ -156,17 +157,23 @@ describe("useAgentChatStream", () => {
           remember_options: ["once"],
         },
       } as AuraEvent);
+      await new Promise<void>((resolve) => {
+        finishStream = resolve;
+      });
     });
     const { result } = renderHook(() =>
       useAgentChatStream({ agentId: "agent-1", sessionId: "session-1" }),
     );
 
-    await act(async () => {
-      await result.current.sendMessage("Run the tests");
+    let sendPromise!: Promise<void>;
+    act(() => {
+      sendPromise = result.current.sendMessage("Run the tests");
     });
 
-    expect(useToolApprovalStore.getState().prompts["agent-1:session-1"])
-      .toMatchObject({ request_id: "approval-standalone", tool_name: "run_command" });
+    await waitFor(() => {
+      expect(useToolApprovalStore.getState().prompts["agent-1:session-1"])
+        .toMatchObject({ request_id: "approval-standalone", tool_name: "run_command" });
+    });
 
     act(() => {
       approvalHandler?.onEvent({
@@ -175,6 +182,10 @@ describe("useAgentChatStream", () => {
       } as AuraEvent);
     });
     expect(useToolApprovalStore.getState().prompts["agent-1:session-1"]).toBeUndefined();
+    finishStream();
+    await act(async () => {
+      await sendPromise;
+    });
   });
 
   it("sends a message and creates a user message in the store", async () => {
