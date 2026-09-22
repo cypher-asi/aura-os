@@ -9,6 +9,7 @@ import { useChatUIStore } from "../stores/chat-ui-store";
 import { useSessionsListStore } from "../stores/sessions-list-store";
 import { STYLE_LOCK_SUFFIX } from "../constants/generation";
 import { EventType, type AuraEvent } from "../shared/types/aura-events";
+import { ApiClientError } from "../shared/api/core";
 
 const mockSetStreamingAgentInstanceId = vi.fn();
 const mockSetAgentStreaming = vi.fn();
@@ -232,7 +233,7 @@ describe("useChatStream", () => {
     expect(event.deliveryStatus).toBeUndefined();
   });
 
-  it("keeps a project command queued when the stream ends before acceptance", async () => {
+  it("keeps a project command retryable when the stream ends before acceptance", async () => {
     vi.mocked(api.sendEventStream).mockImplementation(
       async (_projectId, _instanceId, _content, _action, _model, _attachments, handler) => {
         handler?.onDone?.();
@@ -247,7 +248,29 @@ describe("useChatStream", () => {
     });
 
     const event = useStreamStore.getState().entries[result.current.streamKey].events[0];
-    expect(event.deliveryStatus).toBe("queued");
+    expect(event.deliveryStatus).toBe("retrying");
+  });
+
+  it("preserves the retrying state after a transient transport rejection", async () => {
+    vi.mocked(api.sendEventStream).mockImplementationOnce(
+      async (_projectId, _instanceId, _content, _action, _model, _attachments, handler) => {
+        handler?.onError?.(new ApiClientError(503, {
+          error: "temporarily unavailable",
+          code: "unavailable",
+          details: null,
+        }));
+      },
+    );
+    const { result } = renderHook(() =>
+      useChatStream({ projectId: "p-1", agentInstanceId: "ai-1" }),
+    );
+
+    await act(async () => {
+      await result.current.sendMessage("hello");
+    });
+
+    const event = useStreamStore.getState().entries[result.current.streamKey].events[0];
+    expect(event.deliveryStatus).toBe("retrying");
   });
 
   it("promotes a queued prompt without changing its transcript identity", async () => {

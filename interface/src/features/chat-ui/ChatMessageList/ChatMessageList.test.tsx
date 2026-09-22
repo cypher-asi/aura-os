@@ -13,6 +13,10 @@ function makeMessage(
 }
 
 const mockMessageBubble = vi.fn();
+const outboxMocks = vi.hoisted(() => ({
+  retryChatCommandNow: vi.fn(),
+  cancelChatCommandReplay: vi.fn(),
+}));
 const mockStreamEntry = {
   isStreaming: false,
   streamingText: "",
@@ -63,6 +67,11 @@ vi.mock("../../../apps/chat/components/MessageBubble", () => ({
   },
 }));
 
+vi.mock("../../../stores/chat-command-outbox", () => ({
+  retryChatCommandNow: outboxMocks.retryChatCommandNow,
+  cancelChatCommandReplay: outboxMocks.cancelChatCommandReplay,
+}));
+
 vi.mock("../../../apps/chat/components/StreamingBubble", () => ({
   StreamingBubble: () => <div data-testid="streaming-bubble" />,
 }));
@@ -96,6 +105,8 @@ function makeScrollRef(overrides: { scrollHeight?: number; scrollTop?: number } 
 describe("ChatMessageList", () => {
   beforeEach(() => {
     mockMessageBubble.mockReset();
+    outboxMocks.retryChatCommandNow.mockReset();
+    outboxMocks.cancelChatCommandReplay.mockReset();
     mockRowHeight = 100;
     Object.assign(mockStreamEntry, {
       isStreaming: false,
@@ -145,6 +156,28 @@ describe("ChatMessageList", () => {
 
     expect(screen.getByTestId("empty")).toBeInTheDocument();
     expect(mockMessageBubble).not.toHaveBeenCalled();
+  });
+
+  it("wires durable retry controls only for a deferred optimistic message", () => {
+    const scrollRef = makeScrollRef();
+    const retrying = {
+      ...makeMessage("temp-command", "Continue", "user", "command-1"),
+      deliveryStatus: "retrying" as const,
+    };
+
+    render(
+      <ChatMessageList
+        messages={[retrying]}
+        streamKey="stream-1"
+        scrollRef={scrollRef}
+      />,
+    );
+
+    const props = mockMessageBubble.mock.calls[0][0];
+    props.onRetryPendingDelivery();
+    props.onCancelPendingDelivery();
+    expect(outboxMocks.retryChatCommandNow).toHaveBeenCalledWith("command-1");
+    expect(outboxMocks.cancelChatCommandReplay).toHaveBeenCalledWith("command-1");
   });
 
   it("signals onInitialAnchorReady once the first messages render", () => {

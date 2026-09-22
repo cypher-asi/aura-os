@@ -147,11 +147,16 @@ The first Aura slice now implements that boundary:
   bounded to 50, expire after 24 hours, and are never mirrored into localStorage. Validation,
   permission, and credit failures are removed instead of surprising the user with a later send.
   Media-generation requests are intentionally outside this first outbox slice.
+- Deferred sends now have a distinct `Waiting to resend` state instead of sharing the ordinary
+  in-turn `Queued` label. Live chat bubbles expose touch-friendly `Retry now` and `Stop retrying`
+  controls; both operate only on the authenticated user's current environment-scoped outbox. A
+  manual retry makes the existing command id eligible immediately, while stopping retry removes
+  future attempts without claiming to cancel work that the server may already have accepted.
 
 Next: formalize `runtimeId`/environment ownership in session metadata, move accepted command
-execution behind a durable status/worker boundary, expose user-facing outbox inspection/cancel
-controls, and add device registration plus background delivery for completion, failure, approval,
-and input-required events. Add the same durable,
+execution behind a durable status/worker boundary, add an outbox-level inspector for commands whose
+optimistic bubbles are no longer mounted, and add device registration plus background delivery for
+completion, failure, approval, and input-required events. Add the same durable,
 cross-client response path for structured agent questions/input requests. T3 models these as typed
 questions (`id`, header, prompt, options, and multi-select) answered through a dedicated
 `thread.user-input.respond` command; Aura still needs the equivalent harness protocol event and
