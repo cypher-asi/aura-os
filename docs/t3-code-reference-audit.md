@@ -97,11 +97,15 @@ The first Aura slice now implements that boundary:
 - The shared event connection now replaces even an apparently-open WebSocket when the app returns
   to the foreground. It mints a fresh connection ticket and resumes from the last event cursor, so
   mobile does not wait through exponential backoff to learn that an agent completed or failed.
+- Task and loop notifications now retain the persistent agent, project-agent instance, and session
+  identity and target that exact canonical conversation. The same route is included in the native
+  notification payload, establishing one deep-link contract for in-app, desktop, and future mobile
+  push activation.
 
 Next: formalize `runtimeId`/environment ownership in session metadata, add server command receipts
-before persisting or replaying a native prompt outbox, and deliver push deep links for completion,
-failure, approval, and input-required events. Do not make the cloud relay an execution proxy or
-present an unacknowledged prompt as accepted work.
+before persisting or replaying a native prompt outbox, and add device registration plus background
+delivery for completion, failure, approval, and input-required events. Do not make the cloud relay
+an execution proxy or present an unacknowledged prompt as accepted work.
 
 ### P0 — finish the safety foundation
 

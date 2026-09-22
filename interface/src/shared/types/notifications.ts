@@ -22,6 +22,9 @@ export interface AuraNotification {
   createdAt: number;
   taskId?: string;
   projectId?: string;
+  agentId?: string;
+  agentInstanceId?: string;
+  sessionId?: string;
   route?: string;
 }
 

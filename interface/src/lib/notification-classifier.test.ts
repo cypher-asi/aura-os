@@ -34,7 +34,10 @@ describe("classifyNotification", () => {
       priority: 0,
       title: "Task complete",
       body: "Ship notifications",
-      route: "/projects/project-1/tasks",
+      agentId: "agent-1",
+      agentInstanceId: undefined,
+      sessionId: "session-1",
+      route: "/agents/agent-1?project=project-1&session=session-1",
     });
   });
 
@@ -80,6 +83,27 @@ describe("classifyNotification", () => {
       priority: 1,
       title: "Task run failed",
       body: "Waiting for retry budget",
+      agentId: "agent-1",
+      sessionId: "session-1",
+      route: "/agents/agent-1?project=project-1&session=session-1",
+    });
+  });
+
+  it("deep-links project-agent events to their exact canonical session", () => {
+    const notification = classifyNotification({
+      ...baseEvent(EventType.TaskFailed, {
+        task_id: "task-4",
+        task_title: "Verify mobile",
+        reason: "Needs review",
+      }),
+      project_agent_id: "instance-1",
+    });
+
+    expect(notification).toMatchObject({
+      agentId: "agent-1",
+      agentInstanceId: "instance-1",
+      sessionId: "session-1",
+      route: "/projects/project-1/agents/instance-1?session=session-1",
     });
   });
 

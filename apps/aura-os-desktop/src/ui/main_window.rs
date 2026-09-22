@@ -135,7 +135,7 @@ mod tests {
     #[test]
     fn parses_native_notification_ipc_message() {
         let parsed = parse_structured_ipc_message(
-            r#"{"type":"native_notification","payload":{"id":"task:1","title":"Task complete","body":"Build finished","sound":false,"badgeCount":2}}"#,
+            r#"{"type":"native_notification","payload":{"id":"task:1","title":"Task complete","body":"Build finished","sound":false,"badgeCount":2,"route":"/projects/p1/agents/i1?session=s1"}}"#,
         )
         .expect("structured JSON should be parsed")
         .expect("native notification IPC should deserialize");
@@ -147,6 +147,10 @@ mod tests {
                 assert_eq!(payload.body.as_deref(), Some("Build finished"));
                 assert!(!payload.sound);
                 assert_eq!(payload.badge_count, Some(2));
+                assert_eq!(
+                    payload.route.as_deref(),
+                    Some("/projects/p1/agents/i1?session=s1")
+                );
             }
         }
     }

@@ -591,6 +591,7 @@ mod tests {
             body: body.map(str::to_string),
             sound: true,
             badge_count: Some(1),
+            route: None,
         }
     }
 
