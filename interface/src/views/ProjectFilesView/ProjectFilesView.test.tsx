@@ -340,6 +340,48 @@ describe("ProjectFilesView", () => {
     );
   });
 
+  it("hands an exact previewed source line back to the canonical agent draft", async () => {
+    mockUseAuraCapabilities.mockReturnValue(capabilities({ isMobileLayout: true, isMobileClient: true }));
+    currentSearchParams = new URLSearchParams(
+      "instance=remote-inst-1&agent=agent-1&session=session-1&file=%2Fworkspace%2Fsrc%2Fapp.ts",
+    );
+    mockReadRemoteFile.mockResolvedValue({
+      ok: true,
+      content: "const first = true;\nconst selected = mobile;\n",
+    });
+
+    render(<MobileProjectFilesScreen />);
+    const line = await screen.findByRole("button", {
+      name: "Ask agent about /workspace/src/app.ts line 2",
+    });
+    line.click();
+
+    const streamKey = keyForProjectSession("proj-1", "remote-inst-1", "session-1");
+    const draft = useChatUIStore.getState().getDraft(streamKey);
+    expect(draft).toContain("`/workspace/src/app.ts` (line 2)");
+    expect(draft).toContain("const selected = mobile;");
+    expect(mockNavigate).toHaveBeenCalledWith(
+      "/agents/agent-1?project=proj-1&instance=remote-inst-1&session=session-1",
+    );
+  });
+
+  it("keeps large mobile previews lightweight while retaining whole-file handoff", async () => {
+    mockUseAuraCapabilities.mockReturnValue(capabilities({ isMobileLayout: true, isMobileClient: true }));
+    currentSearchParams = new URLSearchParams(
+      "instance=remote-inst-1&agent=agent-1&session=session-1&file=%2Fworkspace%2Fsrc%2Flarge.ts",
+    );
+    const largeFile = Array.from({ length: 1_001 }, (_, index) => `line ${index + 1}`).join("\n");
+    mockReadRemoteFile.mockResolvedValue({ ok: true, content: largeFile });
+
+    render(<MobileProjectFilesScreen />);
+    await waitFor(() => expect(document.querySelector("pre")?.textContent).toContain("line 1001"));
+
+    expect(screen.queryByRole("button", {
+      name: "Ask agent about /workspace/src/large.ts line 1",
+    })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ask agent about this file" })).toBeInTheDocument();
+  });
+
   it("shows a workspace empty state on mobile when no remote workspace is available", () => {
     mockUseAuraCapabilities.mockReturnValue(capabilities({ isMobileLayout: true, isMobileClient: true }));
     mockUseTerminalTarget.mockReturnValue({

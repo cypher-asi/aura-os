@@ -220,7 +220,7 @@
 
 .previewContent {
   margin: 0;
-  padding: 13px 16px;
+  padding: 8px 0;
   border: 1px solid color-mix(in srgb, var(--color-border) 34%, transparent);
   border-radius: 12px;
   background: color-mix(in srgb, var(--color-bg-surface) 44%, transparent);
@@ -228,6 +228,56 @@
   font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.55;
+  overflow-x: auto;
+}
+
+.previewContent code {
+  display: block;
+  min-width: max-content;
+}
+
+.previewContentPlain {
+  padding: 13px 16px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.previewLine {
+  display: grid;
+  width: 100%;
+  min-height: 44px;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: start;
+  padding: 5px 16px 5px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.previewLine:hover,
+.previewLine:focus-visible {
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  outline: none;
+}
+
+.previewLine:disabled {
+  cursor: default;
+}
+
+.previewLineNumber {
+  padding-right: 10px;
+  color: var(--color-text-muted);
+  text-align: right;
+  user-select: none;
+}
+
+.previewLineCode {
+  min-width: 0;
   white-space: pre-wrap;
   word-break: break-word;
 }

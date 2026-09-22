@@ -212,7 +212,11 @@ The first Aura slice now implements that boundary:
   “send code/review context to the agent” loop. Changed lines in the read-only mobile diff are also
   actionable: Aura tracks unified-diff old/new line positions and adds the selected bounded diff
   line, file, area, and position to the same canonical draft. Range selection and provider-hosted
-  review-comment synchronization remain later increments. When Files was opened outside an agent
+  review-comment synchronization remain later increments. Ordinary mobile file previews now use
+  the same handoff model: each source line has an explicit 44px action that appends the bounded
+  line, path, and line number to the existing canonical draft without auto-sending. To keep large
+  mobile files responsive, line actions are capped at 1,000 lines while the full read-only preview
+  and whole-file handoff remain available. When Files was opened outside an agent
   route, Aura now resolves the most recent real session for the exact project-agent instance before
   enabling any handoff; it no longer writes a `:fresh` draft and then reopens a different existing
   conversation. Explicit session identity still wins, and a confirmed instance with no sessions
