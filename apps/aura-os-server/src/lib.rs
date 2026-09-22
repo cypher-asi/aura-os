@@ -16,6 +16,7 @@ pub(crate) mod harness_gateway;
 pub mod mixpanel;
 mod network_bridge;
 pub mod orbit_guard;
+pub mod push_notifications;
 
 pub mod live_streams;
 pub(crate) mod log_throttle;

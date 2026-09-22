@@ -100,6 +100,11 @@ pub(super) async fn maybe_apply_task_level_retry(
     );
     emit_task_retrying_signal(TaskRetryingPayload {
         state: ctx.state,
+        user_id: ctx
+            .state
+            .validation_cache
+            .get(jwt)
+            .map(|cached| cached.session.user_id.clone()),
         project_id: ctx.project_id,
         agent_instance_id: ctx.agent_instance_id,
         task_id,
@@ -214,6 +219,7 @@ async fn push_task_back_to_ready(
 /// signature stays inside the project's five-parameter ceiling.
 struct TaskRetryingPayload<'a> {
     state: &'a AppState,
+    user_id: Option<String>,
     project_id: ProjectId,
     agent_instance_id: AgentInstanceId,
     task_id: &'a str,
@@ -227,6 +233,7 @@ struct TaskRetryingPayload<'a> {
 fn emit_task_retrying_signal(payload_in: TaskRetryingPayload<'_>) {
     let TaskRetryingPayload {
         state,
+        user_id,
         project_id,
         agent_instance_id,
         task_id,
@@ -247,6 +254,9 @@ fn emit_task_retrying_signal(payload_in: TaskRetryingPayload<'_>) {
         "reason": reason,
         "retry_action": action,
     });
+    if let (Some(object), Some(user_id)) = (payload.as_object_mut(), user_id) {
+        object.insert("user_id".to_string(), user_id.into());
+    }
     if let Some(session_id) = session_id {
         if let Some(object) = payload.as_object_mut() {
             object.insert("session_id".to_string(), session_id.to_string().into());

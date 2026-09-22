@@ -32,6 +32,7 @@ import { bootstrapNativeTestAuth } from "./lib/native-test-auth";
 import { hydrateStoredAuth, isLoggedInSync } from "./shared/lib/auth-token";
 import { preloadInitialShellApp } from "./lib/boot-shell";
 import { reportBootError } from "./lib/boot-diagnostics";
+import { useNativePushNotifications } from "./hooks/use-native-push-notifications";
 
 const InviteAcceptView = lazy(() =>
   import("./views/InviteAcceptView").then((m) => ({ default: m.InviteAcceptView })),
@@ -260,6 +261,7 @@ export function App(): React.ReactElement {
 
 function AppRoutes(): React.ReactElement {
   const location = useLocation();
+  useNativePushNotifications();
   const { isNativeApp } = useAuraCapabilities();
   const isAuthenticated = useAuthStore((s) => s.user !== null);
 

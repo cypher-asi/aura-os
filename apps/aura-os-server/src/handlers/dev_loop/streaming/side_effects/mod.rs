@@ -147,6 +147,13 @@ fn broadcast_event(ctx: &SideEffectCtx<'_>, mut payload: serde_json::Value) {
         if let Some(session_id) = ctx.session_id {
             object.insert("session_id".to_string(), session_id.to_string().into());
         }
+        if let Some(user_id) = ctx
+            .jwt
+            .and_then(|jwt| ctx.state.validation_cache.get(jwt))
+            .map(|cached| cached.session.user_id.clone())
+        {
+            object.insert("user_id".to_string(), user_id.into());
+        }
     }
     let _ = ctx.state.event_broadcast.send(payload.clone());
     ctx.state
