@@ -55,7 +55,7 @@ describe("MobileAgentResumeSection", () => {
     );
   });
 
-  it("opens code from the session project and exposes recent shared chats", async () => {
+  it("opens the exact session workspace and exposes recent shared chats", async () => {
     const user = userEvent.setup();
     renderSection("/agents/agent-1?view=details");
 
@@ -63,7 +63,26 @@ describe("MobileAgentResumeSection", () => {
     await user.click(screen.getByRole("button", { name: "Browse code" }));
 
     expect(screen.getByTestId("location")).toHaveTextContent(
-      "/projects/recent-project/files",
+      "/projects/recent-project/files?instance=instance-1",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Review changes" }));
+
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      "/projects/recent-project/files?instance=instance-1&view=changes",
+    );
+  });
+
+  it("keeps route-selected workspace identity ahead of another recent session", async () => {
+    const user = userEvent.setup();
+    renderSection(
+      "/agents/agent-1?project=project-1&instance=route-instance&view=details",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Review changes" }));
+
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      "/projects/project-1/files?instance=route-instance&view=changes",
     );
   });
 });

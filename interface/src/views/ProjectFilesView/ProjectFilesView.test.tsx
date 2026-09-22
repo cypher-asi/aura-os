@@ -44,7 +44,7 @@ vi.mock("../../hooks/use-aura-capabilities", () => ({
 }));
 
 vi.mock("../../hooks/use-terminal-target", () => ({
-  useTerminalTarget: () => mockUseTerminalTarget(),
+  useTerminalTarget: (...args: unknown[]) => mockUseTerminalTarget(...args),
 }));
 
 vi.mock("../../stores/projects-list-store", () => ({
@@ -81,6 +81,25 @@ vi.mock("../../components/FileExplorer", () => ({
         </button>
       ) : null}
     </div>
+  ),
+}));
+
+vi.mock("../../components/SourceControlWorkbench", () => ({
+  SourceControlWorkbench: ({
+    projectId,
+    agentInstanceId,
+    readOnly,
+  }: {
+    projectId: string;
+    agentInstanceId?: string;
+    readOnly?: boolean;
+  }) => (
+    <div
+      data-testid="source-control-workbench"
+      data-project-id={projectId}
+      data-agent-instance-id={agentInstanceId ?? ""}
+      data-read-only={String(Boolean(readOnly))}
+    />
   ),
 }));
 
@@ -163,6 +182,35 @@ describe("ProjectFilesView", () => {
 
     expect(mockSetSearchParams).toHaveBeenCalled();
     expect(currentSearchParams.get("file")).toBe("/workspace/README.md");
+  });
+
+  it("reviews the canonical agent workspace changes without mobile mutation controls", () => {
+    mockUseAuraCapabilities.mockReturnValue(capabilities({ isMobileLayout: true, isMobileClient: true }));
+    currentSearchParams = new URLSearchParams("instance=remote-inst-1&view=changes");
+
+    render(<MobileProjectFilesScreen />);
+
+    expect(mockUseTerminalTarget).toHaveBeenCalledWith(expect.objectContaining({
+      projectId: "proj-1",
+      agentInstanceId: "remote-inst-1",
+    }));
+    expect(screen.getByRole("tab", { name: "Changes" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByTestId("source-control-workbench")).toHaveAttribute(
+      "data-project-id",
+      "proj-1",
+    );
+    expect(screen.getByTestId("source-control-workbench")).toHaveAttribute(
+      "data-agent-instance-id",
+      "remote-inst-1",
+    );
+    expect(screen.getByTestId("source-control-workbench")).toHaveAttribute(
+      "data-read-only",
+      "true",
+    );
+    expect(screen.queryByTestId("file-explorer")).not.toBeInTheDocument();
   });
 
   it("loads a mobile remote-file preview without sending users into the IDE", async () => {

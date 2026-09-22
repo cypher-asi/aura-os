@@ -10,10 +10,42 @@
 
 .summary {
   display: flex;
+  flex: 1;
   align-items: center;
   min-height: 40px;
   padding: 8px 16px 4px;
+}
+
+.workspaceHeader {
+  display: flex;
+  flex-shrink: 0;
+  align-items: flex-end;
+  gap: 8px;
+  padding-right: 12px;
   border-bottom: 1px solid color-mix(in srgb, var(--color-border) 24%, transparent);
+}
+
+.viewTabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.viewTab {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.viewTabActive {
+  border-bottom-color: var(--color-accent);
+  color: var(--color-text);
 }
 
 .searchHeader {
@@ -28,6 +60,23 @@
   min-height: 0;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.changesArea {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.changesArea :global([data-source-control-mode="review"]) button {
+  min-height: 44px;
+}
+
+.changesArea :global([data-source-control-mode="review"] [class*="fileRow"]),
+.changesArea :global([data-source-control-mode="review"] [class*="groupHeader"]),
+.changesArea :global([data-source-control-mode="review"] [class*="diffHeader"]) {
+  min-height: 44px;
 }
 
 .remoteRoot {

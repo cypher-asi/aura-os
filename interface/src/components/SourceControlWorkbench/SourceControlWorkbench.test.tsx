@@ -66,6 +66,10 @@ describe("SourceControlWorkbench", () => {
     expect(
       await screen.findByText("codex/source-control-workbench"),
     ).toBeInTheDocument();
+    expect(screen.getByTestId("source-control-workbench")).toHaveAttribute(
+      "data-source-control-mode",
+      "manage",
+    );
     expect(screen.getByText("PR #42")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /PR #42/i })).toHaveAttribute(
       "href",
@@ -113,6 +117,31 @@ describe("SourceControlWorkbench", () => {
     );
     await waitFor(() => expect(message).toHaveValue(""));
     expect(await screen.findByText("Committed abc123def456.")).toBeInTheDocument();
+  });
+
+  it("keeps mobile review mode read-only while retaining status and diffs", async () => {
+    render(
+      <SourceControlWorkbench
+        projectId="project-1"
+        agentInstanceId="agent-1"
+        readOnly
+      />,
+    );
+
+    expect(
+      await screen.findByText("codex/source-control-workbench"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("source-control-workbench")).toHaveAttribute(
+      "data-source-control-mode",
+      "review",
+    );
+    expect(await screen.findByText("+next")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Commit message" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Stage src/app.ts" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Unstage src/staged.ts" })).not.toBeInTheDocument();
+    expect(sourceControl.stage).not.toHaveBeenCalled();
+    expect(sourceControl.unstage).not.toHaveBeenCalled();
+    expect(sourceControl.commit).not.toHaveBeenCalled();
   });
 
   it("explains when the workspace is not a repository", async () => {

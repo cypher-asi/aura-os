@@ -23,6 +23,8 @@ import styles from "./SourceControlWorkbench.module.css";
 interface SourceControlWorkbenchProps {
   projectId: string;
   agentInstanceId?: string;
+  /** Review-only mode for mobile: status and diffs without repository mutations. */
+  readOnly?: boolean;
 }
 
 interface Selection {
@@ -74,6 +76,7 @@ function selectionExists(
 export function SourceControlWorkbench({
   projectId,
   agentInstanceId,
+  readOnly = false,
 }: SourceControlWorkbenchProps) {
   const [status, setStatus] = useState<SourceControlStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
@@ -234,7 +237,11 @@ export function SourceControlWorkbench({
   }
 
   return (
-    <div className={styles.root} data-testid="source-control-workbench">
+    <div
+      className={styles.root}
+      data-testid="source-control-workbench"
+      data-source-control-mode={readOnly ? "review" : "manage"}
+    >
       <header className={styles.repositoryHeader}>
         <div className={styles.branchRow}>
           <div className={styles.branchName} title={status.branch ?? "Detached HEAD"}>
@@ -286,38 +293,40 @@ export function SourceControlWorkbench({
           selection={selection}
           pendingAction={pendingAction}
           onSelect={setSelection}
-          onMutate={mutateFiles}
+          onMutate={readOnly ? undefined : mutateFiles}
         />
 
-        <div className={styles.commitBox}>
-          <textarea
-            className={styles.commitInput}
-            value={commitMessage}
-            onChange={(event) => setCommitMessage(event.target.value)}
-            onKeyDown={(event) => {
-              if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-                event.preventDefault();
-                void createCommit();
+        {!readOnly ? (
+          <div className={styles.commitBox}>
+            <textarea
+              className={styles.commitInput}
+              value={commitMessage}
+              onChange={(event) => setCommitMessage(event.target.value)}
+              onKeyDown={(event) => {
+                if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                  event.preventDefault();
+                  void createCommit();
+                }
+              }}
+              placeholder="Commit message"
+              aria-label="Commit message"
+              rows={2}
+            />
+            <button
+              type="button"
+              className={styles.commitButton}
+              onClick={() => void createCommit()}
+              disabled={
+                stagedFiles.length === 0 ||
+                !commitMessage.trim() ||
+                Boolean(pendingAction)
               }
-            }}
-            placeholder="Commit message"
-            aria-label="Commit message"
-            rows={2}
-          />
-          <button
-            type="button"
-            className={styles.commitButton}
-            onClick={() => void createCommit()}
-            disabled={
-              stagedFiles.length === 0 ||
-              !commitMessage.trim() ||
-              Boolean(pendingAction)
-            }
-          >
-            <Check size={13} />
-            {pendingAction === "commit" ? "Committing…" : "Commit"}
-          </button>
-        </div>
+            >
+              <Check size={13} />
+              {pendingAction === "commit" ? "Committing…" : "Commit"}
+            </button>
+          </div>
+        ) : null}
 
         <FileGroup
           title="Changes"
@@ -326,7 +335,7 @@ export function SourceControlWorkbench({
           selection={selection}
           pendingAction={pendingAction}
           onSelect={setSelection}
-          onMutate={mutateFiles}
+          onMutate={readOnly ? undefined : mutateFiles}
         />
         {notice ? <div className={styles.notice} role="status">{notice}</div> : null}
       </div>
@@ -360,7 +369,7 @@ interface FileGroupProps {
   selection: Selection | null;
   pendingAction: string | null;
   onSelect: (selection: Selection) => void;
-  onMutate: (area: SourceControlArea, paths: string[]) => Promise<void>;
+  onMutate?: (area: SourceControlArea, paths: string[]) => Promise<void>;
 }
 
 function FileGroup({
@@ -378,7 +387,7 @@ function FileGroup({
       <div className={styles.groupHeader}>
         <span>{title}</span>
         <span className={styles.fileCount}>{files.length}</span>
-        {files.length > 1 ? (
+        {files.length > 1 && onMutate ? (
           <button
             type="button"
             className={styles.groupAction}
@@ -431,23 +440,25 @@ function FileGroup({
                   {file.path}
                 </span>
               </button>
-              <button
-                type="button"
-                className={styles.fileAction}
-                onClick={() =>
-                  void onMutate(
-                    area,
-                    file.original_path
-                      ? [file.path, file.original_path]
-                      : [file.path],
-                  )
-                }
-                disabled={Boolean(pendingAction)}
-                aria-label={`${verb} ${file.path}`}
-                title={`${verb} ${file.path}`}
-              >
-                {area === "worktree" ? <Plus size={13} /> : <Minus size={13} />}
-              </button>
+              {onMutate ? (
+                <button
+                  type="button"
+                  className={styles.fileAction}
+                  onClick={() =>
+                    void onMutate(
+                      area,
+                      file.original_path
+                        ? [file.path, file.original_path]
+                        : [file.path],
+                    )
+                  }
+                  disabled={Boolean(pendingAction)}
+                  aria-label={`${verb} ${file.path}`}
+                  title={`${verb} ${file.path}`}
+                >
+                  {area === "worktree" ? <Plus size={13} /> : <Minus size={13} />}
+                </button>
+              ) : null}
             </div>
           );
         })

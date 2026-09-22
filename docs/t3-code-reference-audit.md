@@ -84,8 +84,9 @@ The first Aura slice now implements that boundary:
   by a profile-only screen.
 - Agent details move to `?view=details`, preserving the canonical `project`, `instance`, and
   `session` query identity when moving between chat and controls.
-- The mobile details surface adds Continue chat, recent canonical sessions, and Browse code when a
-  project workspace is known.
+- The mobile details surface adds Continue chat, recent canonical sessions, Browse code, and Review
+  changes when a project workspace is known. Workspace navigation carries the exact canonical
+  agent-instance identity instead of resolving whichever project runtime happens to be newest.
 - The agent library warms and displays recent shared conversation previews rather than only profile
   biography text.
 - Desktop-local agents remain readable on mobile while their runtime is unreachable; sending stays
@@ -168,6 +169,13 @@ The first Aura slice now implements that boundary:
   persisted last prompt; Aura never silently resubmits it. If discovery itself fails, the state
   remains unknown/recoverable rather than falsely claiming interruption. This is honest restart
   truth at the client boundary, not durable execution recovery.
+- Mobile project workspaces now separate Files from a read-only Changes view. Users can inspect the
+  current branch, upstream/ahead/behind state, linked pull request, changed files, and exact staged
+  or worktree diffs for the canonical agent instance without exposing stage, unstage, or commit
+  mutations on a touch client. This reuses Aura's provider-neutral source-control contract rather
+  than introducing a mobile-only Git path. Server-side Git inspection does not yet reach every
+  remote/swarm workspace, so those environments report the capability as unavailable instead of
+  showing another workspace's state.
 - Regular project and standalone-agent chat now enqueue the request intent in an IndexedDB outbox
   before opening the POST. The authenticated shell drains retryable commands on boot, connectivity
   restoration, and foreground using the original command id, never repeats `new_session=true`, and
@@ -213,8 +221,10 @@ expanding one component indefinitely.
 
 ### P1 — build a native source-control and review workbench
 
-Introduce a provider-neutral source-control service with capability discovery, then build the UI in
-thin layers:
+Aura now has a first provider-neutral local source-control service and workbench for repository
+status, branch/sync state, staged and worktree diffs, commit, and linked pull-request discovery. The
+mobile surface reuses it in read-only mode. Continue building the UI and adapter coverage in thin
+layers:
 
 1. Repository status, branch, changes, staged/unstaged diff, commit, pull, and push.
 2. Detect and link the active PR/MR to a session or task.
