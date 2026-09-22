@@ -63,6 +63,8 @@ export const EventType = {
   AssistantMessageEnd:       "assistant_message_end",
   TextDelta:                 "text_delta",
   ToolUseStart:              "tool_use_start",
+  ToolApprovalPrompt:        "tool_approval_prompt",
+  ToolApprovalResolved:      "tool_approval_resolved",
 
   /**
    * Throttled live-progress heartbeat published by

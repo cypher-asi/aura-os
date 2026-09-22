@@ -157,6 +157,15 @@ export interface ApprovalResponse {
   approved: boolean;
 }
 
+export type ToolApprovalDecision = "on" | "off";
+export type ToolApprovalRemember = "once" | "session" | "forever";
+
+export interface ToolApprovalResponse {
+  request_id: string;
+  decision: ToolApprovalDecision;
+  remember: ToolApprovalRemember;
+}
+
 /**
  * Phase A: the harness no longer accepts a `session_init` first WS
  * frame — sessions are created via `POST /v1/run` (body:
@@ -167,7 +176,8 @@ export interface ApprovalResponse {
 export type InboundMessage =
   | ({ type: "user_message" } & UserMessage)
   | { type: "cancel" }
-  | ({ type: "approval_response" } & ApprovalResponse);
+  | ({ type: "approval_response" } & ApprovalResponse)
+  | ({ type: "tool_approval_response" } & ToolApprovalResponse);
 
 // ============================================================================
 // Outbound Messages (Server → Client)
@@ -204,6 +214,14 @@ export interface ThinkingDelta {
 export interface ToolUseStart {
   id: string;
   name: string;
+}
+
+export interface ToolApprovalPrompt {
+  request_id: string;
+  tool_name: string;
+  args: unknown;
+  agent_id: string;
+  remember_options: ToolApprovalRemember[];
 }
 
 export interface ToolResultMsg {
@@ -390,6 +408,7 @@ export type OutboundMessage =
   | { type: "text_delta" } & TextDelta
   | { type: "thinking_delta" } & ThinkingDelta
   | { type: "tool_use_start" } & ToolUseStart
+  | { type: "tool_approval_prompt" } & ToolApprovalPrompt
   | { type: "tool_result" } & ToolResultMsg
   | { type: "assistant_message_end" } & AssistantMessageEnd
   | { type: "subagent_spawned" } & SubagentSpawned

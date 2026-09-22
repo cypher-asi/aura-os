@@ -15,6 +15,7 @@ mod normalize;
 mod subagent;
 mod tool;
 
+use super::event_bus::publish_tool_approval_prompt_event;
 use message::{
     handle_error, handle_message_end, handle_message_start, handle_text_delta,
     handle_thinking_delta,
@@ -118,13 +119,16 @@ pub(super) async fn handle_outbound(
             .await;
             true
         }
+        HarnessOutbound::ToolApprovalPrompt(prompt) => {
+            publish_tool_approval_prompt_event(event_bus, ctx, prompt);
+            false
+        }
         HarnessOutbound::SessionReady(_)
         | HarnessOutbound::GenerationStart(_)
         | HarnessOutbound::GenerationProgress(_)
         | HarnessOutbound::GenerationPartialImage(_)
         | HarnessOutbound::GenerationCompleted(_)
         | HarnessOutbound::GenerationError(_)
-        | HarnessOutbound::ToolApprovalPrompt(_)
         // Progress heartbeats from the harness (Phase 6: `tool_running`
         // ticks every `AURA_TURN_TOOL_HEARTBEAT_INTERVAL_SECS`) are
         // transient liveness signals, not persistable turn progress —

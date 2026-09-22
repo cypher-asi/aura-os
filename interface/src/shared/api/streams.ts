@@ -1,4 +1,8 @@
 import { apiFetch } from "./core";
+import type {
+  ToolApprovalDecision,
+  ToolApprovalRemember,
+} from "../types/harness-protocol";
 
 /** Kind of harness flow a resumable stream represents. Mirrors the
  *  server `StreamKind` enum. */
@@ -58,5 +62,20 @@ export const streamsApi = {
     apiFetch<{ cancelled: boolean }>(
       `/api/streams/${encodeURIComponent(attachId)}/cancel`,
       { method: "POST" },
+    ),
+
+  /** Answer a protected tool request on the environment-owned live run. */
+  respondToToolApproval: (
+    requestId: string,
+    decision: ToolApprovalDecision,
+    remember: ToolApprovalRemember,
+  ) =>
+    apiFetch<{ accepted: boolean }>(
+      `/api/streams/tool-approvals/${encodeURIComponent(requestId)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision, remember }),
+      },
     ),
 };

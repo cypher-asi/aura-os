@@ -75,6 +75,11 @@ import type { StreamCloseContext } from "../shared/observability/stream-breadcru
 import { recordStreamCloseReason } from "../shared/observability/stream-breadcrumbs";
 import { isStreamDroppedError } from "./stream/handlers/lifecycle";
 import { applySubagentStatus, registerSpawnedSubagent } from "./use-chat-stream/subagent-cards";
+import type { ToolApprovalPrompt } from "../shared/types/harness-protocol";
+import {
+  clearPendingToolApproval,
+  setPendingToolApproval,
+} from "../stores/tool-approval-store";
 
 /**
  * Auto-retry budget for transient stream drops on the standalone-agent
@@ -463,6 +468,15 @@ export function useAgentChatStream({
             case EventType.ToolUseStart:
               handleToolCallStarted(refs, partitionSetters, event.content as { id: string; name: string });
               break;
+            case EventType.ToolApprovalPrompt:
+              setPendingToolApproval(getPartitionKey(), event.content as ToolApprovalPrompt);
+              markStreamProgress(getPartitionKey());
+              partitionSetters.setProgressText("Waiting for your approval");
+              break;
+            case EventType.ToolApprovalResolved:
+              clearPendingToolApproval(getPartitionKey(), event.content.request_id);
+              partitionSetters.setProgressText("Continuing…");
+              break;
             case EventType.ToolCallSnapshot:
               handleToolCallSnapshot(refs, partitionSetters, event.content);
               break;
@@ -531,6 +545,7 @@ export function useAgentChatStream({
                 });
               }
               if (amc.stop_reason !== "tool_use") {
+                clearPendingToolApproval(getPartitionKey());
                 resetStreamBuffers(refs, partitionSetters);
                 // Clear the synchronous re-entry latch in lockstep with
                 // `isStreaming` so the `useChatPanelState` dequeue effect,
@@ -628,6 +643,7 @@ export function useAgentChatStream({
               handleStreamError(refs, partitionSetters, event.content, breadcrumbContext);
               break;
             case EventType.Error:
+              clearPendingToolApproval(getPartitionKey());
               inFlightRef.current = false;
               // Pass the FULL error payload (not just `.message`) so the
               // `code` survives — that's what classifies `stream_stalled`
@@ -1053,6 +1069,15 @@ export function useAgentChatStream({
           case EventType.ToolUseStart:
             handleToolCallStarted(refs, partitionSetters, event.content as { id: string; name: string });
             break;
+          case EventType.ToolApprovalPrompt:
+            setPendingToolApproval(getPartitionKey(), event.content as ToolApprovalPrompt);
+            markStreamProgress(getPartitionKey());
+            partitionSetters.setProgressText("Waiting for your approval");
+            break;
+          case EventType.ToolApprovalResolved:
+            clearPendingToolApproval(getPartitionKey(), event.content.request_id);
+            partitionSetters.setProgressText("Continuing…");
+            break;
           case EventType.ToolCallSnapshot:
             handleToolCallSnapshot(refs, partitionSetters, event.content);
             break;
@@ -1105,6 +1130,7 @@ export function useAgentChatStream({
                 );
             }
             if (amc.stop_reason !== "tool_use") {
+              clearPendingToolApproval(getPartitionKey());
               resetStreamBuffers(refs, partitionSetters);
               inFlightRef.current = false;
               partitionSetters.setIsStreaming(false);
@@ -1123,6 +1149,7 @@ export function useAgentChatStream({
             break;
           }
           case EventType.Error:
+            clearPendingToolApproval(getPartitionKey());
             inFlightRef.current = false;
             handleStreamError(refs, partitionSetters, event.content.message, breadcrumbContext);
             break;

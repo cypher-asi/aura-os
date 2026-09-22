@@ -147,6 +147,20 @@ impl EventLog {
         self.next_seq.load(Ordering::SeqCst).saturating_sub(1)
     }
 
+    /// Return whether any currently-buffered value matches `predicate`.
+    ///
+    /// This is intentionally a read-only snapshot over the bounded ring.
+    /// Callers use it to resolve control messages (for example a mobile
+    /// tool-approval response) back to the live stream that emitted the
+    /// corresponding request without exposing the ring itself.
+    pub fn any_value(&self, predicate: impl Fn(&serde_json::Value) -> bool) -> bool {
+        self.ring
+            .lock()
+            .expect("event log ring poisoned")
+            .iter()
+            .any(|event| predicate(&event.value))
+    }
+
     /// Compute the delta a client needs to catch up from `since`.
     pub fn replay_since(&self, since: u64) -> ReplayResult {
         let ring = self.ring.lock().expect("event log ring poisoned");

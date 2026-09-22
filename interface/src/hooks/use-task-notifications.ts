@@ -98,6 +98,7 @@ export function useTaskNotifications(enabled = true): void {
       subscribe(EventType.TaskRetrying, handler),
       subscribe(EventType.LoopEnded, handler),
       subscribe(EventType.ProjectPushStuck, handler),
+      subscribe(EventType.ToolApprovalPrompt, handler),
     );
     return () => {
       unsubscribe();

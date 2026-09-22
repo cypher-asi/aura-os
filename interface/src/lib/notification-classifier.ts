@@ -52,6 +52,26 @@ export function classifyNotification(event: AuraEvent): AuraNotification | null 
         taskId: event.content.task_id,
         route: projectRoute(event.project_id),
       };
+    case EventType.ToolApprovalPrompt: {
+      const projectId = event.project_id || undefined;
+      const agentId = event.agent_id || event.content.agent_id || undefined;
+      const agentInstanceId = event.project_agent_id ?? undefined;
+      const sessionId = event.session_id || undefined;
+      const toolName = event.content.tool_name.replaceAll("_", " ");
+      return {
+        id: `tool_approval:${event.content.request_id}`,
+        kind: NotificationKind.ApprovalRequired,
+        priority: 1,
+        title: "Agent needs approval",
+        body: `Review ${toolName} before the agent can continue.`,
+        createdAt: Date.parse(event.created_at) || Date.now(),
+        projectId,
+        agentId,
+        agentInstanceId,
+        sessionId,
+        route: buildAgentSessionRoute({ projectId, agentInstanceId, agentId, sessionId }),
+      };
+    }
     default:
       return null;
   }

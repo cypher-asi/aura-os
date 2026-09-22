@@ -107,6 +107,28 @@ describe("classifyNotification", () => {
     });
   });
 
+  it("routes approval notifications back to the exact waiting conversation", () => {
+    const notification = classifyNotification({
+      ...baseEvent(EventType.ToolApprovalPrompt, {
+        request_id: "approval-1",
+        tool_name: "write_file",
+        args: { path: "src/main.ts" },
+        agent_id: "agent-1",
+        remember_options: ["once"],
+      }),
+      project_agent_id: "instance-1",
+    });
+
+    expect(notification).toMatchObject({
+      id: "tool_approval:approval-1",
+      kind: NotificationKind.ApprovalRequired,
+      priority: 1,
+      title: "Agent needs approval",
+      body: "Review write file before the agent can continue.",
+      route: "/projects/project-1/agents/instance-1?session=session-1",
+    });
+  });
+
   it("returns null for non-notification events", () => {
     expect(
       classifyNotification(

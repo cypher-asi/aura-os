@@ -36,6 +36,7 @@ import { getLastSendArgs as getLastAgentChatSendArgs } from "../../../hooks/use-
 import { getPartitionSendControl } from "../../../hooks/use-chat-stream/partition-send-control";
 import { recordStreamCloseReason } from "../../../shared/observability/stream-breadcrumbs";
 import { AsideModal } from "./AsideModal";
+import { ToolApprovalPromptCard } from "./ToolApprovalPromptCard";
 import { useErrorReportAgentInfo } from "../../../hooks/use-error-report-agent-info";
 import type { AgentMentionTarget, ChatAttachment } from "../../../api/streams";
 import type { AgentInstance, Project } from "../../../shared/types";
@@ -897,6 +898,8 @@ export function ChatSurface({
           onStop={onStop}
           onRetry={handleRetryLastSend}
         />
+
+        <ToolApprovalPromptCard streamKey={streamKey} />
 
         <DraftedInputBar
           InputBarComponent={InputBarComponent}

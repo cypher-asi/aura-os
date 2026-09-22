@@ -54,6 +54,11 @@ import {
 } from "../stream/store";
 import { migrateChatPartition } from "../stream/migration";
 import { registerSpawnedSubagent, applySubagentStatus } from "./subagent-cards";
+import type { ToolApprovalPrompt } from "../../shared/types/harness-protocol";
+import {
+  clearPendingToolApproval,
+  setPendingToolApproval,
+} from "../../stores/tool-approval-store";
 
 export interface DispatchDeps {
   projectId: string;
@@ -346,6 +351,15 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
         }
         break;
       }
+      case EventType.ToolApprovalPrompt:
+        setPendingToolApproval(activeKey, event.content as ToolApprovalPrompt);
+        markStreamProgress(activeKey);
+        setProgressText("Waiting for your approval");
+        break;
+      case EventType.ToolApprovalResolved:
+        clearPendingToolApproval(activeKey, event.content.request_id);
+        setProgressText("Continuing…");
+        break;
       case EventType.ToolCallSnapshot: {
         const snap = event.content;
         handleToolCallSnapshot(refs, setters, snap);
@@ -511,6 +525,7 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
           });
         }
         if (amc.stop_reason !== "tool_use") {
+          clearPendingToolApproval(activeKey);
           resetStreamBuffers(refs, setters);
           // Clear the partition's in-flight latch in lockstep with the
           // Zustand `isStreaming` flag so the dequeue-on-completion
@@ -638,6 +653,7 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
         handleStreamError(refs, setters, event.content, breadcrumbContext);
         break;
       case EventType.Error: {
+        clearPendingToolApproval(activeKey);
         // Phase 2: a transient WS-side `Error` payload (`harness_ws_closed`,
         // `harness_ws_read_error`, `harness_protocol_mismatch`,
         // `stream_lagged`, ...) classifies as `streamDropped`. Give the

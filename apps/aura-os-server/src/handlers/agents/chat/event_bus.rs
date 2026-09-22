@@ -19,6 +19,7 @@
 //! [`CROSS_AGENT_TRACING.md`](./CROSS_AGENT_TRACING.md) — keep that
 //! doc in sync when adding or removing log lines under either target.
 
+use aura_protocol::ToolApprovalPrompt;
 use serde::Serialize;
 
 use super::persist::ChatPersistCtx;
@@ -187,6 +188,29 @@ pub(crate) fn publish_assistant_message_end_event(
     _message_id: &str,
 ) {
     publish_chat_event(bus, "assistant_message_end", ctx);
+}
+
+/// Publish a live approval request with the same canonical conversation
+/// identity used by chat deep links. The request itself remains owned by
+/// the live-stream registry; this event lets clients notify the user and
+/// route them into the exact session that is waiting.
+pub(super) fn publish_tool_approval_prompt_event(
+    bus: &tokio::sync::broadcast::Sender<serde_json::Value>,
+    ctx: &ChatPersistCtx,
+    prompt: &ToolApprovalPrompt,
+) {
+    let _ = bus.send(serde_json::json!({
+        "type": "tool_approval_prompt",
+        "session_id": ctx.session_id,
+        "project_id": ctx.project_id,
+        "project_agent_id": ctx.project_agent_id,
+        "agent_instance_id": ctx.project_agent_id,
+        "agent_id": ctx.agent_id.as_deref().unwrap_or(prompt.agent_id.as_str()),
+        "request_id": prompt.request_id,
+        "tool_name": prompt.tool_name,
+        "args": prompt.args,
+        "remember_options": prompt.remember_options,
+    }));
 }
 
 /// Publish a `session_summary_updated` event on the WS bus once the
@@ -508,5 +532,31 @@ mod tests {
         publish_assistant_message_end_event(&tx, &ctx, "msg-1");
         // Reaching this line proves both publishers ran to
         // completion without unwinding; no further assertion needed.
+    }
+
+    #[tokio::test]
+    async fn tool_approval_event_carries_canonical_session_identity() {
+        let (tx, mut rx) = broadcast::channel::<serde_json::Value>(4);
+        let ctx = test_ctx(
+            aura_os_core::SessionId::new(),
+            "project-x",
+            "instance-y",
+            Some("agent-z"),
+        );
+        let prompt = ToolApprovalPrompt {
+            request_id: "approval-1".to_string(),
+            tool_name: "write_file".to_string(),
+            args: serde_json::json!({ "path": "src/main.rs" }),
+            agent_id: "harness-agent".to_string(),
+            remember_options: vec![aura_protocol::ToolApprovalRemember::Once],
+        };
+
+        publish_tool_approval_prompt_event(&tx, &ctx, &prompt);
+        let event = rx.try_recv().expect("approval event must enqueue");
+        assert_eq!(event["type"], "tool_approval_prompt");
+        assert_eq!(event["project_id"], "project-x");
+        assert_eq!(event["project_agent_id"], "instance-y");
+        assert_eq!(event["agent_id"], "agent-z");
+        assert_eq!(event["request_id"], "approval-1");
     }
 }

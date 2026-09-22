@@ -101,10 +101,20 @@ The first Aura slice now implements that boundary:
   identity and target that exact canonical conversation. The same route is included in the native
   notification payload, establishing one deep-link contract for in-app, desktop, and future mobile
   push activation.
+- Live tool approval is now a cross-client control-plane operation instead of an SSE event the UI
+  silently drops. The server retains the environment-owned command channel, resolves a response by
+  the harness request id with account ownership checks, and forwards allow/deny plus the offered
+  remember scope to the original run. Project and standalone chats render the same touch-friendly
+  approval card, including after mobile reattaches to a desktop-started stream.
+- Approval-required events are also published with canonical project, agent-instance, agent, and
+  session identity. In-app/native notifications deep-link to the exact waiting conversation, and
+  approval notifications have their own default-on preference. The live-stream registry remains
+  the source of truth for the pending command; the notification is only a routing signal.
 
 Next: formalize `runtimeId`/environment ownership in session metadata, add server command receipts
 before persisting or replaying a native prompt outbox, and add device registration plus background
-delivery for completion, failure, approval, and input-required events. Do not make the cloud relay
+delivery for completion, failure, approval, and input-required events. Add the same durable,
+cross-client response path for structured agent questions/input requests. Do not make the cloud relay
 an execution proxy or present an unacknowledged prompt as accepted work.
 
 ### P0 — finish the safety foundation
