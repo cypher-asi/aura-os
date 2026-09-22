@@ -1,6 +1,10 @@
 import { renderHook, act } from "@testing-library/react";
 import { useChatStream } from "./use-chat-stream";
-import { useStreamStore, streamMetaMap } from "./stream/store";
+import {
+  keyForProjectSession,
+  useStreamStore,
+  streamMetaMap,
+} from "./stream/store";
 import { useChatUIStore } from "../stores/chat-ui-store";
 import { useSessionsListStore } from "../stores/sessions-list-store";
 import { STYLE_LOCK_SUFFIX } from "../constants/generation";
@@ -198,6 +202,8 @@ describe("useChatStream", () => {
           commandId: "command-project-1",
           sessionId: "session-1",
           projectId: "p-1",
+          attachId: "attach-1",
+          replayed: false,
         });
       },
     );
@@ -220,7 +226,9 @@ describe("useChatStream", () => {
       );
     });
 
-    const event = useStreamStore.getState().entries[result.current.streamKey].events[0];
+    const event = useStreamStore.getState().entries[
+      keyForProjectSession("p-1", "ai-1", "session-1")
+    ].events[0];
     expect(event.deliveryStatus).toBeUndefined();
   });
 

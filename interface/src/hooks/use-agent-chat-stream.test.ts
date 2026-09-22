@@ -1,7 +1,11 @@
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { useAgentChatStream, _resetAgentChatStreamReplayMap } from "./use-agent-chat-stream";
 import { _resetAllPartitionSendControl } from "./stream/partition-state";
-import { useStreamStore, streamMetaMap } from "./stream/store";
+import {
+  keyForAgentSession,
+  useStreamStore,
+  streamMetaMap,
+} from "./stream/store";
 import { useChatUIStore } from "../stores/chat-ui-store";
 import { useMessageQueueStore } from "../stores/message-queue-store";
 import { useContextUsageStore } from "../stores/context-usage-store";
@@ -211,6 +215,8 @@ describe("useAgentChatStream", () => {
           commandId: "command-agent-1",
           sessionId: "session-1",
           projectId: "project-1",
+          attachId: "attach-1",
+          replayed: false,
         });
       },
     );
@@ -231,7 +237,9 @@ describe("useAgentChatStream", () => {
       );
     });
 
-    const event = useStreamStore.getState().entries[result.current.streamKey].events[0];
+    const event = useStreamStore.getState().entries[
+      keyForAgentSession("agent-1", "session-1")
+    ].events[0];
     expect(event.deliveryStatus).toBeUndefined();
   });
 
@@ -819,6 +827,9 @@ describe("useAgentChatStream", () => {
       // Kick off the second send in the same synchronous tick the first
       // is mid-await. Without the latch both pass the streaming guard.
       const secondSend = result.current.sendMessage("hello again");
+      // Durable mobile sends persist to IndexedDB before opening the POST, so
+      // let that microtask boundary complete before releasing the mocked SSE.
+      await Promise.resolve();
       resolveFirstStream?.();
       await Promise.all([firstSend, secondSend]);
     });

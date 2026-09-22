@@ -63,3 +63,6 @@ pub(crate) const HEADER_CHAT_PERSISTED: &str = "x-aura-chat-persisted";
 pub(crate) const HEADER_CHAT_SESSION_ID: &str = "x-aura-chat-session-id";
 pub(crate) const HEADER_CHAT_PROJECT_ID: &str = "x-aura-chat-project-id";
 pub(crate) const HEADER_CHAT_COMMAND_ID: &str = "x-aura-chat-command-id";
+pub(crate) const HEADER_CHAT_COMMAND_REPLAY: &str = "x-aura-command-replay";
+pub(crate) const HEADER_CHAT_COMMAND_REPLAYED: &str = "x-aura-chat-command-replayed";
+pub(crate) const HEADER_CHAT_ATTACH_ID: &str = "x-aura-attach-id";

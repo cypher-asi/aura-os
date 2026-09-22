@@ -20,12 +20,12 @@
 //! final frame still receives the tail of the output.
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, Weak};
 use std::time::{Duration, Instant};
 
 use dashmap::DashMap;
 use serde::Serialize;
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, Mutex as AsyncMutex};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, warn};
 
@@ -50,6 +50,7 @@ pub const STREAM_LOG_CAPACITY_ENV: &str = "AURA_STREAM_LOG_CAPACITY";
 pub const DEFAULT_STREAM_TTL_SECS: u64 = 300;
 /// Env var overriding [`DEFAULT_STREAM_TTL_SECS`].
 pub const STREAM_TTL_SECS_ENV: &str = "AURA_STREAM_TTL_SECS";
+const CHAT_COMMAND_RECEIPT_TTL: Duration = Duration::from_secs(24 * 60 * 60);
 
 /// Kind of harness flow a stream represents. Lets the client route a
 /// reattached stream back into the right UI surface.
@@ -380,9 +381,28 @@ pub struct PendingToolApprovalSummary {
     pub started_at_ms: i64,
 }
 
+#[derive(Clone)]
+pub struct ChatCommandMatch {
+    pub session_id: String,
+    pub project_id: String,
+    pub content: String,
+    pub stream: Option<Arc<LiveStream>>,
+}
+
+#[derive(Clone, Debug)]
+struct ChatCommandReceipt {
+    session_id: String,
+    project_id: String,
+    content: String,
+    attach_id: Option<AttachId>,
+    recorded_at: Instant,
+}
+
 /// Registry of all live/recently-terminated harness streams.
 pub struct LiveStreamRegistry {
     inner: DashMap<AttachId, Arc<LiveStream>>,
+    chat_command_receipts: DashMap<String, ChatCommandReceipt>,
+    chat_command_locks: DashMap<String, Weak<AsyncMutex<()>>>,
     stream_capacity: usize,
     ttl: Duration,
 }
@@ -402,6 +422,8 @@ impl LiveStreamRegistry {
             .unwrap_or(DEFAULT_STREAM_TTL_SECS);
         let registry = Arc::new(Self {
             inner: DashMap::new(),
+            chat_command_receipts: DashMap::new(),
+            chat_command_locks: DashMap::new(),
             stream_capacity,
             ttl: Duration::from_secs(ttl_secs),
         });
@@ -495,6 +517,88 @@ impl LiveStreamRegistry {
     /// Look up a stream by attach id.
     pub fn get(&self, attach_id: &str) -> Option<Arc<LiveStream>> {
         self.inner.get(attach_id).map(|e| e.value().clone())
+    }
+
+    fn chat_command_key(user_id: Option<&str>, command_id: &str) -> String {
+        let owner = user_id.unwrap_or("");
+        format!("{}:{owner}:{command_id}", owner.len())
+    }
+
+    /// Serialize attempts carrying the same client command id. The map stores
+    /// weak references so completed commands do not retain one mutex forever;
+    /// the registry sweeper removes dead keys.
+    pub fn chat_command_lock(
+        &self,
+        user_id: Option<&str>,
+        command_id: &str,
+    ) -> Arc<AsyncMutex<()>> {
+        use dashmap::mapref::entry::Entry;
+
+        let key = Self::chat_command_key(user_id, command_id);
+        match self.chat_command_locks.entry(key) {
+            Entry::Occupied(mut occupied) => {
+                if let Some(lock) = occupied.get().upgrade() {
+                    return lock;
+                }
+                let lock = Arc::new(AsyncMutex::new(()));
+                occupied.insert(Arc::downgrade(&lock));
+                lock
+            }
+            Entry::Vacant(vacant) => {
+                let lock = Arc::new(AsyncMutex::new(()));
+                vacant.insert(Arc::downgrade(&lock));
+                lock
+            }
+        }
+    }
+
+    pub fn record_chat_command(
+        &self,
+        user_id: Option<&str>,
+        command_id: &str,
+        session_id: &str,
+        project_id: &str,
+        content: &str,
+    ) {
+        let key = Self::chat_command_key(user_id, command_id);
+        self.chat_command_receipts.insert(
+            key,
+            ChatCommandReceipt {
+                session_id: session_id.to_string(),
+                project_id: project_id.to_string(),
+                content: content.to_string(),
+                attach_id: None,
+                recorded_at: Instant::now(),
+            },
+        );
+    }
+
+    pub fn attach_chat_command(&self, user_id: Option<&str>, command_id: &str, attach_id: &str) {
+        let key = Self::chat_command_key(user_id, command_id);
+        if let Some(mut receipt) = self.chat_command_receipts.get_mut(&key) {
+            receipt.attach_id = Some(attach_id.to_string());
+        }
+    }
+
+    pub fn find_chat_command(
+        &self,
+        user_id: Option<&str>,
+        command_id: &str,
+    ) -> Option<ChatCommandMatch> {
+        let key = Self::chat_command_key(user_id, command_id);
+        let receipt = self.chat_command_receipts.get(&key)?;
+        let session_id = receipt.session_id.clone();
+        let project_id = receipt.project_id.clone();
+        let content = receipt.content.clone();
+        let attach_id = receipt.attach_id.clone();
+        drop(receipt);
+        let stream = attach_id.and_then(|id| self.get(&id));
+        Some(ChatCommandMatch {
+            session_id,
+            project_id,
+            content,
+            stream,
+        })
     }
 
     /// Find the most recently-registered, still-live subagent stream for
@@ -609,6 +713,11 @@ impl LiveStreamRegistry {
                         None => true,
                     }
                 });
+                self.chat_command_receipts.retain(|_, receipt| {
+                    now.duration_since(receipt.recorded_at) < CHAT_COMMAND_RECEIPT_TTL
+                });
+                self.chat_command_locks
+                    .retain(|_, lock| lock.strong_count() > 0);
             }
         });
     }
@@ -712,13 +821,84 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn forwarder_records_frames_and_marks_terminal() {
-        let registry = Arc::new(LiveStreamRegistry {
+    fn test_registry() -> Arc<LiveStreamRegistry> {
+        Arc::new(LiveStreamRegistry {
             inner: DashMap::new(),
+            chat_command_receipts: DashMap::new(),
+            chat_command_locks: DashMap::new(),
             stream_capacity: 64,
             ttl: Duration::from_secs(300),
-        });
+        })
+    }
+
+    #[tokio::test]
+    async fn chat_command_receipts_are_user_scoped_and_attach_to_original_stream() {
+        let registry = test_registry();
+        registry.record_chat_command(
+            Some("user-1"),
+            "command-1",
+            "session-1",
+            "project-1",
+            "hello",
+        );
+        registry.record_chat_command(
+            Some("user-2"),
+            "command-1",
+            "session-2",
+            "project-2",
+            "other",
+        );
+
+        let first = registry
+            .find_chat_command(Some("user-1"), "command-1")
+            .expect("first user receipt");
+        assert_eq!(first.session_id, "session-1");
+        assert_eq!(first.content, "hello");
+        assert!(first.stream.is_none());
+
+        let stream = registry.register(
+            StreamKind::ChatTurn,
+            StreamScope {
+                user_id: Some("user-1".into()),
+                session_id: Some("session-1".into()),
+                ..Default::default()
+            },
+            fake_session(),
+        );
+        registry.attach_chat_command(Some("user-1"), "command-1", &stream.attach_id);
+
+        let attached = registry
+            .find_chat_command(Some("user-1"), "command-1")
+            .expect("attached receipt");
+        assert_eq!(
+            attached.stream.expect("original stream").attach_id,
+            stream.attach_id
+        );
+        assert_eq!(
+            registry
+                .find_chat_command(Some("user-2"), "command-1")
+                .expect("second user receipt")
+                .session_id,
+            "session-2"
+        );
+    }
+
+    #[test]
+    fn chat_command_locks_serialize_only_the_same_user_and_id() {
+        let registry = test_registry();
+        let first = registry.chat_command_lock(Some("user-1"), "command-1");
+        let same = registry.chat_command_lock(Some("user-1"), "command-1");
+        let other_user = registry.chat_command_lock(Some("user-2"), "command-1");
+        let other_command = registry.chat_command_lock(Some("user-1"), "command-2");
+
+        assert!(Arc::ptr_eq(&first, &same));
+        assert!(!Arc::ptr_eq(&first, &other_user));
+        assert!(!Arc::ptr_eq(&first, &other_command));
+    }
+
+    #[tokio::test]
+    async fn forwarder_records_frames_and_marks_terminal() {
+        let registry = test_registry();
         let session = fake_session();
         let events_tx = session.events_tx.clone();
         let scope = StreamScope {
@@ -763,11 +943,7 @@ mod tests {
 
     #[tokio::test]
     async fn list_for_scope_filters_by_user_and_project() {
-        let registry = Arc::new(LiveStreamRegistry {
-            inner: DashMap::new(),
-            stream_capacity: 64,
-            ttl: Duration::from_secs(300),
-        });
+        let registry = test_registry();
         let s1 = registry.register(
             StreamKind::SpecGen,
             StreamScope {
@@ -800,11 +976,7 @@ mod tests {
 
     #[tokio::test]
     async fn register_receiver_records_frames_and_marks_terminal() {
-        let registry = Arc::new(LiveStreamRegistry {
-            inner: DashMap::new(),
-            stream_capacity: 64,
-            ttl: Duration::from_secs(300),
-        });
+        let registry = test_registry();
         // The receiver path does NOT own the session: the broadcast
         // sender lives on the caller's side (here, the test), mirroring
         // the reused chat session in `chat_sessions`.
@@ -850,11 +1022,7 @@ mod tests {
 
     #[tokio::test]
     async fn terminated_replay_releases_command_sender() {
-        let registry = Arc::new(LiveStreamRegistry {
-            inner: DashMap::new(),
-            stream_capacity: 64,
-            ttl: Duration::from_secs(300),
-        });
+        let registry = test_registry();
         let (events_tx, _) = broadcast::channel::<HarnessOutbound>(16);
         let (commands_tx, mut commands_rx) = mpsc::channel(4);
         let stream = registry.register_receiver(
@@ -892,11 +1060,7 @@ mod tests {
 
     #[tokio::test]
     async fn cancelling_terminated_replay_does_not_cancel_reused_session() {
-        let registry = Arc::new(LiveStreamRegistry {
-            inner: DashMap::new(),
-            stream_capacity: 64,
-            ttl: Duration::from_secs(300),
-        });
+        let registry = test_registry();
         let (events_tx, _) = broadcast::channel::<HarnessOutbound>(16);
         let (commands_tx, mut commands_rx) = mpsc::channel(4);
         let stream = registry.register_receiver(
@@ -920,11 +1084,7 @@ mod tests {
 
     #[tokio::test]
     async fn register_receiver_surfaces_lag_as_terminal_replay_error() {
-        let registry = Arc::new(LiveStreamRegistry {
-            inner: DashMap::new(),
-            stream_capacity: 64,
-            ttl: Duration::from_secs(300),
-        });
+        let registry = test_registry();
         let (events_tx, events_rx) = broadcast::channel::<HarnessOutbound>(1);
         events_tx
             .send(HarnessOutbound::TextDelta(TextDelta {
@@ -962,11 +1122,7 @@ mod tests {
 
     #[tokio::test]
     async fn register_receiver_lists_and_filters_by_scope() {
-        let registry = Arc::new(LiveStreamRegistry {
-            inner: DashMap::new(),
-            stream_capacity: 64,
-            ttl: Duration::from_secs(300),
-        });
+        let registry = test_registry();
         let (tx1, _r1) = broadcast::channel::<HarnessOutbound>(16);
         let (tx2, _r2) = broadcast::channel::<HarnessOutbound>(16);
         let s1 = registry.register_receiver(
@@ -1005,11 +1161,7 @@ mod tests {
     /// owned-session path relies on dropping the session instead).
     #[tokio::test]
     async fn register_receiver_cancel_forwards_harness_cancel() {
-        let registry = Arc::new(LiveStreamRegistry {
-            inner: DashMap::new(),
-            stream_capacity: 64,
-            ttl: Duration::from_secs(300),
-        });
+        let registry = test_registry();
         let (events_tx, _rx0) = broadcast::channel::<HarnessOutbound>(16);
         let (commands_tx, mut commands_rx) = mpsc::channel(4);
         let stream = registry.register_receiver(
@@ -1046,11 +1198,7 @@ mod tests {
 
     #[tokio::test]
     async fn mobile_client_can_resolve_and_answer_chat_tool_approval_by_request_id() {
-        let registry = Arc::new(LiveStreamRegistry {
-            inner: DashMap::new(),
-            stream_capacity: 64,
-            ttl: Duration::from_secs(300),
-        });
+        let registry = test_registry();
         let (events_tx, _rx0) = broadcast::channel::<HarnessOutbound>(16);
         let (commands_tx, mut commands_rx) = mpsc::channel(4);
         let stream = registry.register_receiver(

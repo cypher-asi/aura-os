@@ -1,0 +1,125 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiClientError } from "../shared/api/core";
+
+const mocks = vi.hoisted(() => ({
+  stored: [] as unknown[],
+  sendAgent: vi.fn(),
+  sendProject: vi.fn(),
+}));
+
+vi.mock("../shared/lib/auth-token", () => ({
+  getStoredSession: () => ({ user_id: "user-1" }),
+}));
+
+vi.mock("../shared/lib/host-config", () => ({
+  getResolvedHostOrigin: () => "https://environment-1.example",
+}));
+
+vi.mock("../shared/lib/browser-db", () => ({
+  BROWSER_DB_STORES: { chatCommandOutbox: "chatCommandOutbox" },
+  browserDbGet: vi.fn(async () => structuredClone(mocks.stored)),
+  browserDbSet: vi.fn(async (_store: string, _key: string, value: unknown[]) => {
+    mocks.stored = structuredClone(value);
+  }),
+}));
+
+vi.mock("../api/streams", () => ({
+  sendAgentEventStream: mocks.sendAgent,
+  sendEventStream: mocks.sendProject,
+}));
+
+import {
+  _resetChatCommandOutboxForTests,
+  drainChatCommandOutbox,
+  enqueueChatCommand,
+  recordChatCommandFailure,
+} from "./chat-command-outbox";
+
+describe("chat command outbox", () => {
+  beforeEach(() => {
+    mocks.stored = [];
+    mocks.sendAgent.mockReset();
+    mocks.sendProject.mockReset();
+    _resetChatCommandOutboxForTests();
+    Object.defineProperty(navigator, "onLine", {
+      configurable: true,
+      value: true,
+    });
+  });
+
+  it("persists a user-scoped project command before transport", async () => {
+    await enqueueChatCommand({
+      surface: "project",
+      commandId: "cmd-1",
+      projectId: "project-1",
+      agentInstanceId: "instance-1",
+      content: "fix the tests",
+      action: null,
+      sessionId: "session-1",
+      originallyStartedNewSession: false,
+    });
+
+    expect(mocks.stored).toEqual([
+      expect.objectContaining({
+        surface: "project",
+        commandId: "cmd-1",
+        ownerId: "user-1",
+        hostOrigin: "https://environment-1.example",
+        content: "fix the tests",
+        attempts: 0,
+      }),
+    ]);
+  });
+
+  it("replays with the same id, without forcing a new session, then removes it", async () => {
+    mocks.sendProject.mockImplementation(async (...args: unknown[]) => {
+      const handler = args[6] as { onAccepted: (receipt: unknown) => void };
+      handler.onAccepted({
+        commandId: "cmd-1",
+        sessionId: "session-2",
+        projectId: "project-1",
+        attachId: "attach-1",
+        replayed: true,
+      });
+    });
+    await enqueueChatCommand({
+      surface: "project",
+      commandId: "cmd-1",
+      projectId: "project-1",
+      agentInstanceId: "instance-1",
+      content: "continue",
+      action: null,
+      sessionId: null,
+      originallyStartedNewSession: true,
+    });
+
+    await drainChatCommandOutbox();
+
+    const args = mocks.sendProject.mock.calls[0];
+    expect(args[9]).toBe(false);
+    expect(args[10]).toBeNull();
+    expect(args[16]).toBe("cmd-1");
+    expect(args[17]).toBe(true);
+    expect(mocks.stored).toEqual([]);
+  });
+
+  it("drops deterministic rejections instead of surprising the user later", async () => {
+    await enqueueChatCommand({
+      surface: "agent",
+      commandId: "cmd-2",
+      agentId: "agent-1",
+      content: "ship it",
+      action: null,
+      originallyStartedNewSession: false,
+    });
+    await recordChatCommandFailure(
+      "cmd-2",
+      new ApiClientError(402, {
+        error: "credits required",
+        code: "insufficient_credits",
+        details: null,
+      }),
+    );
+    expect(mocks.stored).toEqual([]);
+  });
+});
