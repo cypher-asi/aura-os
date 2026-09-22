@@ -25,6 +25,20 @@ interface SourceControlWorkbenchProps {
   agentInstanceId?: string;
   /** Review-only mode for mobile: status and diffs without repository mutations. */
   readOnly?: boolean;
+  /**
+   * Optional review handoff. When present, changed diff lines become explicit
+   * actions that can be sent back to the owning conversation without making
+   * the source-control surface responsible for chat routing or draft state.
+   */
+  onDiscussChange?: (context: SourceControlReviewContext) => void;
+}
+
+export interface SourceControlReviewContext {
+  path: string;
+  area: SourceControlArea;
+  line: string;
+  oldLine: number | null;
+  newLine: number | null;
 }
 
 interface Selection {
@@ -77,6 +91,7 @@ export function SourceControlWorkbench({
   projectId,
   agentInstanceId,
   readOnly = false,
+  onDiscussChange,
 }: SourceControlWorkbenchProps) {
   const [status, setStatus] = useState<SourceControlStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
@@ -349,7 +364,11 @@ export function SourceControlWorkbench({
                 {selection.area === "staged" ? "INDEX" : "WORKTREE"}
               </span>
             </div>
-            <DiffView loading={diffLoading} diff={diff} />
+            <DiffView
+              loading={diffLoading}
+              diff={diff}
+              onDiscussChange={onDiscussChange}
+            />
           </>
         ) : (
           <div className={styles.cleanState}>
@@ -470,9 +489,11 @@ function FileGroup({
 function DiffView({
   loading,
   diff,
+  onDiscussChange,
 }: {
   loading: boolean;
   diff: SourceControlDiff | null;
+  onDiscussChange?: (context: SourceControlReviewContext) => void;
 }) {
   if (loading) {
     return <div className={styles.diffMessage}>Loading diff…</div>;
@@ -486,10 +507,11 @@ function DiffView({
   if (!diff.diff) {
     return <div className={styles.diffMessage}>No textual diff available.</div>;
   }
+  const lines = parseReviewableDiffLines(diff.diff);
   return (
     <pre className={styles.diff} tabIndex={0}>
       <code>
-        {diff.diff.split("\n").map((line, index) => {
+        {lines.map(({ line, oldLine, newLine }, index) => {
           const kind = line.startsWith("+") && !line.startsWith("+++")
             ? styles.addition
             : line.startsWith("-") && !line.startsWith("---")
@@ -502,8 +524,33 @@ function DiffView({
                     line.startsWith("+++")
                   ? styles.diffMeta
                   : undefined;
+          const reviewable = Boolean(onDiscussChange) && (oldLine !== null || newLine !== null)
+            && (line.startsWith("+") || line.startsWith("-"));
+          const lineLabel = newLine !== null
+            ? `new line ${newLine}`
+            : `old line ${oldLine}`;
+          if (reviewable) {
+            return (
+              <button
+                type="button"
+                className={`${styles.diffLineButton}${kind ? ` ${kind}` : ""}`}
+                key={`${index}:${line}`}
+                onClick={() => onDiscussChange?.({
+                  path: diff.path,
+                  area: diff.area,
+                  line,
+                  oldLine,
+                  newLine,
+                })}
+                aria-label={`Ask agent about ${diff.path} ${lineLabel}`}
+                title={`Ask agent about ${lineLabel}`}
+              >
+                {line || " "}
+              </button>
+            );
+          }
           return (
-            <span className={kind} key={`${index}:${line}`}>
+            <span className={`${styles.diffLine}${kind ? ` ${kind}` : ""}`} key={`${index}:${line}`}>
               {line || " "}
               {"\n"}
             </span>
@@ -512,4 +559,44 @@ function DiffView({
       </code>
     </pre>
   );
+}
+
+interface ParsedDiffLine {
+  line: string;
+  oldLine: number | null;
+  newLine: number | null;
+}
+
+/** Track unified-diff hunk positions so review actions cite source lines. */
+function parseReviewableDiffLines(diff: string): ParsedDiffLine[] {
+  let oldLine = 0;
+  let newLine = 0;
+  let inHunk = false;
+
+  return diff.split("\n").map((line) => {
+    const hunk = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(line);
+    if (hunk) {
+      oldLine = Number(hunk[1]);
+      newLine = Number(hunk[2]);
+      inHunk = true;
+      return { line, oldLine: null, newLine: null };
+    }
+    if (!inHunk || line.startsWith("\\ No newline")) {
+      return { line, oldLine: null, newLine: null };
+    }
+    if (line.startsWith("+") && !line.startsWith("+++")) {
+      const result = { line, oldLine: null, newLine };
+      newLine += 1;
+      return result;
+    }
+    if (line.startsWith("-") && !line.startsWith("---")) {
+      const result = { line, oldLine, newLine: null };
+      oldLine += 1;
+      return result;
+    }
+    const result = { line, oldLine, newLine };
+    oldLine += 1;
+    newLine += 1;
+    return result;
+  });
 }
