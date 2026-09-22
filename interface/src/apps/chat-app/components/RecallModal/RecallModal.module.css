@@ -91,6 +91,12 @@
   opacity: 0.45;
 }
 
+:global(html[data-mobile-client="true"]) .actionButton {
+  min-height: 44px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
 .error {
   margin: var(--space-3) 0 0;
   color: var(--color-danger);

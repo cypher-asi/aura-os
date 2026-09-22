@@ -91,6 +91,10 @@ The first Aura slice now implements that boundary:
   biography text. Its mobile search now matches agent identity/profile fields, live attention, and
   those cross-device conversation previews, with an explicit no-results state instead of a blank
   list.
+- Mobile can also escalate from that instant cache search to Aura's authenticated Recall endpoint
+  for bounded lexical search across completed chats. Results remain source-linked excerpts: mobile
+  opens the exact original project, agent instance, session, and event, and does not silently inject
+  recalled text into another turn. Partial-history searches disclose skipped sessions.
 - Desktop-local agents remain readable on mobile while their runtime is unreachable; sending stays
   disabled until the owning host is available instead of bouncing the user out of the conversation.
 - A disabled mobile composer now distinguishes saved conversation availability from execution
@@ -218,9 +222,11 @@ navigation; skips disabled actions; and uses `>` for action-only results. It del
 canonical Aura routes and existing action handlers rather than owning another navigation system.
 
 The mobile agent library now exposes a touch-native search over agents and its cached cross-device
-conversation previews. Next increments should be server-backed message search, project
-file-name/content search, recent query history, and an explicit result-provider registry so apps
-can contribute results without expanding one component indefinitely.
+conversation previews, plus an explicit server-backed Recall flow over completed chats. The current
+Recall MVP scans a bounded recent candidate set rather than a storage full-text index. Next
+increments should be indexed full-history search, project file-name/content search, recent query
+history, and an explicit result-provider registry so apps can contribute results without expanding
+one component indefinitely.
 
 ### P1 — build a native source-control and review workbench
 

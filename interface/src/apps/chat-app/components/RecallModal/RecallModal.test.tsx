@@ -49,6 +49,25 @@ function renderModal() {
   );
 }
 
+function renderSourceOnlyModal(initialQuery: string) {
+  return render(
+    <RecallModal
+      isOpen
+      onClose={vi.fn()}
+      onOpenSource={mocks.openSource}
+      onAddToDraft={mocks.addToDraft}
+      canAddToDraft={false}
+      resolveMetadata={() => ({
+        sessionTitle: "Authentication refresh decision",
+        projectName: "Aura Desktop",
+        agentName: "Engineer",
+      })}
+      initialQuery={initialQuery}
+      showDraftAction={false}
+    />,
+  );
+}
+
 function searchFor(query = "authentication") {
   fireEvent.change(screen.getByLabelText("Search completed chats"), { target: { value: query } });
   fireEvent.click(screen.getByRole("button", { name: "Search past chats" }));
@@ -121,5 +140,17 @@ describe("RecallModal", () => {
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     resolveNext?.({ results: [], scannedSessions: 3, skippedSessions: 0 });
     expect(await screen.findByText("No matching completed chats found.")).toBeInTheDocument();
+  });
+
+  it("supports a prefilled source-only mobile recall flow", async () => {
+    mocks.search.mockResolvedValue({ results: [result], scannedSessions: 1, skippedSessions: 0 });
+    renderSourceOnlyModal("desktop migration");
+
+    expect(screen.getByLabelText("Search completed chats")).toHaveValue("desktop migration");
+    fireEvent.click(screen.getByRole("button", { name: "Search past chats" }));
+
+    await screen.findByText(result.snippet);
+    expect(screen.getByRole("button", { name: "Open source chat" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add to current draft" })).not.toBeInTheDocument();
   });
 });
