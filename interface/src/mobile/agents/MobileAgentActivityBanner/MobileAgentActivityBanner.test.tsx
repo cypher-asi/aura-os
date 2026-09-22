@@ -242,6 +242,7 @@ describe("MobileAgentActivityBanner", () => {
           route: "/projects/project-1/agents/instance-1?session=session-1",
           startedAt: 10,
           activity: "Inspecting code",
+          activeSubagentCount: 2,
         },
       },
       hydrated: true,
@@ -250,7 +251,7 @@ describe("MobileAgentActivityBanner", () => {
     renderBanner();
 
     expect(screen.getByRole("button", {
-      name: "1 agent working · Inspecting code. Open active agent",
+      name: "1 agent working · 2 child agents active · Inspecting code. Open active agent",
     })).toBeInTheDocument();
   });
 });

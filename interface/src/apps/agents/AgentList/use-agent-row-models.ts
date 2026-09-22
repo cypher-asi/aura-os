@@ -37,6 +37,8 @@ export interface AgentRowModel {
   };
   activeRun?: {
     route?: string;
+    activity?: string;
+    activeSubagentCount?: number;
   };
 }
 
@@ -157,12 +159,22 @@ export function useAgentRowModels(
   }, [pendingApprovals, pendingInputs]);
 
   const activeRunByAgentId = useMemo(() => {
-    const result = new Map<string, { route?: string; startedAt: number }>();
+    const result = new Map<string, {
+      route?: string;
+      startedAt: number;
+      activity?: string;
+      activeSubagentCount?: number;
+    }>();
     for (const item of Object.values(activeRuns)) {
       if (!item) continue;
       const existing = result.get(item.agentId);
       if (!existing || item.startedAt > existing.startedAt) {
-        result.set(item.agentId, { route: item.route, startedAt: item.startedAt });
+        result.set(item.agentId, {
+          route: item.route,
+          startedAt: item.startedAt,
+          activity: item.activity,
+          activeSubagentCount: item.activeSubagentCount,
+        });
       }
     }
     return result;

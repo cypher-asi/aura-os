@@ -32,6 +32,8 @@ export interface ActiveStreamSummary {
   started_at_ms: number;
   /** Content-free environment status suitable for shell/mobile surfaces. */
   activity?: string | null;
+  /** Content-free count of child agents still running under this turn. */
+  active_subagent_count?: number;
 }
 
 export interface ActiveStreamsResponse {
