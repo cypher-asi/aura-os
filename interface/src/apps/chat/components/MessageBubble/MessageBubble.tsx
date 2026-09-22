@@ -664,9 +664,13 @@ export const MessageBubble = memo(function MessageBubble({
           {isUser ? renderUserContent() : renderAssistantContent()}
         </div>
       )}
-      {isUser && message.deliveryStatus === "queued" && (
+      {isUser && message.deliveryStatus && (
         <div className={styles.deliveryStatus} role="status">
-          Queued
+          {message.deliveryStatus === "queued"
+            ? "Queued"
+            : message.deliveryStatus === "sending"
+              ? "Sending…"
+              : "Not sent"}
         </div>
       )}
       {showAssistantCopy && streamKey && (

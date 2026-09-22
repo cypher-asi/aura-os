@@ -127,10 +127,18 @@ The first Aura slice now implements that boundary:
   filtered during both replay and live delivery. Legacy unscoped events retain their existing
   behavior, while new account-scoped control signals cannot appear in another user's mobile agent
   list.
+- Regular chat sends now carry a stable client command id through both project and standalone-agent
+  routes. Aura persists that id with the user message, returns a correlated acceptance receipt only
+  after the durable write succeeds, and exposes the receipt headers to native WebViews. Optimistic
+  chat bubbles distinguish `Sending…`, accepted, and `Not sent`, so a lossy mobile connection no
+  longer makes an unacknowledged prompt look committed. This is the receipt foundation, not yet an
+  idempotent retry protocol: clients must not automatically replay these commands until server-side
+  duplicate detection and recovery semantics land.
 
-Next: formalize `runtimeId`/environment ownership in session metadata, add server command receipts
-before persisting or replaying a native prompt outbox, and add device registration plus background
-delivery for completion, failure, approval, and input-required events. Add the same durable,
+Next: formalize `runtimeId`/environment ownership in session metadata, add server-side command
+deduplication and a persisted native prompt outbox on top of the new receipts, and add device
+registration plus background delivery for completion, failure, approval, and input-required events.
+Add the same durable,
 cross-client response path for structured agent questions/input requests. T3 models these as typed
 questions (`id`, header, prompt, options, and multi-select) answered through a dedicated
 `thread.user-input.respond` command; Aura still needs the equivalent harness protocol event and

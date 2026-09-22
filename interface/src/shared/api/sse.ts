@@ -101,6 +101,12 @@ function parseApiErrorBody(text: string): ApiError | null {
 /** Opt-in resume behaviour for {@link streamSSE}. */
 export interface StreamSSEOptions {
   /**
+   * Called once the response has passed HTTP and content-type validation,
+   * before the first event is read. POST callers use this boundary as an
+   * acknowledgement that the server accepted and persisted a command.
+   */
+  onResponse?: (response: Response) => void;
+  /**
    * When true, a recoverable close (idle timeout or transport drop —
    * NOT an HTTP error or an abort) is retried by re-issuing the request
    * with `?since=<lastEventId>` appended, resuming the same `onEvent`
@@ -136,6 +142,7 @@ async function runSSEOnce<T extends string>(
   onEvent: SSECallbacks<T>["onEvent"],
   onId: (id: string) => void,
   signal?: AbortSignal,
+  onResponse?: (response: Response) => void,
 ): Promise<RunOutcome> {
   let response: Response;
   const resolvedUrl = resolveApiUrl(url);
@@ -172,6 +179,16 @@ async function runSSEOnce<T extends string>(
     return {
       kind: "error",
       error: new Error(`Expected an SSE response but received ${contentType}${suffix}`),
+      recoverable: false,
+    };
+  }
+
+  try {
+    onResponse?.(response);
+  } catch (err) {
+    return {
+      kind: "error",
+      error: err instanceof Error ? err : new Error(String(err)),
       recoverable: false,
     };
   }
@@ -259,6 +276,7 @@ export async function streamSSE<T extends string>(
         }
       },
       signal,
+      options?.onResponse,
     );
 
     if (outcome.kind === "aborted") return;

@@ -99,6 +99,44 @@ describe("streamSSE", () => {
     expect(callbacks.onDone).toHaveBeenCalledOnce();
   });
 
+  it("exposes validated response headers before reading events", async () => {
+    const { fetchFn } = mockSSEFetch(200, ["event: done\ndata: {}\n\n"]);
+    globalThis.fetch = fetchFn;
+    const onResponse = vi.fn();
+
+    await streamSSE(
+      "/api/stream",
+      { method: "POST" },
+      { onEvent: vi.fn() },
+      undefined,
+      { onResponse },
+    );
+
+    expect(onResponse).toHaveBeenCalledOnce();
+  });
+
+  it("routes a rejected response acknowledgement through onError", async () => {
+    const { fetchFn } = mockSSEFetch(200, ["event: done\ndata: {}\n\n"]);
+    globalThis.fetch = fetchFn;
+    const onError = vi.fn();
+
+    await streamSSE(
+      "/api/stream",
+      { method: "POST" },
+      { onEvent: vi.fn(), onError },
+      undefined,
+      {
+        onResponse: () => {
+          throw new Error("receipt mismatch");
+        },
+      },
+    );
+
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "receipt mismatch" }),
+    );
+  });
+
   it("reports numeric SSE ids via onSeq and ignores non-numeric ones", async () => {
     const { fetchFn } = mockSSEFetch(200, [
       'id: 7\nevent: delta\ndata: {"text":"a"}\n\n',

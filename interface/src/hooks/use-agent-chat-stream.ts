@@ -20,7 +20,10 @@ import {
   supportedReasoningEffort,
 } from "../lib/model-effort";
 import { STYLE_LOCK_SUFFIX } from "../constants/generation";
-import { buildUserChatMessage } from "./attachment-helpers";
+import {
+  buildUserChatMessage,
+  updateUserMessageDeliveryStatus,
+} from "./attachment-helpers";
 import type { Spec, Task } from "../shared/types";
 import type { AuraEvent } from "../shared/types/aura-events";
 import { EventType } from "../shared/types/aura-events";
@@ -306,12 +309,23 @@ export function useAgentChatStream({
 
       inFlightRef.current = true;
 
-      const userMsg = buildUserChatMessage(
-        trimmed,
-        attachments,
-        is3DModelStep ? "Generate 3D model" : undefined,
-        clientMessageId,
-      );
+      const userMsg: DisplaySessionEvent = {
+        ...buildUserChatMessage(
+          trimmed,
+          attachments,
+          is3DModelStep ? "Generate 3D model" : undefined,
+          clientMessageId,
+        ),
+        ...(!_generationMode ? { deliveryStatus: "sending" as const } : {}),
+      };
+      let commandAccepted = false;
+      const updateCommandDelivery = (
+        status: DisplaySessionEvent["deliveryStatus"],
+      ) => {
+        partitionSetters.setEvents((events) =>
+          updateUserMessageDeliveryStatus(events, userMsg.clientId ?? userMsg.id, status),
+        );
+      };
 
       partitionSetters.setEvents((prev) => [...prev, userMsg]);
       partitionSetters.setIsStreaming(true);
@@ -663,6 +677,7 @@ export function useAgentChatStream({
         },
         onError: (error) => {
           if (controller.signal.aborted) return;
+          if (!_generationMode && !commandAccepted) updateCommandDelivery("failed");
           inFlightRef.current = false;
           // Transport-level drops (SSE idle timeout, WS close) recover
           // the same way as an in-band `Error` frame.
@@ -675,6 +690,11 @@ export function useAgentChatStream({
           if (controller.signal.aborted) return;
           inFlightRef.current = false;
           finalizeStream(refs, partitionSetters, partitionAbortRef, false, { breadcrumbContext });
+        },
+        onAccepted: (receipt) => {
+          if (receipt.commandId !== (userMsg.clientId ?? userMsg.id)) return;
+          commandAccepted = true;
+          updateCommandDelivery(undefined);
         },
       };
 
@@ -924,9 +944,11 @@ export function useAgentChatStream({
           undefined,
           council,
           mixture,
+          userMsg.clientId ?? userMsg.id,
         );
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
+        if (!_generationMode && !commandAccepted) updateCommandDelivery("failed");
         handleStreamError(refs, partitionSetters, err, breadcrumbContext);
       } finally {
         // `inFlightRef` is gated by the same "still my turn" sentinel
@@ -939,6 +961,7 @@ export function useAgentChatStream({
         // otherwise clobber that new latch even though `abortRef`
         // has moved on.
         if (partitionAbortRef.current === controller) {
+          if (!_generationMode && !commandAccepted) updateCommandDelivery("failed");
           partitionSetters.setIsStreaming(false);
           controller.abort();
           partitionAbortRef.current = null;

@@ -191,6 +191,52 @@ describe("useChatStream", () => {
     expect(entry.events[0].content).toBe("hello");
   });
 
+  it("clears sending state only after the server accepts the project command", async () => {
+    vi.mocked(api.sendEventStream).mockImplementation(
+      async (_projectId, _instanceId, _content, _action, _model, _attachments, handler) => {
+        handler?.onAccepted?.({
+          commandId: "command-project-1",
+          sessionId: "session-1",
+          projectId: "p-1",
+        });
+      },
+    );
+    const { result } = renderHook(() =>
+      useChatStream({ projectId: "p-1", agentInstanceId: "ai-1" }),
+    );
+
+    await act(async () => {
+      await result.current.sendMessage(
+        "hello",
+        null,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        "command-project-1",
+      );
+    });
+
+    const event = useStreamStore.getState().entries[result.current.streamKey].events[0];
+    expect(event.deliveryStatus).toBeUndefined();
+  });
+
+  it("marks a project command not sent when no acceptance receipt arrives", async () => {
+    const { result } = renderHook(() =>
+      useChatStream({ projectId: "p-1", agentInstanceId: "ai-1" }),
+    );
+
+    await act(async () => {
+      await result.current.sendMessage("hello");
+    });
+
+    const event = useStreamStore.getState().entries[result.current.streamKey].events[0];
+    expect(event.deliveryStatus).toBe("failed");
+  });
+
   it("promotes a queued prompt without changing its transcript identity", async () => {
     const { result } = renderHook(() =>
       useChatStream({ projectId: "p-1", agentInstanceId: "ai-1" }),
@@ -660,6 +706,7 @@ describe("useChatStream", () => {
       undefined,
       // 16th positional `safeWorkspace` remains opt-in.
       false,
+      expect.any(String),
     );
     expect(api.sendEventStream).toHaveBeenNthCalledWith(
       2,
@@ -679,6 +726,7 @@ describe("useChatStream", () => {
       undefined,
       undefined,
       false,
+      expect.any(String),
     );
   });
 
@@ -883,6 +931,7 @@ describe("useChatStream", () => {
       undefined,
       undefined,
       false,
+      expect.any(String),
     );
   });
 
@@ -941,6 +990,7 @@ describe("useChatStream", () => {
       undefined,
       undefined,
       false,
+      expect.any(String),
     );
   });
 
