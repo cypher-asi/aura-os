@@ -69,6 +69,18 @@
   overflow: hidden;
 }
 
+.agentHandoffBar {
+  display: flex;
+  flex-shrink: 0;
+  padding: 10px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 24%, transparent);
+}
+
+.agentHandoffBar button,
+.previewHeader > button {
+  min-height: 44px;
+}
+
 .changesArea :global([data-source-control-mode="review"]) button {
   min-height: 44px;
 }

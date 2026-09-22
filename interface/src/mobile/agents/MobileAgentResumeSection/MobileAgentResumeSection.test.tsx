@@ -63,13 +63,13 @@ describe("MobileAgentResumeSection", () => {
     await user.click(screen.getByRole("button", { name: "Browse code" }));
 
     expect(screen.getByTestId("location")).toHaveTextContent(
-      "/projects/recent-project/files?instance=instance-1",
+      "/projects/recent-project/files?instance=instance-1&agent=agent-1&session=session-1",
     );
 
     await user.click(screen.getByRole("button", { name: "Review changes" }));
 
     expect(screen.getByTestId("location")).toHaveTextContent(
-      "/projects/recent-project/files?instance=instance-1&view=changes",
+      "/projects/recent-project/files?instance=instance-1&agent=agent-1&session=session-1&view=changes",
     );
   });
 
@@ -82,7 +82,20 @@ describe("MobileAgentResumeSection", () => {
     await user.click(screen.getByRole("button", { name: "Review changes" }));
 
     expect(screen.getByTestId("location")).toHaveTextContent(
-      "/projects/project-1/files?instance=route-instance&view=changes",
+      "/projects/project-1/files?instance=route-instance&agent=agent-1&view=changes",
+    );
+  });
+
+  it("preserves the selected session when opening its workspace", async () => {
+    const user = userEvent.setup();
+    renderSection(
+      "/agents/agent-1?project=project-1&instance=route-instance&session=route-session&view=details",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Browse code" }));
+
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      "/projects/project-1/files?instance=route-instance&agent=agent-1&session=route-session",
     );
   });
 });

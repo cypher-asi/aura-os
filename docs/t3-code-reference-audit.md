@@ -182,6 +182,13 @@ The first Aura slice now implements that boundary:
   than introducing a mobile-only Git path. Server-side Git inspection does not yet reach every
   remote/swarm workspace, so those environments report the capability as unavailable instead of
   showing another workspace's state.
+- Mobile code inspection now hands work back to the owning conversation instead of becoming a
+  dead-end viewer. Opening Files or Changes from agent details carries the canonical agent,
+  project-agent instance, and session identity. A user can add a file-specific inspection request
+  or a workspace-change review request to that conversation's existing client-owned draft and
+  return to the exact chat. The action never auto-sends, never replaces an unfinished draft, and
+  does not put file contents in navigation state. This is the first Aura-native version of T3's
+  “send code/review context to the agent” loop; line/range review requests remain a later increment.
 - Regular project and standalone-agent chat now enqueue the request intent in an IndexedDB outbox
   before opening the POST. The authenticated shell drains retryable commands on boot, connectivity
   restoration, and foreground using the original command id, never repeats `new_session=true`, and
@@ -206,6 +213,14 @@ delivery for completion, failure, approval, and input-required events. Persist a
 and pending question waits so a server restart can reconstruct status or explicitly fail the
 original environment-owned turn instead of relying on an in-memory channel. Do not make the cloud
 relay an execution proxy or present an unacknowledged prompt as accepted work.
+
+Remote source-control inspection also needs a real cross-service addition rather than a client
+workaround. The current Swarm gateway exposes authenticated pod proxies for files, file reads, and
+terminal I/O, while the Harness pod HTTP surface exposes `/api/files` and `/api/read-file`; neither
+currently publishes the provider-neutral Git status/diff contract used by Aura OS. Implementing
+remote Changes therefore requires a read-only Harness endpoint plus an authenticated Swarm gateway
+proxy before Aura OS can advertise that capability. Do not tunnel arbitrary Git commands through
+the terminal to simulate it.
 
 ### P0 — finish the safety foundation
 
