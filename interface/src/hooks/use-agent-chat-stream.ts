@@ -54,7 +54,10 @@ import {
 } from "../stores/context-usage-store";
 import { bumpEstimatedTokensThrottled } from "../stores/context-usage-throttle";
 import { useSessionsListStore } from "../stores/sessions-list-store";
-import { useMessageQueueStore } from "../stores/message-queue-store";
+import {
+  enqueueQueuedMessage,
+  removeQueuedMessage,
+} from "../stores/message-queue-store";
 import {
   createSetters,
   ensureEntry,
@@ -300,7 +303,7 @@ export function useAgentChatStream({
         const lastEventAt = getLastEventAt(getPartitionKey());
         const isStuck =
           lastEventAt != null && Date.now() - lastEventAt >= STUCK_THRESHOLD_MS;
-        useMessageQueueStore.getState().enqueue(getPartitionKey(), {
+        await enqueueQueuedMessage(getPartitionKey(), {
           content,
           action,
           model: selectedModel ?? null,
@@ -976,6 +979,9 @@ export function useAgentChatStream({
           mixture,
           originallyStartedNewSession: shouldStartNewSession,
         });
+        if (clientMessageId?.startsWith("q-")) {
+          await removeQueuedMessage(getPartitionKey(), clientMessageId);
+        }
         await api.agents.sendEventStream(
           agentId,
           userMsg.content,

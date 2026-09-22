@@ -3,7 +3,13 @@ import { useScrollAnchorV2 } from "../../../shared/hooks/use-scroll-anchor-v2";
 import { useIsStreaming } from "../../../hooks/stream/hooks";
 import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import type { ChatInputBarHandle, AttachmentItem } from "../ChatInputBar";
-import { useMessageQueueStore, useMessageQueue } from "../../../stores/message-queue-store";
+import {
+  enqueueQueuedMessage,
+  prepareNextQueuedMessage,
+  removeQueuedMessage,
+  resumeQueuedMessages,
+  useMessageQueue,
+} from "../../../stores/message-queue-store";
 import type { QueuedMessage } from "../../../stores/message-queue-store";
 import type { AgentMentionTarget, ChatAttachment } from "../../../api/streams";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";
@@ -115,6 +121,7 @@ export function useChatPanelState({
   );
   const [attachments, setAttachments] = useState<AttachmentItem[]>(EMPTY_ATTACHMENTS);
   const [commands, setCommands] = useState<SlashCommand[]>(EMPTY_COMMANDS);
+  const [queuePersistenceError, setQueuePersistenceError] = useState<string | null>(null);
   // Co-located with `commands` so the `/record_demo` send intercept can
   // read exactly what the `DemoRecordSettings` panel mutates.
   const [demoRecordOptions, setDemoRecordOptions] = useState<DemoRecordOptions>(
@@ -306,7 +313,7 @@ export function useChatPanelState({
   }, [scrollToBottom]);
 
   const handleSend = useCallback(
-    (
+    async (
       content: string,
       action?: string,
       atts?: AttachmentItem[],
@@ -320,7 +327,6 @@ export function useChatPanelState({
       if (sendDisabledRef.current) {
         return;
       }
-      setDraft("");
       const apiAttachments = buildApiAttachments(atts) ?? [];
       const userCommandIds = commandsRef.current.map((c) => c.id);
 
@@ -328,6 +334,7 @@ export function useChatPanelState({
       // it opens a fresh AURA window, runs the typed instruction there,
       // and screen-records it. Intercept before the normal send pipeline.
       if (userCommandIds.includes("record_demo")) {
+        setDraft("");
         setCommands((prev) => {
           const next = prev.filter((c) => c.id !== "record_demo");
           if (next.length === prev.length) return prev;
@@ -386,18 +393,20 @@ export function useChatPanelState({
         pinnedSourceImageUrl,
       });
 
-      // Reset to module-level empties when not already empty, so React
-      // sees a stable reference and the input bar's memo can short-circuit.
-      setAttachments((prev) =>
-        prev.length === 0 ? prev : EMPTY_ATTACHMENTS,
-      );
-      // Drop non-generation chips (the panel's transient chip row);
-      // generation modes own that signal via the selector now.
-      setCommands((prev) => {
-        const next = prev.filter((c) => isGenerationCommand(c.id));
-        if (next.length === prev.length) return prev;
-        return next.length === 0 ? EMPTY_COMMANDS : next;
-      });
+      const clearSentComposer = () => {
+        setDraft("");
+        // Reset to module-level empties when not already empty, so React
+        // sees a stable reference and the input bar can short-circuit.
+        setAttachments((prev) =>
+          prev.length === 0 ? prev : EMPTY_ATTACHMENTS,
+        );
+        // Generation modes keep their chip; transient commands do not.
+        setCommands((prev) => {
+          const next = prev.filter((c) => isGenerationCommand(c.id));
+          if (next.length === prev.length) return prev;
+          return next.length === 0 ? EMPTY_COMMANDS : next;
+        });
+      };
 
       // An explicit `action` from the caller (e.g. inline "Generate
       // specs" buttons) wins over the mode-supplied one. The override
@@ -407,17 +416,30 @@ export function useChatPanelState({
 
       if (isStreamingRef.current) {
         const record = toQueuedRecord(resolved);
-        useMessageQueueStore.getState().enqueue(streamKey, {
-          content: record.content,
-          action: overrideAction ?? record.action,
-          model: record.model,
-          attachments: record.attachments,
-          commands: record.commands,
-          generationMode: record.generationMode,
-          sourceImageUrl: record.sourceImageUrl,
-          agentMentions,
-        });
+        try {
+          await enqueueQueuedMessage(streamKey, {
+            content: record.content,
+            action: overrideAction ?? record.action,
+            model: record.model,
+            attachments: record.attachments,
+            commands: record.commands,
+            generationMode: record.generationMode,
+            sourceImageUrl: record.sourceImageUrl,
+            agentMentions,
+          });
+          setQueuePersistenceError(null);
+          clearSentComposer();
+        } catch (error) {
+          setQueuePersistenceError(
+            error instanceof Error
+              ? error.message
+              : "Couldn't safely save this follow-up. Your draft is still here.",
+          );
+          return;
+        }
       } else {
+        setQueuePersistenceError(null);
+        clearSentComposer();
         scrollToBottomRef.current();
         if (overrideAction !== null) {
           // Caller supplied an explicit action; bypass the mode's
@@ -484,41 +506,53 @@ export function useChatPanelState({
 
   useEffect(() => {
     if (prevStreamingRef.current && !isStreaming) {
-      const next = useMessageQueueStore.getState().dequeue(streamKey);
-      if (next) {
-        if (sendDisabledRef.current) {
-          prevStreamingRef.current = isStreaming;
-          return;
-        }
-        onSendRef.current(
-          next.content,
-          next.action,
-          next.model ?? selectedModelRef.current,
-          next.attachments,
-          next.commands,
-          selectedProjectIdRef.current,
-          next.generationMode,
-          next.sourceImageUrl,
-          next.agentMentions,
-          next.id,
-        );
-        scrollToBottomRef.current();
+      if (sendDisabledRef.current) {
+        prevStreamingRef.current = isStreaming;
+        return;
       }
+      void prepareNextQueuedMessage(streamKey).then((next) => {
+        if (next) {
+          onSendRef.current(
+            next.content,
+            next.action,
+            next.model ?? selectedModelRef.current,
+            next.attachments,
+            next.commands,
+            selectedProjectIdRef.current,
+            next.generationMode,
+            next.sourceImageUrl,
+            next.agentMentions,
+            next.id,
+          );
+          scrollToBottomRef.current();
+        }
+      }).catch(() => {
+        setQueuePersistenceError(
+          "Couldn't safely advance this queue. It remains saved on this device.",
+        );
+      });
     }
     prevStreamingRef.current = isStreaming;
   }, [adapterType, isStreaming, streamKey]);
 
   const handleQueueEdit = useCallback(
     (item: QueuedMessage) => {
-      useMessageQueueStore.getState().remove(streamKey, item.id);
-      setDraft(item.content);
-      requestAnimationFrame(() => inputBarRef.current?.focus());
+      void removeQueuedMessage(streamKey, item.id).then(() => {
+        setDraft(item.content);
+        requestAnimationFrame(() => inputBarRef.current?.focus());
+      }).catch(() => {
+        setQueuePersistenceError("Couldn't remove this saved follow-up.");
+      });
     },
     [setDraft, streamKey],
   );
 
   const handleQueueRemove = useCallback(
-    (id: string) => useMessageQueueStore.getState().remove(streamKey, id),
+    (id: string) => {
+      void removeQueuedMessage(streamKey, id).catch(() => {
+        setQueuePersistenceError("Couldn't remove this saved follow-up.");
+      });
+    },
     [streamKey],
   );
 
@@ -536,11 +570,19 @@ export function useChatPanelState({
   // effect never sees a `true → false` transition and there's no
   // competing replay.
   const handleQueueSendNow = useCallback(
-    (item: QueuedMessage) => {
+    async (item: QueuedMessage) => {
       if (sendDisabledRef.current) {
         return;
       }
-      useMessageQueueStore.getState().remove(streamKey, item.id);
+      try {
+        const prepared = await prepareNextQueuedMessage(streamKey, item);
+        if (!prepared) return;
+      } catch {
+        setQueuePersistenceError(
+          "Couldn't safely remove this follow-up from the queue. It was not sent.",
+        );
+        return;
+      }
       const stop = onStopRef.current;
       if (stop) stop();
       onSendRef.current(
@@ -559,6 +601,33 @@ export function useChatPanelState({
     },
     [streamKey],
   );
+
+  const handleQueueResume = useCallback(async () => {
+    try {
+      await resumeQueuedMessages(streamKey);
+      setQueuePersistenceError(null);
+      if (isStreamingRef.current || sendDisabledRef.current) return;
+      const next = await prepareNextQueuedMessage(streamKey);
+      if (!next) return;
+      onSendRef.current(
+        next.content,
+        next.action,
+        next.model ?? selectedModelRef.current,
+        next.attachments,
+        next.commands,
+        selectedProjectIdRef.current,
+        next.generationMode,
+        next.sourceImageUrl,
+        next.agentMentions,
+        next.id,
+      );
+      scrollToBottomRef.current();
+    } catch {
+      setQueuePersistenceError(
+        "Couldn't safely resume this queue. The follow-ups remain held.",
+      );
+    }
+  }, [streamKey]);
 
   return {
     attachments,
@@ -583,6 +652,8 @@ export function useChatPanelState({
     handleQueueEdit,
     handleQueueRemove,
     handleQueueSendNow,
+    handleQueueResume,
+    queuePersistenceError,
     loadOlder,
     isLoadingOlder,
     hasOlderMessages,

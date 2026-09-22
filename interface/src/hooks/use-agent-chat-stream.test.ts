@@ -928,6 +928,36 @@ describe("useAgentChatStream", () => {
     expect(queue[0].pendingDueToStuckStream).toBe(false);
   });
 
+  it("removes a queued copy only after handing the same id to the command send path", async () => {
+    const { result } = renderHook(() =>
+      useAgentChatStream({ agentId: "agent-1" }),
+    );
+    const key = result.current.streamKey;
+    useMessageQueueStore.getState().enqueue(key, {
+      content: "resume me",
+      action: null,
+    });
+    const queued = useMessageQueueStore.getState().queues[key][0];
+
+    await act(async () => {
+      await result.current.sendMessage(
+        queued.content,
+        queued.action,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        queued.id,
+      );
+    });
+
+    expect(api.agents.sendEventStream).toHaveBeenCalledTimes(1);
+    expect(useMessageQueueStore.getState().queues[key]).toEqual([]);
+  });
+
   it("clears the in-flight latch in sync with setIsStreaming(false) from AssistantMessageEnd so a queued dequeue can re-enter immediately", async () => {
     // Regression for the "queued prompts disappear" bug: when the
     // server emits `AssistantMessageEnd` mid-stream, the handler

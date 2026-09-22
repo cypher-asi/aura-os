@@ -43,7 +43,10 @@ import {
   keyForProjectSession,
 } from "../stream/store";
 import { STUCK_THRESHOLD_MS } from "../stream/use-stream-health";
-import { useMessageQueueStore } from "../../stores/message-queue-store";
+import {
+  enqueueQueuedMessage,
+  removeQueuedMessage,
+} from "../../stores/message-queue-store";
 import {
   buildUserChatMessage,
   updateUserMessageDeliveryStatus,
@@ -259,7 +262,7 @@ export function useChatStream({
         const lastEventAt = getLastEventAt(getPartitionKey());
         const isStuck =
           lastEventAt != null && Date.now() - lastEventAt >= STUCK_THRESHOLD_MS;
-        useMessageQueueStore.getState().enqueue(getPartitionKey(), {
+        await enqueueQueuedMessage(getPartitionKey(), {
           content: args.content,
           action: args.action ?? null,
           model: args.selectedModel ?? null,
@@ -740,6 +743,9 @@ export function useChatStream({
           safeWorkspace: safeWorkspaceRef.current,
           originallyStartedNewSession: shouldStartNewSession,
         });
+        if (clientMessageId?.startsWith("q-")) {
+          await removeQueuedMessage(getPartitionKey(), clientMessageId);
+        }
         await api.sendEventStream(
           capturedProjectId,
           capturedInstanceId,

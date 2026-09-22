@@ -153,6 +153,8 @@ export interface ChatInputBarProps {
    * "Queued behind current turn…".
    */
   queuedHint?: string;
+  /** Storage/delivery validation supplied by the owning chat surface. */
+  externalValidationMessage?: string | null;
   adapterType?: string;
   defaultModel?: string | null;
   machineType?: "local" | "remote";
@@ -282,6 +284,7 @@ export const DesktopChatInputBar = memo(
       externalBusyMessage,
       isQueued = false,
       queuedHint,
+      externalValidationMessage,
       adapterType,
       defaultModel,
       machineType,
@@ -969,7 +972,7 @@ export const DesktopChatInputBar = memo(
           sendDisabled={sendDisabled}
           sendDisabledReason={sendDisabledReason}
           sendDisabledAction={effectiveSendDisabledAction}
-          validationMessage={lengthValidationMessage}
+          validationMessage={externalValidationMessage ?? lengthValidationMessage}
         />
         {modelsForMode.length > 0 ? (
           <ModelControls placement="mobileBar" {...modelControlsProps} />

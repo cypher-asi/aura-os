@@ -203,6 +203,10 @@ const { mockMessageQueueClear } = vi.hoisted(() => ({
   mockMessageQueueClear: vi.fn(),
 }));
 vi.mock("../stores/message-queue-store", () => ({
+  clearQueuedMessages: (...args: unknown[]) => {
+    mockMessageQueueClear(...args);
+    return Promise.resolve();
+  },
   useMessageQueueStore: {
     getState: () => ({
       clear: mockMessageQueueClear,

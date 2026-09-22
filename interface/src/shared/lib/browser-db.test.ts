@@ -76,6 +76,15 @@ describe("browserDbSet", () => {
     ).toBeNull();
   });
 
+  it("does NOT mirror queued follow-up prompts to localStorage", async () => {
+    await browserDbSet(BROWSER_DB_STORES.chatFollowUpQueue, "pending", [
+      { id: "private-follow-up", content: "secret" },
+    ]);
+    expect(
+      window.localStorage.getItem("aura-idb:chatFollowUpQueue:pending"),
+    ).toBeNull();
+  });
+
   it("still mirrors small fallback stores (auth, org, ui, ...) to localStorage", async () => {
     await browserDbSet(BROWSER_DB_STORES.ui, "panel", { open: true });
     const raw = window.localStorage.getItem("aura-idb:ui:panel");

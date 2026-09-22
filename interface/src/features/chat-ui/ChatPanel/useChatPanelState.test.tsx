@@ -19,6 +19,8 @@ const mockUseScrollAnchorV2 = scrollAnchorMocks.useScrollAnchorV2;
 const mockEnqueue = vi.fn();
 const mockDequeue = vi.fn();
 const mockRemove = vi.fn();
+const mockPrepare = vi.fn((...args: unknown[]) => args[1] ?? mockDequeue(args[0]));
+const mockResume = vi.fn(async () => {});
 const mockSetDraft = vi.fn();
 const mockChatUI: {
   selectedMode: "code" | "plan" | "image" | "3d" | "video";
@@ -128,6 +130,16 @@ vi.mock("../../../stores/chat-ui-store", () => ({
 }));
 
 vi.mock("../../../stores/message-queue-store", () => ({
+  enqueueQueuedMessage: (...args: unknown[]) => {
+    mockEnqueue(...args);
+    return Promise.resolve({ id: "queued-id" });
+  },
+  prepareNextQueuedMessage: (...args: unknown[]) => Promise.resolve(mockPrepare(...args)),
+  removeQueuedMessage: (...args: unknown[]) => {
+    mockRemove(...args);
+    return Promise.resolve();
+  },
+  resumeQueuedMessages: (...args: unknown[]) => mockResume(...args),
   useMessageQueueStore: {
     getState: () => ({
       enqueue: mockEnqueue,
@@ -156,6 +168,8 @@ describe("useChatPanelState", () => {
     mockEnqueue.mockReset();
     mockDequeue.mockReset();
     mockRemove.mockReset();
+    mockPrepare.mockClear();
+    mockResume.mockClear();
     mockSetDraft.mockReset();
     mockChatUI.init.mockReset();
     mockChatUI.syncAvailableModels.mockReset();
@@ -174,7 +188,7 @@ describe("useChatPanelState", () => {
     requestAnimationFrameSpy = null;
   });
 
-  it("re-anchors to the bottom when an idle send adds a new message", () => {
+  it("re-anchors to the bottom when an idle send adds a new message", async () => {
     const onSend = vi.fn();
     const { result, rerender } = renderHook(() =>
       useChatPanelState({
@@ -183,7 +197,7 @@ describe("useChatPanelState", () => {
       }),
     );
 
-    act(() => result.current.handleSend("Hello"));
+    await act(async () => result.current.handleSend("Hello"));
 
     expect(onSend).toHaveBeenCalledWith(
       "Hello",
@@ -199,14 +213,14 @@ describe("useChatPanelState", () => {
     expect(mockScrollToBottom).toHaveBeenCalledTimes(1);
 
     mockStreamMessages = [{ id: "msg-1", role: "assistant", content: "" }];
-    act(() => {
+    await act(async () => {
       rerender();
     });
 
     expect(mockScrollToBottom).toHaveBeenCalledTimes(1);
   });
 
-  it("does not re-arm auto-follow when a follow-up queues during the active response", () => {
+  it("does not re-arm auto-follow when a follow-up queues during the active response", async () => {
     mockIsStreaming = true;
     const onSend = vi.fn();
     const { result } = renderHook(() =>
@@ -216,7 +230,7 @@ describe("useChatPanelState", () => {
       }),
     );
 
-    act(() => result.current.handleSend("Queued follow-up"));
+    await act(async () => result.current.handleSend("Queued follow-up"));
 
     expect(onSend).not.toHaveBeenCalled();
     expect(mockEnqueue).toHaveBeenCalledWith(
@@ -231,7 +245,7 @@ describe("useChatPanelState", () => {
     expect(mockScrollToBottom).not.toHaveBeenCalled();
   });
 
-  it("blocks direct, queued, and send-now paths when sending is disabled", () => {
+  it("blocks direct, queued, and send-now paths when sending is disabled", async () => {
     mockIsStreaming = true;
     const onSend = vi.fn();
     const onStop = vi.fn();
@@ -244,11 +258,11 @@ describe("useChatPanelState", () => {
       }),
     );
 
-    act(() => result.current.handleSend("Blocked direct"));
+    await act(async () => result.current.handleSend("Blocked direct"));
     expect(onSend).not.toHaveBeenCalled();
     expect(mockEnqueue).not.toHaveBeenCalled();
 
-    act(() =>
+    await act(async () =>
       result.current.handleQueueSendNow({
         id: "q-1",
         content: "Blocked queued",
@@ -271,7 +285,7 @@ describe("useChatPanelState", () => {
     expect(onSend).not.toHaveBeenCalled();
   });
 
-  it("keeps image mode active after an idle send", () => {
+  it("keeps image mode active after an idle send", async () => {
     mockChatUI.selectedModel = "gpt-image-2";
     const onSend = vi.fn();
     const { result } = renderHook(() =>
@@ -292,7 +306,7 @@ describe("useChatPanelState", () => {
       ]);
     });
 
-    act(() => result.current.handleSend("Draw a fox", undefined, undefined, "image"));
+    await act(async () => result.current.handleSend("Draw a fox", undefined, undefined, "image"));
 
     expect(onSend).toHaveBeenCalledWith(
       "Draw a fox",
@@ -308,7 +322,7 @@ describe("useChatPanelState", () => {
     ]);
   });
 
-  it("preserves image model and generation mode for queued sends", () => {
+  it("preserves image model and generation mode for queued sends", async () => {
     mockIsStreaming = true;
     mockChatUI.selectedModel = "gpt-image-2";
     const onSend = vi.fn();
@@ -320,7 +334,7 @@ describe("useChatPanelState", () => {
       }),
     );
 
-    act(() => result.current.handleSend("Draw a fox", undefined, undefined, "image"));
+    await act(async () => result.current.handleSend("Draw a fox", undefined, undefined, "image"));
 
     expect(mockEnqueue).toHaveBeenCalledWith(
       "stream-1",
@@ -342,7 +356,7 @@ describe("useChatPanelState", () => {
     });
     mockIsStreaming = false;
 
-    act(() => {
+    await act(async () => {
       rerender();
     });
 
@@ -360,7 +374,7 @@ describe("useChatPanelState", () => {
     );
   });
 
-  it("preserves exact agent bindings while a chat send is queued", () => {
+  it("preserves exact agent bindings while a chat send is queued", async () => {
     mockIsStreaming = true;
     const onSend = vi.fn();
     const mentions = [
@@ -374,7 +388,7 @@ describe("useChatPanelState", () => {
       }),
     );
 
-    act(() =>
+    await act(async () =>
       result.current.handleSend(
         "Ask @Maya to review",
         undefined,
@@ -396,7 +410,7 @@ describe("useChatPanelState", () => {
       agentMentions: mentions,
     });
     mockIsStreaming = false;
-    act(() => rerender());
+    await act(async () => rerender());
 
     expect(onSend).toHaveBeenCalledWith(
       "Ask @Maya to review",
@@ -412,7 +426,7 @@ describe("useChatPanelState", () => {
     );
   });
 
-  it("3D model step: forwards the pinned source image URL from chat-ui-store (not from chat history)", () => {
+  it("3D model step: forwards the pinned source image URL from chat-ui-store (not from chat history)", async () => {
     mockChatUI.selectedMode = "3d";
     mockChatUI.selectedModel = "tripo-v2";
     // The pin lives on the store; chat history is intentionally
@@ -449,7 +463,7 @@ describe("useChatPanelState", () => {
       }),
     );
 
-    act(() => result.current.handleSend("optional refinement"));
+    await act(async () => result.current.handleSend("optional refinement"));
 
     expect(onSend).toHaveBeenCalledWith(
       "optional refinement",
@@ -463,7 +477,7 @@ describe("useChatPanelState", () => {
     );
   });
 
-  it("3D image step: dispatches with no source URL when no thumb is pinned", () => {
+  it("3D image step: dispatches with no source URL when no thumb is pinned", async () => {
     mockChatUI.selectedMode = "3d";
     mockChatUI.selectedModel = "tripo-v2";
     mockChatUI.pinnedSourceImage = null;
@@ -497,7 +511,7 @@ describe("useChatPanelState", () => {
       }),
     );
 
-    act(() => result.current.handleSend("a brass robot"));
+    await act(async () => result.current.handleSend("a brass robot"));
 
     expect(onSend).toHaveBeenCalledWith(
       "a brass robot",
@@ -511,7 +525,7 @@ describe("useChatPanelState", () => {
     );
   });
 
-  it("does not trigger an extra bottom scroll when streaming finishes without a queued send", () => {
+  it("does not trigger an extra bottom scroll when streaming finishes without a queued send", async () => {
     mockIsStreaming = true;
     const onSend = vi.fn();
     const { rerender } = renderHook(() =>
@@ -523,7 +537,7 @@ describe("useChatPanelState", () => {
 
     mockIsStreaming = false;
 
-    act(() => {
+    await act(async () => {
       rerender();
     });
 
@@ -559,7 +573,7 @@ describe("useChatPanelState", () => {
   // by the sync re-entry guard. React 18 batches the
   // `setIsStreaming(false → true)` toggles, so there's no
   // `true → false` blip to race with the dequeue effect.
-  it("handleQueueSendNow removes the item, calls onStop, then dispatches inline", () => {
+  it("handleQueueSendNow prepares the item, calls onStop, then dispatches inline", async () => {
     mockIsStreaming = true;
     const onSend = vi.fn();
     const onStop = vi.fn();
@@ -581,9 +595,9 @@ describe("useChatPanelState", () => {
       commands: undefined,
     };
 
-    act(() => result.current.handleQueueSendNow(queuedItem));
+    await act(async () => result.current.handleQueueSendNow(queuedItem));
 
-    expect(mockRemove).toHaveBeenCalledWith("stream-1", "q-1");
+    expect(mockPrepare).toHaveBeenCalledWith("stream-1", queuedItem);
     expect(onStop).toHaveBeenCalledTimes(1);
     expect(onSend).toHaveBeenCalledWith(
       "force me",
@@ -604,7 +618,7 @@ describe("useChatPanelState", () => {
     expect(stopOrder).toBeLessThan(sendOrder);
   });
 
-  it("handleQueueSendNow falls back to the selected model when the item omits one", () => {
+  it("handleQueueSendNow falls back to the selected model when the item omits one", async () => {
     mockChatUI.selectedModel = "claude-fallback";
     const onSend = vi.fn();
     const onStop = vi.fn();
@@ -617,7 +631,7 @@ describe("useChatPanelState", () => {
       }),
     );
 
-    act(() =>
+    await act(async () =>
       result.current.handleQueueSendNow({
         id: "q-2",
         content: "no model",
@@ -639,7 +653,7 @@ describe("useChatPanelState", () => {
     );
   });
 
-  it("handleQueueSendNow no-ops the stop call when onStop is not provided", () => {
+  it("handleQueueSendNow no-ops the stop call when onStop is not provided", async () => {
     const onSend = vi.fn();
     const { result } = renderHook(() =>
       useChatPanelState({
@@ -648,17 +662,20 @@ describe("useChatPanelState", () => {
       }),
     );
 
-    expect(() =>
-      act(() =>
+    await expect(
+      act(async () =>
         result.current.handleQueueSendNow({
           id: "q-3",
           content: "no stop wired",
           action: null,
         }),
       ),
-    ).not.toThrow();
+    ).resolves.toBeUndefined();
 
-    expect(mockRemove).toHaveBeenCalledWith("stream-1", "q-3");
+    expect(mockPrepare).toHaveBeenCalledWith(
+      "stream-1",
+      expect.objectContaining({ id: "q-3" }),
+    );
     expect(onSend).toHaveBeenCalledWith(
       "no stop wired",
       null,

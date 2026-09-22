@@ -55,6 +55,7 @@ and attribution.
 | Multi-client UX | Web, Electron desktop, and native mobile share contracts, connection supervision, auth, cached environment state, and domain projections while retaining platform-specific shells. | High for mobile. Aura already has desktop/web/mobile surfaces, but cross-client agent/session discovery, resumability, and offline truth need to feel like one product. |
 | Mobile agent awareness | The environment publishes redacted per-thread activity for push notifications and Live Activities. Notifications deep-link back to `(environmentId, threadId)`; the socket does not need to survive in the background. | High after basic resume reliability. Aura should notify for completion, failure, approval, and required input, keyed to its canonical agent/session/runtime identity. |
 | Mobile outbox and drafts | Composer drafts and pending sends are client-owned, while accepted commands and conversation state remain environment-owned. Reconnect drains retryable client intent without pretending an unacknowledged send was committed. | High. This is the right boundary for reliable mobile prompts on lossy networks. |
+| Restart-held follow-ups | T3 preserves queued work across a server restart but holds it until an explicit `queue.resume` instead of silently executing stale intent (`728b1b2fc`). | High for mobile. Aura should durably restore client-owned follow-ups as held, while leaving accepted/running commands under environment ownership. |
 
 Primary T3 sources reviewed:
 
@@ -260,6 +261,23 @@ The first Aura slice now implements that boundary:
   last-send payload still supports an explicit retry while the app remains open. This complements
   T3's reconnect-aware upload queue: Aura's failed object upload already falls back to the inline
   attachment, while the command outbox protects the resulting prompt across mobile suspension.
+  The Android-readiness track verified the exact row and attachment bytes in WebView IndexedDB,
+  force-stopped and relaunched the app, observed replay with the same command id and payload, and
+  confirmed one rendered user turn. It also injected `QuotaExceededError`: no command POST opened,
+  the bubble became `Not sent`, and the in-process retry preserved the exact attachment.
+- Client-owned follow-ups waiting behind a running turn now have their own durable, authenticated
+  IndexedDB queue. Exact text, attachment payloads, generation settings, and agent bindings are
+  stored before the composer clears; quota/unavailable-storage failures leave the draft and
+  attachments in place with an inline error. After app process death, recovered items render in the
+  originating canonical conversation as `held after restart` and cannot auto-dequeue until the
+  user taps the touch-sized Resume queue action. Ordinary chat sends hand the same queue id into
+  the durable command outbox before deleting the queue copy; cold-start hydration deduplicates the
+  overlap if Android kills the WebView between those commits. Media-generation sends, which are not
+  in the command outbox yet, delete their queue item before dispatch. Editing, removal, and new-chat
+  clearing also commit the deletion before advancing, preventing a completed or discarded follow-up
+  from reappearing after another kill. Queues are user/environment-scoped,
+  bounded to 50, expire after 24 hours, and never mirror prompt data into localStorage. This adopts
+  T3's safe restart-hold invariant without pretending Aura's client queue is a server worker.
 - The mobile agent library now has an explicit touch-sized refresh action for agents, projects,
   canonical sessions, approvals, questions, and active runs. The attention hydration is
   independently fail-safe per endpoint: a transient failure preserves the last known slice, while
@@ -271,6 +289,10 @@ The first Aura slice now implements that boundary:
   active sessions, endpoint, and runtime version remain visible in the same touch-oriented card.
   This borrows T3 mobile's principle that a phone should control the agent-owned environment, while
   keeping Aura's confidential swarm lifecycle rather than copying T3's interactive device-stream UI.
+  A non-recoverable state error now wins over any cached VM state, so a stale running/error snapshot
+  cannot reintroduce Recovery or Stop after a 401. The agent-library session selector also uses a
+  stable empty snapshot; Android production-build testing had exposed the prior fresh-array fallback
+  as a React maximum-update-depth crash that component mocks did not reproduce.
 - Deferred sends now have a distinct `Waiting to resend` state instead of sharing the ordinary
   in-turn `Queued` label. Live chat bubbles expose touch-friendly `Retry now` and `Stop retrying`
   controls; both operate only on the authenticated user's current environment-scoped outbox. A

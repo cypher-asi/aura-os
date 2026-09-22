@@ -1,6 +1,6 @@
 const DB_NAME = "aura-browser-store";
 // Bump this when adding new object stores so `onupgradeneeded` creates them.
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 const LOCAL_FALLBACK_PREFIX = "aura-idb";
 
 export const BROWSER_DB_STORES = {
@@ -29,6 +29,9 @@ export const BROWSER_DB_STORES = {
   // exact request in IDB lets the authenticated shell replay it with the same
   // idempotency key after foregrounding or reconnecting.
   chatCommandOutbox: "chatCommandOutbox",
+  // Client-owned follow-ups waiting behind an active turn. Restored entries
+  // are held for explicit resumption rather than auto-executed.
+  chatFollowUpQueue: "chatFollowUpQueue",
 } as const;
 
 export type BrowserDbStoreName =

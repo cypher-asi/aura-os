@@ -202,6 +202,14 @@ vi.mock("../MessageQueue", () => ({
 }));
 
 vi.mock("../../../stores/message-queue-store", () => ({
+  enqueueQueuedMessage: vi.fn(async () => ({ id: "queued-id" })),
+  prepareNextQueuedMessage: vi.fn(async () => undefined),
+  removeQueuedMessage: vi.fn(async () => {}),
+  resumeQueuedMessages: vi.fn(async () => {}),
+  clearQueuedMessages: (...args: unknown[]) => {
+    mockClearQueue(...args);
+    return Promise.resolve();
+  },
   useMessageQueueStore: {
     getState: () => ({
       enqueue: vi.fn(),
@@ -425,7 +433,7 @@ describe("ChatPanel", () => {
     expect(getInputBar()).toHaveAttribute("data-visible", "true");
   });
 
-  it("clears the draft and queued messages before starting a new chat", () => {
+  it("clears the draft and queued messages before starting a new chat", async () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
     const onNewChat = vi.fn();
 
@@ -434,14 +442,16 @@ describe("ChatPanel", () => {
     fireEvent.change(input, { target: { value: "draft message" } });
     expect(input.value).toBe("draft message");
 
-    fireEvent.click(screen.getByRole("button", { name: "new chat" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "new chat" }));
+    });
 
     expect(input.value).toBe("");
     expect(mockClearQueue).toHaveBeenCalledWith("stream-1");
     expect(onNewChat).toHaveBeenCalledTimes(1);
   });
 
-  it("focuses the input after pressing the new-chat button on desktop", () => {
+  it("focuses the input after pressing the new-chat button on desktop", async () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
     const onNewChat = vi.fn();
 
@@ -456,7 +466,9 @@ describe("ChatPanel", () => {
     input.blur();
     expect(input).not.toHaveFocus();
 
-    fireEvent.click(screen.getByRole("button", { name: "new chat" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "new chat" }));
+    });
 
     expect(getInputBar()).toHaveFocus();
   });

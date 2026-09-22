@@ -26,7 +26,7 @@ import { useChatPanelState } from "./useChatPanelState";
 import { findLatestGeneratedImage } from "./latest-generated-image";
 import { appendQueuedDisplayMessages } from "./queued-display-message";
 import { useChatUIStore } from "../../../stores/chat-ui-store";
-import { useMessageQueueStore } from "../../../stores/message-queue-store";
+import { clearQueuedMessages } from "../../../stores/message-queue-store";
 import {
   useStreamHealth,
   useStuckStreamAutoTimeout,
@@ -222,6 +222,7 @@ export function ChatSurface({
     answer?: string;
     error?: string;
   } | null>(null);
+  const [newChatQueueError, setNewChatQueueError] = useState<string | null>(null);
   const asideRequestRef = useRef(0);
   const handleAside = useCallback(
     (question: string) => {
@@ -275,6 +276,8 @@ export function ChatSurface({
     handleQueueEdit,
     handleQueueRemove,
     handleQueueSendNow,
+    handleQueueResume,
+    queuePersistenceError,
     loadOlder,
     isLoadingOlder,
     hasOlderMessages,
@@ -398,12 +401,20 @@ export function ChatSurface({
 
   useStuckStreamAutoTimeout(streamHealth, handleStuckStreamAutoTimeout);
 
-  const handleNewChat = useCallback(() => {
+  const handleNewChat = useCallback(async () => {
     if (!onNewChat) return;
     useChatUIStore.getState().setDraft(streamKey, "");
     setAttachments([]);
     setCommands([]);
-    useMessageQueueStore.getState().clear(streamKey);
+    try {
+      await clearQueuedMessages(streamKey);
+      setNewChatQueueError(null);
+    } catch {
+      setNewChatQueueError(
+        "Couldn't safely clear the saved follow-up queue. The current chat was kept open.",
+      );
+      return;
+    }
     onNewChat();
     // Place the cursor back in the input on the fresh canvas. The
     // standing focus effect below only re-fires when `inputFocusReadyRef`
@@ -907,6 +918,7 @@ export function ChatSurface({
               onEdit={handleQueueEdit}
               onRemove={handleQueueRemove}
               onSendNow={handleQueueSendNow}
+              onResume={handleQueueResume}
             />
           </div>
         )}
@@ -958,6 +970,7 @@ export function ChatSurface({
           onNewChat={onNewChat ? handleNewChat : undefined}
           sendDisabled={sendDisabled}
           sendDisabledReason={sendDisabledReason}
+          externalValidationMessage={newChatQueueError ?? queuePersistenceError}
         />
       </div>
       {aside ? (
