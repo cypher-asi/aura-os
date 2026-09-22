@@ -228,6 +228,8 @@ describe("useAgentRowModels", () => {
           sessionId: "session-1",
           route: "/projects/project-1/agents/instance-1?session=session-1",
           startedAt: 10,
+          activity: "Coordinating agents",
+          activeSubagentCount: 2,
         },
       },
     });
@@ -236,6 +238,8 @@ describe("useAgentRowModels", () => {
       busy: true,
       activeRun: {
         route: "/projects/project-1/agents/instance-1?session=session-1",
+        activity: "Coordinating agents",
+        activeSubagentCount: 2,
       },
     });
   });

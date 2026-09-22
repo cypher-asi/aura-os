@@ -165,7 +165,11 @@ The first Aura slice now implements that boundary:
   mobile is foregrounded it refreshes only the active-run projection every ten seconds and on
   foreground return, so the shell can show useful desktop-run progress without holding the stream
   open or polling approvals and questions. This is Aura's content-safe counterpart to T3's
-  per-thread Live Activity updates.
+  per-thread Live Activity updates. As an Aura-specific extension, the same bounded projection
+  reconstructs how many child agents are still active under the turn. Mobile shows the aggregate
+  swarm count in both the global activity strip and agent work inbox, while child run ids, prompts,
+  models, paths, and failure reasons stay inside the owning environment. If an old spawn ages out
+  of the bounded replay ring, the projection under-counts instead of retaining stale child metadata.
 - Android now has the corresponding OS-background delivery path. The native client requests
   notification permission only when its Firebase resources are present, registers its FCM token
   against the authenticated Aura account, and resynchronizes the enabled notification categories

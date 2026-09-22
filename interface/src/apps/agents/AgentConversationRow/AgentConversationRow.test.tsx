@@ -227,4 +227,24 @@ describe("AgentConversationRow", () => {
     expect(screen.getByText("Agent is working · Tap to follow")).toBeInTheDocument();
     expect(screen.getByRole("button")).toHaveAttribute("data-agent-activity", "running");
   });
+
+  it("surfaces active child agents without exposing their private identities", () => {
+    render(
+      <AgentConversationRow
+        agent={baseAgent}
+        lastMessage={lastMessage}
+        isSelected={false}
+        busy
+        activeRun={{
+          route: "/agents/agent-1?session=session-1",
+          activity: "Coordinating agents",
+          activeSubagentCount: 2,
+        }}
+        {...noopHandlers}
+      />,
+    );
+
+    expect(screen.getByText("3 agents working")).toBeInTheDocument();
+    expect(screen.getByText("2 child agents active · Tap to follow")).toBeInTheDocument();
+  });
 });

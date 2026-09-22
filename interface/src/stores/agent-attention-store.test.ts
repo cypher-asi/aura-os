@@ -135,6 +135,7 @@ describe("agent-attention-store", () => {
         terminated: false,
         started_at_ms: 50,
         activity: "Inspecting code",
+        active_subagent_count: 2,
       }],
     });
 
@@ -144,6 +145,7 @@ describe("agent-attention-store", () => {
       agentId: "agent-1",
       route: "/projects/project-1/agents/instance-1?session=session-1",
       activity: "Inspecting code",
+      activeSubagentCount: 2,
     });
   });
 
@@ -184,6 +186,7 @@ describe("agent-attention-store", () => {
         terminated: false,
         started_at_ms: 50,
         activity: "Running a command",
+        active_subagent_count: 3,
       }],
     });
 
@@ -191,6 +194,8 @@ describe("agent-attention-store", () => {
 
     expect(Object.values(useAgentAttentionStore.getState().activeRuns)[0]?.activity)
       .toBe("Running a command");
+    expect(Object.values(useAgentAttentionStore.getState().activeRuns)[0]?.activeSubagentCount)
+      .toBe(3);
     expect(useAgentAttentionStore.getState().pendingApprovals.approval)
       .toBeDefined();
     expect(listPendingToolApprovals).not.toHaveBeenCalled();

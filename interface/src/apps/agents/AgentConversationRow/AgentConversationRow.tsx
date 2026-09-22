@@ -44,6 +44,8 @@ interface AgentConversationRowProps {
   };
   activeRun?: {
     route?: string;
+    activity?: string;
+    activeSubagentCount?: number;
   };
   onClick: () => void;
   onContextMenu: (e: React.MouseEvent) => void;
@@ -75,7 +77,9 @@ function AgentConversationRowBase({
   const preview = attention
     ? `${attention.count > 1 ? `${attention.count} requests` : attention.kind === "input" ? "Answer needed" : "Approval needed"} · ${attention.label}`
     : activeRun
-      ? "Agent is working · Tap to follow"
+      ? activeRun.activeSubagentCount
+        ? `${activeRun.activeSubagentCount} child ${activeRun.activeSubagentCount === 1 ? "agent" : "agents"} active · Tap to follow`
+        : `${activeRun.activity ?? "Agent is working"} · Tap to follow`
       : messagePreview || agentDescription || fallback;
   const isCeo = isSuperAgent(agent);
 
@@ -136,7 +140,9 @@ function AgentConversationRowBase({
             ) : activeRun ? (
               <span className={styles.activityBadge}>
                 <Activity size={11} aria-hidden="true" />
-                Working
+                {activeRun.activeSubagentCount
+                  ? `${activeRun.activeSubagentCount + 1} agents working`
+                  : "Working"}
               </span>
             ) : null}
           </span>

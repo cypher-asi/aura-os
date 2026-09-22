@@ -19,7 +19,7 @@
 //! streams linger for a TTL so a client that reconnects just after the
 //! final frame still receives the tail of the output.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex, Weak};
 use std::time::{Duration, Instant};
 
@@ -417,31 +417,64 @@ impl LiveStream {
 
     /// Build the listing summary for `GET /api/streams/active`.
     pub fn summary(&self) -> ActiveStreamSummary {
+        let terminated = self.is_terminated();
+        let events = if terminated {
+            Vec::new()
+        } else {
+            self.events.snapshot_values()
+        };
         ActiveStreamSummary {
             attach_id: self.attach_id.clone(),
             kind: self.kind,
             scope: self.scope.clone(),
             latest_seq: self.events.latest_seq(),
-            terminated: self.is_terminated(),
+            terminated,
             started_at_ms: self.started_at_ms,
-            activity: self.current_activity(),
+            activity: current_activity(&events),
+            active_subagent_count: active_subagent_count(&events),
         }
     }
+}
 
-    /// Return a content-free description of the newest useful harness frame.
-    /// This powers mobile activity surfaces without exposing prompts, model
-    /// output, command text, file paths, or tool arguments in a shell-level
-    /// snapshot.
-    fn current_activity(&self) -> Option<String> {
-        if self.is_terminated() {
-            return None;
+/// Return a content-free description of the newest useful harness frame.
+/// This powers mobile activity surfaces without exposing prompts, model
+/// output, command text, file paths, or tool arguments in a shell-level
+/// snapshot.
+fn current_activity(events: &[Arc<serde_json::Value>]) -> Option<String> {
+    events
+        .iter()
+        .rev()
+        .find_map(|value| redacted_stream_activity(value))
+}
+
+/// Count live child runs without exposing their ids, prompts, models, or
+/// failure reasons. This shell projection deliberately stays within the
+/// bounded replay ring. If an old spawn ages out without a newer running
+/// status, the count fails closed by under-reporting rather than retaining
+/// stale or sensitive child metadata elsewhere.
+fn active_subagent_count(events: &[Arc<serde_json::Value>]) -> usize {
+    let mut active = HashSet::new();
+    for value in events {
+        let event_type = value.get("type").and_then(|entry| entry.as_str());
+        let child_run_id = value
+            .get("child_run_id")
+            .and_then(|entry| entry.as_str())
+            .filter(|entry| !entry.is_empty());
+        match (event_type, child_run_id) {
+            (Some("subagent_spawned"), Some(child_run_id)) => {
+                active.insert(child_run_id.to_string());
+            }
+            (Some("subagent_status"), Some(child_run_id)) => {
+                if value.get("state").and_then(|entry| entry.as_str()) == Some("running") {
+                    active.insert(child_run_id.to_string());
+                } else {
+                    active.remove(child_run_id);
+                }
+            }
+            _ => {}
         }
-        self.events
-            .snapshot_values()
-            .iter()
-            .rev()
-            .find_map(|value| redacted_stream_activity(value))
     }
+    active.len()
 }
 
 fn redacted_stream_activity(value: &serde_json::Value) -> Option<String> {
@@ -453,7 +486,14 @@ fn redacted_stream_activity(value: &serde_json::Value) -> Option<String> {
         "text_delta" => "Responding",
         "assistant_message_start" => "Starting response",
         "tool_result" => "Reviewing tool results",
-        "subagent_spawned" | "subagent_status" => "Coordinating agents",
+        "subagent_spawned" => "Coordinating agents",
+        "subagent_status" => {
+            if value.get("state").and_then(|entry| entry.as_str()) == Some("running") {
+                "Coordinating agents"
+            } else {
+                "Reviewing agent results"
+            }
+        }
         "tool_use_start" | "tool_call_snapshot" => {
             return Some(tool_activity_label(
                 value.get("name").and_then(|entry| entry.as_str()),
@@ -503,6 +543,13 @@ pub struct ActiveStreamSummary {
     /// Content-free current activity suitable for mobile shell surfaces.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub activity: Option<String>,
+    /// Number of child agents currently running under this parent turn.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub active_subagent_count: usize,
+}
+
+fn is_zero(value: &usize) -> bool {
+    *value == 0
 }
 
 /// User-facing identity for an unresolved protected-tool request.
@@ -1464,6 +1511,44 @@ mod tests {
         let serialized = serde_json::to_string(&summary).expect("summary serializes");
         assert!(!serialized.contains("secrets.rs"));
         assert!(!serialized.contains("/private/workspace"));
+    }
+
+    #[tokio::test]
+    async fn active_summary_counts_only_live_subagents_without_exposing_identity() {
+        let registry = test_registry();
+        let stream = registry.register(
+            StreamKind::ChatTurn,
+            StreamScope {
+                user_id: Some("u1".to_string()),
+                session_id: Some("sess-1".to_string()),
+                ..Default::default()
+            },
+            fake_session(),
+        );
+        stream.events.append(serde_json::json!({
+            "type": "subagent_spawned",
+            "child_run_id": "private-child-1",
+            "prompt": "inspect /private/customer/secret.rs",
+            "model": "private-provider/model",
+        }));
+        stream.events.append(serde_json::json!({
+            "type": "subagent_spawned",
+            "child_run_id": "private-child-2",
+            "prompt": "read customer credentials",
+        }));
+        stream.events.append(serde_json::json!({
+            "type": "subagent_status",
+            "child_run_id": "private-child-1",
+            "state": "completed",
+            "reason": "finished secret.rs",
+        }));
+
+        let summary = stream.summary();
+        assert_eq!(summary.active_subagent_count, 1);
+        let serialized = serde_json::to_string(&summary).expect("summary serializes");
+        assert!(!serialized.contains("private-child"));
+        assert!(!serialized.contains("secret.rs"));
+        assert!(!serialized.contains("private-provider"));
     }
 
     #[test]

@@ -31,6 +31,8 @@ export interface AgentActiveRunItem {
   startedAt: number;
   /** Content-free environment status, e.g. "Inspecting code". */
   activity?: string;
+  /** Content-free count of child agents currently running under this turn. */
+  activeSubagentCount?: number;
 }
 
 export interface AgentUserInputItem {
@@ -152,6 +154,12 @@ function clean(value: string | null | undefined): string | undefined {
   return result || undefined;
 }
 
+function positiveInteger(value: number | null | undefined): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? Math.floor(value)
+    : undefined;
+}
+
 function fromSummary(summary: PendingToolApprovalSummary): AgentAttentionItem | null {
   const requestId = clean(summary.request_id);
   const toolName = clean(summary.tool_name);
@@ -240,6 +248,7 @@ function activeRunsFromStreams(
       }),
       startedAt: stream.started_at_ms,
       activity: clean(stream.activity),
+      activeSubagentCount: positiveInteger(stream.active_subagent_count),
     };
     const finishVersion = finishedRunVersions.get(runKey(item)) ?? 0;
     return finishVersion > startedAtVersion ? [] : [item];

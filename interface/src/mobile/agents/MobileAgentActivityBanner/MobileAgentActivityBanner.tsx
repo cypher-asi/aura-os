@@ -92,23 +92,29 @@ export function MobileAgentActivityBanner() {
       .sort((a, b) => a.command.createdAt - b.command.createdAt);
     const runs = Object.values(activeRuns)
       .filter(
-        (item) =>
+        (item): item is AgentActiveRunItem => Boolean(
           item &&
           !isAgentSessionRouteCurrent(item.route, currentUrl) &&
           (!item.route || !blockedRoutes.has(item.route)),
+        ),
       )
-      .sort((a, b) => a!.startedAt - b!.startedAt);
+      .sort((a, b) => a.startedAt - b.startedAt);
 
     const inputCount = inputs.length;
     const approvalCount = approvals.length;
     const waitingCount = waitingCommands.length;
     const runCount = runs.length;
     const currentActivity = runs[0]?.activity;
+    const activeSubagentCount = runs.reduce(
+      (total, run) => total + (run.activeSubagentCount ?? 0),
+      0,
+    );
     const labels = [
       countLabel(inputCount, "answer needed", "answers needed"),
       countLabel(approvalCount, "approval waiting", "approvals waiting"),
       countLabel(waitingCount, "message waiting to send", "messages waiting to send"),
       countLabel(runCount, "agent working", "agents working"),
+      countLabel(activeSubagentCount, "child agent active", "child agents active"),
       currentActivity ?? null,
     ].filter((label): label is string => label !== null);
 
