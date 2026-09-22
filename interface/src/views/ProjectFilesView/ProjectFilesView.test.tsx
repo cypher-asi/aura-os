@@ -2,6 +2,10 @@ import * as React from "react";
 import { render, screen, waitFor } from "../../test/render";
 import { keyForProjectSession } from "../../hooks/stream/store";
 import { useChatUIStore } from "../../stores/chat-ui-store";
+import {
+  projectSessionsSurfaceKey,
+  useSessionsListStore,
+} from "../../stores/sessions-list-store";
 
 const mockUseProjectContext = vi.fn();
 const mockUseAuraCapabilities = vi.fn();
@@ -19,8 +23,8 @@ let currentLocation = {
 };
 
 vi.mock("@cypher-asi/zui", () => ({
-  Button: ({ children, onClick }: { children?: React.ReactNode; onClick?: () => void }) => (
-    <button type="button" onClick={onClick}>{children}</button>
+  Button: ({ children, onClick, disabled }: { children?: React.ReactNode; onClick?: () => void; disabled?: boolean }) => (
+    <button type="button" disabled={disabled} onClick={onClick}>{children}</button>
   ),
   Spinner: () => <div>Loading…</div>,
   Text: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
@@ -167,6 +171,10 @@ function capabilities(overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   useChatUIStore.setState({ streams: {}, drafts: {} });
+  useSessionsListStore.setState({
+    sessionsBySurface: { [projectSessionsSurfaceKey("proj-1")]: [] },
+    loadingBySurface: {},
+  });
   currentSearchParams = new URLSearchParams();
   currentLocation = {
     pathname: "/projects/proj-1/files",
@@ -270,6 +278,33 @@ describe("ProjectFilesView", () => {
     expect(draft).toContain("+const mobile = true;");
     expect(mockNavigate).toHaveBeenCalledWith(
       "/agents/agent-1?project=proj-1&instance=remote-inst-1&session=session-1",
+    );
+  });
+
+  it("infers the existing agent session when Files was opened from the project tab", () => {
+    mockUseAuraCapabilities.mockReturnValue(capabilities({ isMobileLayout: true, isMobileClient: true }));
+    currentSearchParams = new URLSearchParams("view=changes");
+    useSessionsListStore.setState({
+      sessionsBySurface: {
+        [projectSessionsSurfaceKey("proj-1")]: [{
+          session_id: "session-most-recent",
+          project_id: "proj-1",
+          agent_instance_id: "remote-inst-1",
+          _projectId: "proj-1",
+          _projectName: "Demo Project",
+          _agentInstanceId: "remote-inst-1",
+        } as never],
+      },
+    });
+
+    render(<MobileProjectFilesScreen />);
+    screen.getByRole("button", { name: "Ask agent to review changes" }).click();
+
+    expect(useChatUIStore.getState().getDraft(
+      keyForProjectSession("proj-1", "remote-inst-1", "session-most-recent"),
+    )).toMatch(/review the current workspace changes/i);
+    expect(mockNavigate).toHaveBeenCalledWith(
+      "/agents/remote-agent-1?project=proj-1&instance=remote-inst-1&session=session-most-recent",
     );
   });
 
