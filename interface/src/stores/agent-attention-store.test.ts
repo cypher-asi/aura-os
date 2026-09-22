@@ -14,8 +14,10 @@ import {
   applyAgentAttentionEvent,
   clearAgentAttention,
   hydrateAgentAttention,
+  refreshAgentRunActivity,
   useAgentAttentionStore,
 } from "./agent-attention-store";
+import type { ActiveStreamsResponse } from "../shared/api/streams";
 import { EventType, type AuraEvent } from "../shared/types/aura-events";
 
 function event(type: string, content: Record<string, unknown>): AuraEvent {
@@ -132,6 +134,7 @@ describe("agent-attention-store", () => {
         latest_seq: 4,
         terminated: false,
         started_at_ms: 50,
+        activity: "Inspecting code",
       }],
     });
 
@@ -140,7 +143,110 @@ describe("agent-attention-store", () => {
     expect(Object.values(useAgentAttentionStore.getState().activeRuns)[0]).toMatchObject({
       agentId: "agent-1",
       route: "/projects/project-1/agents/instance-1?session=session-1",
+      activity: "Inspecting code",
     });
+  });
+
+  it("refreshes redacted activity without replacing approval or input state", async () => {
+    useAgentAttentionStore.setState({
+      pendingApprovals: {
+        approval: {
+          kind: "approval",
+          requestId: "approval",
+          toolName: "run_command",
+          agentId: "agent-1",
+          startedAt: 1,
+        },
+      },
+      pendingInputs: {},
+      activeRuns: {
+        "agent-1:project-1:instance-1:session-1": {
+          agentId: "agent-1",
+          projectId: "project-1",
+          agentInstanceId: "instance-1",
+          sessionId: "session-1",
+          startedAt: 50,
+        },
+      },
+      hydrated: true,
+    });
+    listActiveStreams.mockResolvedValue({
+      streams: [{
+        attach_id: "attach-1",
+        kind: "chat_turn",
+        scope: {
+          agent_id: "agent-1",
+          project_id: "project-1",
+          agent_instance_id: "instance-1",
+          session_id: "session-1",
+        },
+        latest_seq: 7,
+        terminated: false,
+        started_at_ms: 50,
+        activity: "Running a command",
+      }],
+    });
+
+    await refreshAgentRunActivity();
+
+    expect(Object.values(useAgentAttentionStore.getState().activeRuns)[0]?.activity)
+      .toBe("Running a command");
+    expect(useAgentAttentionStore.getState().pendingApprovals.approval)
+      .toBeDefined();
+    expect(listPendingToolApprovals).not.toHaveBeenCalled();
+  });
+
+  it("does not resurrect a run that finishes while activity refresh is in flight", async () => {
+    applyAgentAttentionEvent(event(EventType.UserMessage, { text: "keep going" }));
+    let resolveStreams: ((value: ActiveStreamsResponse) => void) | undefined;
+    listActiveStreams.mockReturnValue(new Promise<ActiveStreamsResponse>((resolve) => {
+      resolveStreams = resolve;
+    }));
+
+    const refresh = refreshAgentRunActivity();
+    applyAgentAttentionEvent(event(EventType.AssistantMessageEnd, {}));
+    resolveStreams?.({
+      streams: [{
+        attach_id: "attach-stale",
+        kind: "chat_turn",
+        scope: {
+          agent_id: "agent-1",
+          project_id: "project-1",
+          agent_instance_id: "instance-1",
+          session_id: "session-1",
+        },
+        latest_seq: 7,
+        terminated: false,
+        started_at_ms: 50,
+        activity: "Thinking",
+      }],
+    });
+    await refresh;
+
+    expect(Object.values(useAgentAttentionStore.getState().activeRuns)).toHaveLength(0);
+  });
+
+  it("does not resurrect a terminated replay stream as active work", async () => {
+    listPendingToolApprovals.mockResolvedValue({ approvals: [] });
+    listActiveStreams.mockResolvedValue({
+      streams: [{
+        attach_id: "attach-finished",
+        kind: "chat_turn",
+        scope: {
+          agent_id: "agent-1",
+          project_id: "project-1",
+          agent_instance_id: "instance-1",
+          session_id: "session-1",
+        },
+        latest_seq: 12,
+        terminated: true,
+        started_at_ms: 50,
+      }],
+    });
+
+    await hydrateAgentAttention();
+
+    expect(Object.values(useAgentAttentionStore.getState().activeRuns)).toHaveLength(0);
   });
 
   it("tracks live run start and completion events", () => {

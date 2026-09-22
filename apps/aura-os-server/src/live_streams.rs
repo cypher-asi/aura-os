@@ -424,8 +424,71 @@ impl LiveStream {
             latest_seq: self.events.latest_seq(),
             terminated: self.is_terminated(),
             started_at_ms: self.started_at_ms,
+            activity: self.current_activity(),
         }
     }
+
+    /// Return a content-free description of the newest useful harness frame.
+    /// This powers mobile activity surfaces without exposing prompts, model
+    /// output, command text, file paths, or tool arguments in a shell-level
+    /// snapshot.
+    fn current_activity(&self) -> Option<String> {
+        if self.is_terminated() {
+            return None;
+        }
+        self.events
+            .snapshot_values()
+            .iter()
+            .rev()
+            .find_map(|value| redacted_stream_activity(value))
+    }
+}
+
+fn redacted_stream_activity(value: &serde_json::Value) -> Option<String> {
+    let event_type = value.get("type").and_then(|entry| entry.as_str())?;
+    let label = match event_type {
+        "tool_approval_prompt" => "Waiting for approval",
+        "agent_user_input_requested" => "Waiting for your answer",
+        "thinking_delta" => "Thinking",
+        "text_delta" => "Responding",
+        "assistant_message_start" => "Starting response",
+        "tool_result" => "Reviewing tool results",
+        "subagent_spawned" | "subagent_status" => "Coordinating agents",
+        "tool_use_start" | "tool_call_snapshot" => {
+            return Some(tool_activity_label(
+                value.get("name").and_then(|entry| entry.as_str()),
+            ));
+        }
+        "progress" => {
+            let stage = value.get("stage").and_then(|entry| entry.as_str());
+            if stage == Some("tool_running") {
+                return Some(tool_activity_label(
+                    value.get("tool_name").and_then(|entry| entry.as_str()),
+                ));
+            }
+            if matches!(stage, Some("forked_for_context" | "auto_fork")) {
+                "Managing context"
+            } else {
+                return None;
+            }
+        }
+        _ => return None,
+    };
+    Some(label.to_string())
+}
+
+fn tool_activity_label(name: Option<&str>) -> String {
+    let label = match name.unwrap_or_default().to_ascii_lowercase().as_str() {
+        "read_file" | "list_files" | "find_files" | "search_code" | "stat_file" => {
+            "Inspecting code"
+        }
+        "write_file" | "edit_file" | "apply_patch" => "Editing code",
+        "run_command" | "run_terminal" | "shell" | "terminal" => "Running a command",
+        "task" | "send_to_agent" | "list_agents" | "council" => "Coordinating agents",
+        "web_search" | "web_fetch" | "browser" => "Researching",
+        _ => "Using a tool",
+    };
+    label.to_string()
 }
 
 /// JSON row in the `GET /api/streams/active` response.
@@ -437,6 +500,9 @@ pub struct ActiveStreamSummary {
     pub latest_seq: u64,
     pub terminated: bool,
     pub started_at_ms: i64,
+    /// Content-free current activity suitable for mobile shell surfaces.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub activity: Option<String>,
 }
 
 /// User-facing identity for an unresolved protected-tool request.
@@ -1372,6 +1438,54 @@ mod tests {
 
         let mine_p1 = registry.list_for_scope("u1", Some("p1"), None);
         assert_eq!(mine_p1.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn active_summary_reports_only_redacted_activity() {
+        let registry = test_registry();
+        let stream = registry.register(
+            StreamKind::ChatTurn,
+            StreamScope {
+                user_id: Some("u1".to_string()),
+                session_id: Some("sess-1".to_string()),
+                ..Default::default()
+            },
+            fake_session(),
+        );
+        stream.events.append(serde_json::json!({
+            "type": "tool_call_snapshot",
+            "id": "tool-1",
+            "name": "read_file",
+            "input": { "path": "/private/workspace/secrets.rs" },
+        }));
+
+        let summary = stream.summary();
+        assert_eq!(summary.activity.as_deref(), Some("Inspecting code"));
+        let serialized = serde_json::to_string(&summary).expect("summary serializes");
+        assert!(!serialized.contains("secrets.rs"));
+        assert!(!serialized.contains("/private/workspace"));
+    }
+
+    #[test]
+    fn redacted_activity_uses_generic_labels_for_unknown_tools() {
+        assert_eq!(
+            redacted_stream_activity(&serde_json::json!({
+                "type": "tool_use_start",
+                "name": "private_customer_plugin",
+            }))
+            .as_deref(),
+            Some("Using a tool"),
+        );
+        assert_eq!(
+            redacted_stream_activity(&serde_json::json!({
+                "type": "progress",
+                "stage": "tool_running",
+                "tool_name": "run_command",
+                "message": "running: printenv SECRET_TOKEN",
+            }))
+            .as_deref(),
+            Some("Running a command"),
+        );
     }
 
     #[tokio::test]

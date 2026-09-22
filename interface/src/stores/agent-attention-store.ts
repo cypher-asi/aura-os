@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 import {
   streamsApi,
+  type ActiveStreamSummary,
   type PendingToolApprovalSummary,
   type PendingUserInputSummary,
   type UserInputQuestion,
@@ -28,6 +29,8 @@ export interface AgentActiveRunItem {
   sessionId?: string;
   route?: string;
   startedAt: number;
+  /** Content-free environment status, e.g. "Inspecting code". */
+  activity?: string;
 }
 
 export interface AgentUserInputItem {
@@ -62,6 +65,7 @@ interface AgentAttentionState {
 }
 
 let hydratePromise: Promise<void> | null = null;
+let runRefreshPromise: Promise<void> | null = null;
 let liveMutationVersion = 0;
 let resetEpoch = 0;
 const resolvedRequestIds = new Set<string>();
@@ -135,6 +139,7 @@ export const useAgentAttentionStore = create<AgentAttentionState>()((set) => ({
     liveMutationVersion += 1;
     resetEpoch += 1;
     hydratePromise = null;
+    runRefreshPromise = null;
     resolvedRequestIds.clear();
     resolvedInputRequestIds.clear();
     finishedRunVersions.clear();
@@ -208,6 +213,71 @@ export function markAgentRunStopped(item: AgentActiveRunItem): void {
   useAgentAttentionStore.getState().finishRun(runKey(item));
 }
 
+function activeRunsFromStreams(
+  streams: ActiveStreamSummary[],
+  startedAtVersion: number,
+): AgentActiveRunItem[] {
+  return streams.flatMap((stream) => {
+    // The resumable-stream registry retains terminal streams for a short
+    // replay TTL. They are useful for reconnect/history convergence but are
+    // not active work and must never resurrect a mobile `Working` badge.
+    if (stream.kind !== "chat_turn" || stream.terminated) return [];
+    const agentId = clean(stream.scope.agent_id);
+    if (!agentId) return [];
+    const projectId = clean(stream.scope.project_id);
+    const agentInstanceId = clean(stream.scope.agent_instance_id);
+    const sessionId = clean(stream.scope.session_id);
+    const item: AgentActiveRunItem = {
+      agentId,
+      projectId,
+      agentInstanceId,
+      sessionId,
+      route: buildAgentSessionRoute({
+        projectId,
+        agentInstanceId,
+        agentId,
+        sessionId,
+      }),
+      startedAt: stream.started_at_ms,
+      activity: clean(stream.activity),
+    };
+    const finishVersion = finishedRunVersions.get(runKey(item)) ?? 0;
+    return finishVersion > startedAtVersion ? [] : [item];
+  });
+}
+
+/** Refresh only the active-run projection while mobile remains foregrounded. */
+export function refreshAgentRunActivity(): Promise<void> {
+  if (runRefreshPromise) return runRefreshPromise;
+  const startedAtVersion = liveMutationVersion;
+  const startedAtResetEpoch = resetEpoch;
+  const refresh = streamsApi.listActiveStreams()
+    .then(({ streams }) => {
+      if (startedAtResetEpoch !== resetEpoch) return;
+      const fetchedRuns = activeRunsFromStreams(streams, startedAtVersion);
+      const mergedRuns = new Map<string, AgentActiveRunItem>();
+      for (const item of fetchedRuns) mergedRuns.set(runKey(item), item);
+
+      if (startedAtVersion !== liveMutationVersion) {
+        for (const item of Object.values(useAgentAttentionStore.getState().activeRuns)) {
+          const finishVersion = item ? finishedRunVersions.get(runKey(item)) ?? 0 : 0;
+          if (item && finishVersion <= startedAtVersion) {
+            mergedRuns.set(runKey(item), item);
+          }
+        }
+      }
+
+      useAgentAttentionStore.setState({
+        activeRuns: Object.fromEntries(mergedRuns),
+      });
+    });
+  const trackedRefresh = refresh.finally(() => {
+    if (runRefreshPromise === trackedRefresh) runRefreshPromise = null;
+  });
+  runRefreshPromise = trackedRefresh;
+  return trackedRefresh;
+}
+
 function activeRunFromEvent(event: AuraEvent): AgentActiveRunItem | null {
   const content = event.content as { agent_id?: string };
   const agentId = clean(event.agent_id || content.agent_id);
@@ -250,29 +320,7 @@ export function hydrateAgentAttention(): Promise<void> {
         .map(inputFromSummary)
         .filter((item): item is AgentUserInputItem => item !== null)
         .filter((item) => !resolvedInputRequestIds.has(item.requestId));
-      const fetchedRuns = streams.flatMap((stream) => {
-        if (stream.kind !== "chat_turn") return [];
-        const agentId = clean(stream.scope.agent_id);
-        if (!agentId) return [];
-        const projectId = clean(stream.scope.project_id);
-        const agentInstanceId = clean(stream.scope.agent_instance_id);
-        const sessionId = clean(stream.scope.session_id);
-        const item: AgentActiveRunItem = {
-          agentId,
-          projectId,
-          agentInstanceId,
-          sessionId,
-          route: buildAgentSessionRoute({
-            projectId,
-            agentInstanceId,
-            agentId,
-            sessionId,
-          }),
-          startedAt: stream.started_at_ms,
-        };
-        const finishVersion = finishedRunVersions.get(runKey(item)) ?? 0;
-        return finishVersion > startedAtVersion ? [] : [item];
-      });
+      const fetchedRuns = activeRunsFromStreams(streams, startedAtVersion);
       if (startedAtVersion === liveMutationVersion) {
         useAgentAttentionStore.getState().replace(fetched, fetchedInputs, fetchedRuns);
         return;
