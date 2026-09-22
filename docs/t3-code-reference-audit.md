@@ -97,6 +97,12 @@ The first Aura slice now implements that boundary:
   failures instead of converting them into HTTP 200. Aura sanitizes gateway error bodies, and
   mobile file preview distinguishes those states without exposing pod paths. This fixes the
   diagnostic boundary for cross-device code browsing; it does not make an offline pod readable.
+- The mobile file index is now scoped to the authenticated account **and** owning remote agent,
+  not only a workspace path. Switching agents or accounts hides the old tree immediately even
+  when both use the same pod path. A transient remote refresh failure can retain only that same
+  agent's in-memory listing with a visible stale-data warning; denied or missing workspaces clear
+  it. Remote full-tree polling backs off to 30 seconds while foreground/file-operation signals
+  still refresh promptly, reducing needless mobile network and battery use.
 - The agent library warms and displays recent shared conversation previews rather than only profile
   biography text. Its mobile search now matches agent identity/profile fields, live attention, and
   those cross-device conversation previews, with an explicit no-results state instead of a blank
@@ -337,7 +343,19 @@ proxies only those fixed routes; Aura OS validates the response and routes mobil
 owning remote agent. Git operations are timed, output-limited, and concurrency-limited in Harness,
 with no terminal-command workaround or remote stage/commit action. This remains unverified on a
 deployed pod and must not be counted as production-ready until the three service versions and
-Android review UI are exercised together.
+Android review UI are exercised together. The corrected Android build at `fcb7c3ebd` embeds the
+production native host. On the currently deployed older backend, remote Changes returned HTTP 404
+and showed the explicit unavailable/retry state. A controlled Android WebView test of a synthetic
+status/diff response confirmed branch, file, and read-only diff rendering, touch-sized line actions,
+and canonical Ask-agent draft routing at 320px width. That test does **not** establish successful
+Git inspection against a production agent pod.
+
+The Android QA transcript also contains a 424 agent error on a **project chat** stream with
+`provider_account_unavailable`; an earlier turn in that chat reported the same provider code with
+400. This is distinct from a remote-agent runtime failure and from Aura's own
+`chat_persist_unavailable` 424 preflight. The remote standalone agent remained read-only while its
+runtime was unavailable, so provider execution on that remote path is still unverified. Treat these
+as separate failure domains when diagnosing mobile sends.
 
 ### P0 — finish the safety foundation
 

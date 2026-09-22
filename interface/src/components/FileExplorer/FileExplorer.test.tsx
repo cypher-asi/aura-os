@@ -104,6 +104,20 @@ describe("FileExplorer", () => {
     expect(screen.queryByText(/Swarm gateway returned 503/i)).not.toBeInTheDocument();
   });
 
+  it("labels a same-session remote listing as stale after a refresh failure", () => {
+    setExplorerState({
+      isRemote: true,
+      error: "private gateway diagnostic",
+      entries: [{ name: "index.ts", path: "/workspace/index.ts", is_dir: false }],
+    });
+
+    render(<FileExplorer rootPath="/workspace" remoteAgentId="agent-1" />);
+
+    expect(screen.getByRole("status")).toHaveTextContent("Showing the last list from this session");
+    expect(screen.getByTestId("mobile-file-list")).toBeInTheDocument();
+    expect(screen.queryByText("private gateway diagnostic")).not.toBeInTheDocument();
+  });
+
   it("keeps local file errors descriptive for desktop workspace issues", () => {
     setExplorerState({
       isRemote: false,
