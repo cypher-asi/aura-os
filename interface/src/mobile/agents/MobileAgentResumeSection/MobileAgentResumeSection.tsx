@@ -1,8 +1,10 @@
 import { Button, Text } from "@cypher-asi/zui";
 import { FolderCode, GitCompare, MessageSquare } from "lucide-react";
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { ChatsTab } from "../../../apps/agents/AgentInfoPanel/ChatsTab";
+import { PanelSearch } from "../../../components/PanelSearch";
 import {
   agentSessionsSurfaceKey,
   useMostRecentSession,
@@ -10,6 +12,7 @@ import {
 import styles from "./MobileAgentResumeSection.module.css";
 
 export function MobileAgentResumeSection({ agentId }: { agentId: string }) {
+  const [sessionSearchQuery, setSessionSearchQuery] = useState("");
   const location = useLocation();
   const navigate = useNavigate();
   const mostRecentSession = useMostRecentSession(agentSessionsSurfaceKey(agentId));
@@ -84,7 +87,12 @@ export function MobileAgentResumeSection({ agentId }: { agentId: string }) {
 
       <div className={styles.recentChats}>
         <Text size="xs" variant="muted" weight="medium">Recent chats</Text>
-        <ChatsTab showActionButtons />
+        <PanelSearch
+          placeholder="Search this agent's chats"
+          value={sessionSearchQuery}
+          onChange={setSessionSearchQuery}
+        />
+        <ChatsTab showActionButtons searchQuery={sessionSearchQuery} />
       </div>
     </section>
   );

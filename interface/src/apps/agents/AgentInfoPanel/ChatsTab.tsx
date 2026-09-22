@@ -34,7 +34,13 @@ import { EmptyState } from "../../../components/EmptyState";
  * whether it is mounted from the agents shell or the marketplace
  * preview.
  */
-export function ChatsTab({ showActionButtons = false }: { showActionButtons?: boolean }) {
+export function ChatsTab({
+  showActionButtons = false,
+  searchQuery,
+}: {
+  showActionButtons?: boolean;
+  searchQuery?: string;
+}) {
   const { selectedAgent } = useSelectedAgent();
   const agentId = selectedAgent?.agent_id;
   const surfaceKey = agentId ? agentSessionsSurfaceKey(agentId) : undefined;
@@ -138,6 +144,7 @@ export function ChatsTab({ showActionButtons = false }: { showActionButtons?: bo
       deleteError={deleteError}
       onDismissError={surfaceKey ? () => setDeleteError(surfaceKey, null) : undefined}
       showActionButtons={showActionButtons}
+      searchQuery={searchQuery}
     />
   );
 }

@@ -208,7 +208,9 @@ The first Aura slice now implements that boundary:
   delete through an explicit 44px per-row action trigger. These were already durable Aura session
   operations, but the shared list only exposed them through a desktop context menu. Mobile reuses
   the same account-scoped APIs, optimistic cross-surface projection, and rollback/error handling;
-  it does not create a second client-only organization model.
+  it does not create a second client-only organization model. The same surface can filter that
+  agent's shared sessions by resolved title without leaving agent details; account-wide Recall
+  remains the separate content-search path.
 - Regular project and standalone-agent chat now enqueue the request intent in an IndexedDB outbox
   before opening the POST. The authenticated shell drains retryable commands on boot, connectivity
   restoration, and foreground using the original command id, never repeats `new_session=true`, and

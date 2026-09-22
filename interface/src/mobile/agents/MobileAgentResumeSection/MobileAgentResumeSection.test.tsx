@@ -4,8 +4,19 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../../../apps/agents/AgentInfoPanel/ChatsTab", () => ({
-  ChatsTab: ({ showActionButtons }: { showActionButtons?: boolean }) => (
-    <div data-touch-actions={String(Boolean(showActionButtons))}>Shared recent sessions</div>
+  ChatsTab: ({
+    showActionButtons,
+    searchQuery,
+  }: {
+    showActionButtons?: boolean;
+    searchQuery?: string;
+  }) => (
+    <div
+      data-touch-actions={String(Boolean(showActionButtons))}
+      data-search-query={searchQuery ?? ""}
+    >
+      Shared recent sessions
+    </div>
   ),
 }));
 
@@ -99,6 +110,21 @@ describe("MobileAgentResumeSection", () => {
 
     expect(screen.getByTestId("location")).toHaveTextContent(
       "/projects/project-1/files?instance=route-instance&agent=agent-1&session=route-session",
+    );
+  });
+
+  it("filters the agent's shared session list on touch", async () => {
+    const user = userEvent.setup();
+    renderSection("/agents/agent-1?view=details");
+
+    await user.type(
+      screen.getByPlaceholderText("Search this agent's chats"),
+      "android release",
+    );
+
+    expect(screen.getByText("Shared recent sessions")).toHaveAttribute(
+      "data-search-query",
+      "android release",
     );
   });
 });
