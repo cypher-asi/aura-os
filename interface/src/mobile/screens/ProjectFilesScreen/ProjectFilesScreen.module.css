@@ -114,6 +114,10 @@
   box-shadow: none;
 }
 
+.remoteCard button {
+  min-height: 44px;
+}
+
 .eyebrow {
   font-size: 13px;
   font-weight: 650;
@@ -154,7 +158,7 @@
 .inlineBackButton {
   display: inline-flex;
   width: fit-content;
-  min-height: 36px;
+  min-height: 44px;
   align-items: center;
   gap: 6px;
   padding: 0;

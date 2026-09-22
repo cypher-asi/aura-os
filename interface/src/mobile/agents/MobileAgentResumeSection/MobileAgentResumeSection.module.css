@@ -23,6 +23,10 @@
   gap: var(--space-2);
 }
 
+.actions button {
+  min-height: 44px;
+}
+
 .recentChats {
   min-height: 0;
   padding-top: var(--space-2);
