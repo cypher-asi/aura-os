@@ -15,10 +15,16 @@ export function MobileAgentResumeSection({ agentId }: { agentId: string }) {
   const mostRecentSession = useMostRecentSession(agentSessionsSurfaceKey(agentId));
   const queryProjectId = new URLSearchParams(location.search).get("project");
   const queryAgentInstanceId = new URLSearchParams(location.search).get("instance");
+  const querySessionId = new URLSearchParams(location.search).get("session");
   const workspaceProjectId = queryProjectId ?? mostRecentSession?._projectId ?? null;
   const workspaceAgentInstanceId = queryAgentInstanceId ?? (
     !queryProjectId || queryProjectId === mostRecentSession?._projectId
       ? mostRecentSession?._agentInstanceId ?? null
+      : null
+  );
+  const workspaceSessionId = querySessionId ?? (
+    !queryProjectId || queryProjectId === mostRecentSession?._projectId
+      ? mostRecentSession?.session_id ?? null
       : null
   );
 
@@ -32,6 +38,8 @@ export function MobileAgentResumeSection({ agentId }: { agentId: string }) {
     if (!workspaceProjectId) return;
     const params = new URLSearchParams();
     if (workspaceAgentInstanceId) params.set("instance", workspaceAgentInstanceId);
+    params.set("agent", agentId);
+    if (workspaceSessionId) params.set("session", workspaceSessionId);
     if (view === "changes") params.set("view", "changes");
     const search = params.size > 0 ? `?${params.toString()}` : "";
     navigate(`/projects/${encodeURIComponent(workspaceProjectId)}/files${search}`);

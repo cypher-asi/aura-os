@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, Spinner, Text } from "@cypher-asi/zui";
-import { ArrowLeft, RefreshCw } from "lucide-react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { ArrowLeft, MessageSquare, RefreshCw } from "lucide-react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../../../api/client";
 import { FileExplorer } from "../../../components/FileExplorer";
 import { PanelSearch } from "../../../components/PanelSearch";
 import { SourceControlWorkbench } from "../../../components/SourceControlWorkbench";
+import { keyForProjectSession } from "../../../hooks/stream/store";
 import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../../hooks/use-terminal-target";
 import type { HostedWorkspaceTarget } from "../../../shared/api/hosted-workspace";
+import { useChatUIStore } from "../../../stores/chat-ui-store";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
 import styles from "./ProjectFilesScreen.module.css";
 
@@ -22,6 +24,8 @@ interface ProjectFilesContentProps {
   workspaceDisplay: string | null;
   projectName: string;
   sourceControlAgentInstanceId?: string;
+  conversationAgentId?: string;
+  conversationSessionId?: string;
 }
 
 export function MobileProjectFilesScreen() {
@@ -62,6 +66,8 @@ export function MobileProjectFilesScreen() {
       workspaceDisplay={remoteWorkspacePath ?? workspacePath ?? null}
       projectName={project?.name ?? "Project"}
       sourceControlAgentInstanceId={localAgentInstanceId ?? remoteAgentInstanceId}
+      conversationAgentId={routeSearchParams.get("agent") ?? remoteAgentId}
+      conversationSessionId={routeSearchParams.get("session") ?? undefined}
     />
   );
 }
@@ -76,12 +82,60 @@ function MobileProjectFilesContent({
   workspaceDisplay,
   projectName,
   sourceControlAgentInstanceId,
+  conversationAgentId,
+  conversationSessionId,
 }: ProjectFilesContentProps) {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedFilePath = searchParams.get("file");
   const activeView = searchParams.get("view") === "changes" ? "changes" : "files";
   const canBrowseWorkspace = Boolean(hostedWorkspace) || (Boolean(rootPath) && Boolean(remoteAgentId));
+
+  const openAgentDraft = useCallback((prompt: string) => {
+    if (!sourceControlAgentInstanceId) return;
+    const streamKey = keyForProjectSession(
+      projectId,
+      sourceControlAgentInstanceId,
+      conversationSessionId,
+    );
+    const chatStore = useChatUIStore.getState();
+    const currentDraft = chatStore.getDraft(streamKey).trimEnd();
+    chatStore.setDraft(
+      streamKey,
+      currentDraft ? `${currentDraft}\n\n${prompt}` : prompt,
+    );
+
+    const params = new URLSearchParams({
+      project: projectId,
+      instance: sourceControlAgentInstanceId,
+    });
+    if (conversationSessionId) params.set("session", conversationSessionId);
+    if (conversationAgentId) {
+      navigate(
+        `/agents/${encodeURIComponent(conversationAgentId)}?${params.toString()}`,
+      );
+      return;
+    }
+    const sessionQuery = conversationSessionId
+      ? `?session=${encodeURIComponent(conversationSessionId)}`
+      : "";
+    navigate(
+      `/projects/${encodeURIComponent(projectId)}/agents/${encodeURIComponent(sourceControlAgentInstanceId)}${sessionQuery}`,
+    );
+  }, [
+    conversationAgentId,
+    conversationSessionId,
+    navigate,
+    projectId,
+    sourceControlAgentInstanceId,
+  ]);
+
+  const discussChanges = useCallback(() => {
+    openAgentDraft(
+      "Please review the current workspace changes. Call out risks, regressions, and missing tests before suggesting the next step.",
+    );
+  }, [openAgentDraft]);
 
   const handleFileSelect = useCallback((filePath: string) => {
     setSearchParams((current) => {
@@ -183,6 +237,11 @@ function MobileProjectFilesContent({
         hostedWorkspace={hostedWorkspace}
         workspaceDisplay={workspaceDisplay}
         onBack={clearSelectedFile}
+        onAskAgent={(filePath) => {
+          openAgentDraft(
+            `Please help me with \`${filePath}\` in this workspace. Inspect the file and related code before recommending or making changes.`,
+          );
+        }}
       />
     );
   }
@@ -215,13 +274,23 @@ function MobileProjectFilesContent({
         </div>
       </div>
       {activeView === "changes" ? (
-        <div className={styles.changesArea}>
-          <SourceControlWorkbench
-            projectId={projectId}
-            agentInstanceId={sourceControlAgentInstanceId}
-            readOnly
-          />
-        </div>
+        <>
+          {sourceControlAgentInstanceId ? (
+            <div className={styles.agentHandoffBar}>
+              <Button variant="secondary" size="sm" onClick={discussChanges}>
+                <MessageSquare size={14} aria-hidden="true" />
+                Ask agent to review changes
+              </Button>
+            </div>
+          ) : null}
+          <div className={styles.changesArea}>
+            <SourceControlWorkbench
+              projectId={projectId}
+              agentInstanceId={sourceControlAgentInstanceId}
+              readOnly
+            />
+          </div>
+        </>
       ) : (
         <>
           <div className={styles.searchHeader}>
@@ -253,12 +322,14 @@ function MobileRemoteFilePreview({
   hostedWorkspace,
   workspaceDisplay,
   onBack,
+  onAskAgent,
 }: {
   filePath: string;
   remoteAgentId?: string;
   hostedWorkspace?: HostedWorkspaceTarget;
   workspaceDisplay: string | null;
   onBack: () => void;
+  onAskAgent: (filePath: string) => void;
 }) {
   const [refreshKey, setRefreshKey] = useState(0);
   return (
@@ -270,17 +341,19 @@ function MobileRemoteFilePreview({
       workspaceDisplay={workspaceDisplay}
       onBack={onBack}
       onRefresh={() => setRefreshKey((current) => current + 1)}
+      onAskAgent={onAskAgent}
     />
   );
 }
 
-function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, hostedWorkspace, workspaceDisplay, onBack, onRefresh }: {
+function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, hostedWorkspace, workspaceDisplay, onBack, onRefresh, onAskAgent }: {
   filePath: string;
   remoteAgentId?: string;
   hostedWorkspace?: HostedWorkspaceTarget;
   workspaceDisplay: string | null;
   onBack: () => void;
   onRefresh: () => void;
+  onAskAgent: (filePath: string) => void;
 }) {
   const hostedProjectId = hostedWorkspace?.projectId;
   const hostedAgentInstanceId = hostedWorkspace?.agentInstanceId;
@@ -355,6 +428,10 @@ function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, hostedWorkspa
           <Text size="sm" weight="medium">{fileName}</Text>
           <Text size="xs" variant="muted">{workspaceDisplay ?? filePath}</Text>
         </div>
+        <Button variant="secondary" size="sm" onClick={() => onAskAgent(filePath)}>
+          <MessageSquare size={14} aria-hidden="true" />
+          Ask agent about this file
+        </Button>
       </div>
       <div className={styles.previewBody}>
         <div className={styles.previewPath}>

@@ -1,5 +1,7 @@
 import * as React from "react";
 import { render, screen, waitFor } from "../../test/render";
+import { keyForProjectSession } from "../../hooks/stream/store";
+import { useChatUIStore } from "../../stores/chat-ui-store";
 
 const mockUseProjectContext = vi.fn();
 const mockUseAuraCapabilities = vi.fn();
@@ -143,6 +145,7 @@ function capabilities(overrides: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  useChatUIStore.setState({ streams: {}, drafts: {} });
   currentSearchParams = new URLSearchParams();
   currentLocation = {
     pathname: "/projects/proj-1/files",
@@ -213,6 +216,23 @@ describe("ProjectFilesView", () => {
     expect(screen.queryByTestId("file-explorer")).not.toBeInTheDocument();
   });
 
+  it("hands a changes review request back to the exact canonical agent session", () => {
+    mockUseAuraCapabilities.mockReturnValue(capabilities({ isMobileLayout: true, isMobileClient: true }));
+    currentSearchParams = new URLSearchParams(
+      "instance=remote-inst-1&agent=agent-1&session=session-1&view=changes",
+    );
+
+    render(<MobileProjectFilesScreen />);
+    screen.getByRole("button", { name: "Ask agent to review changes" }).click();
+
+    expect(useChatUIStore.getState().getDraft(
+      keyForProjectSession("proj-1", "remote-inst-1", "session-1"),
+    )).toMatch(/review the current workspace changes/i);
+    expect(mockNavigate).toHaveBeenCalledWith(
+      "/agents/agent-1?project=proj-1&instance=remote-inst-1&session=session-1",
+    );
+  });
+
   it("loads a mobile remote-file preview without sending users into the IDE", async () => {
     mockUseAuraCapabilities.mockReturnValue(capabilities({ isMobileLayout: true, isMobileClient: true }));
     currentSearchParams = new URLSearchParams("file=%2Fworkspace%2FREADME.md");
@@ -224,6 +244,25 @@ describe("ProjectFilesView", () => {
       expect(screen.getByText("# Hello remote")).toBeInTheDocument();
     });
     expect(screen.getByRole("button", { name: "Back to files" })).toBeInTheDocument();
+  });
+
+  it("adds file context to an existing draft without auto-sending or replacing it", async () => {
+    mockUseAuraCapabilities.mockReturnValue(capabilities({ isMobileLayout: true, isMobileClient: true }));
+    currentSearchParams = new URLSearchParams(
+      "instance=remote-inst-1&agent=agent-1&session=session-1&file=%2Fworkspace%2FREADME.md",
+    );
+    const streamKey = keyForProjectSession("proj-1", "remote-inst-1", "session-1");
+    useChatUIStore.getState().setDraft(streamKey, "Keep this thought.");
+
+    render(<MobileProjectFilesScreen />);
+    await waitFor(() => expect(screen.getByText("# Hello remote")).toBeInTheDocument());
+    screen.getByRole("button", { name: "Ask agent about this file" }).click();
+
+    expect(useChatUIStore.getState().getDraft(streamKey)).toContain("Keep this thought.");
+    expect(useChatUIStore.getState().getDraft(streamKey)).toContain("`/workspace/README.md`");
+    expect(mockNavigate).toHaveBeenCalledWith(
+      "/agents/agent-1?project=proj-1&instance=remote-inst-1&session=session-1",
+    );
   });
 
   it("shows a workspace empty state on mobile when no remote workspace is available", () => {
