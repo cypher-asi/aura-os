@@ -99,7 +99,6 @@ interface AgentListProps {
 interface AgentRowProps {
   agent: Agent;
   model: AgentRowModel | undefined;
-  isMobileLibrary: boolean;
   isSelected: boolean;
   /** Id-arg callbacks so the list can pass referentially-stable handlers. */
   onSelect: (agentId: string, attentionRoute?: string) => void;
@@ -115,7 +114,6 @@ interface AgentRowProps {
 function AgentRow({
   agent,
   model,
-  isMobileLibrary,
   isSelected,
   onSelect,
   onHover,
@@ -131,7 +129,6 @@ function AgentRow({
     <AgentConversationRow
       agent={agent}
       lastMessage={model?.lastMessage}
-      showMetadataOnly={isMobileLibrary}
       isSelected={isSelected}
       status={model?.status}
       isLocal={model?.isLocal}
@@ -425,21 +422,31 @@ export function AgentList({ mode = "default" }: AgentListProps) {
     [optimisticDeletedAgentId, sortedAgents],
   );
 
-  const filteredAgents = useMemo(() => {
-    if (!searchQuery) return visibleSortedAgents;
-    const q = searchQuery.toLowerCase();
-    return visibleSortedAgents.filter((a) => {
-      const haystack = `${a.name} ${a.role} ${a.personality} ${a.system_prompt}`.toLowerCase();
-      return haystack.includes(q);
-    });
-  }, [visibleSortedAgents, searchQuery]);
-
   // Resolve every row's live state (avatar status, busy, loop, pin, preview)
   // once at the list level so the rows themselves carry no store
   // subscriptions and stay cheap to (re-)mount on a pane switch.
-  const rowModels = useAgentRowModels(filteredAgents, {
+  const rowModels = useAgentRowModels(visibleSortedAgents, {
     includePreview: true,
   });
+
+  const filteredAgents = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return visibleSortedAgents;
+    const terms = q.split(/\s+/);
+    return visibleSortedAgents.filter((agent) => {
+      const model = rowModels.get(agent.agent_id);
+      const haystack = [
+        agent.name,
+        agent.role,
+        agent.personality,
+        agent.system_prompt,
+        model?.lastMessage?.content,
+        model?.attention?.label,
+        model?.activeRun ? "working active run" : "",
+      ].filter(Boolean).join(" ").toLowerCase();
+      return terms.every((term) => haystack.includes(term));
+    });
+  }, [rowModels, searchQuery, visibleSortedAgents]);
 
   // Mobile is an operator surface first: agents blocked on the user should
   // never be buried below a long library, and live work should be easier to
@@ -480,7 +487,6 @@ export function AgentList({ mode = "default" }: AgentListProps) {
       <AgentRow
         agent={agent}
         model={rowModels.get(agent.agent_id)}
-        isMobileLibrary={isMobileLibrary}
         isSelected={agent.agent_id === agentId}
         onSelect={handleAgentRowClick}
         onHover={handleHoverPrefetch}
@@ -569,12 +575,18 @@ export function AgentList({ mode = "default" }: AgentListProps) {
             </span>
           </div>
         ) : null}
-        <LeftMenuTree
-          ariaLabel="Agents"
-          entries={entries}
-          onContextMenu={handleContextMenu}
-          revealEnabled={isDesktopSidebar}
-        />
+        {displayedAgents.length === 0 && searchQuery.trim() ? (
+          <EmptyState>
+            No agents or recent conversations match “{searchQuery.trim()}”.
+          </EmptyState>
+        ) : (
+          <LeftMenuTree
+            ariaLabel="Agents"
+            entries={entries}
+            onContextMenu={handleContextMenu}
+            revealEnabled={isDesktopSidebar}
+          />
+        )}
       </div>
 
       {ctxMenu &&

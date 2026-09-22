@@ -41,7 +41,7 @@ export interface AgentRowModel {
 }
 
 interface UseAgentRowModelsOptions {
-  /** When false (mobile library), previews are skipped entirely. */
+  /** When false, conversation previews are skipped entirely. */
   includePreview: boolean;
 }
 

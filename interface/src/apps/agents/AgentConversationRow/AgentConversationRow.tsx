@@ -29,7 +29,6 @@ function stripMarkdown(text: string): string {
 interface AgentConversationRowProps {
   agent: Agent;
   lastMessage: DisplaySessionEvent | undefined;
-  showMetadataOnly?: boolean;
   isSelected: boolean;
   /** Pre-resolved presentation state from the list-level batched model. */
   status?: string;
@@ -54,7 +53,6 @@ interface AgentConversationRowProps {
 function AgentConversationRowBase({
   agent,
   lastMessage,
-  showMetadataOnly = false,
   isSelected,
   status,
   isLocal = false,
@@ -78,9 +76,7 @@ function AgentConversationRowBase({
     ? `${attention.count > 1 ? `${attention.count} requests` : attention.kind === "input" ? "Answer needed" : "Approval needed"} · ${attention.label}`
     : activeRun
       ? "Agent is working · Tap to follow"
-      : showMetadataOnly
-        ? agentDescription || fallback
-        : messagePreview || agentDescription || fallback;
+      : messagePreview || agentDescription || fallback;
   const isCeo = isSuperAgent(agent);
 
   // Defer the avatar image to the frame after the row paints so the heavy
