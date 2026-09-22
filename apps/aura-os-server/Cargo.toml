@@ -60,7 +60,7 @@ dotenvy = "0.15"
 hex = { workspace = true }
 hostname = "0.4"
 indexmap = "2"
-jsonwebtoken = { version = "10", default-features = false, features = ["rust_crypto"] }
+jsonwebtoken = { version = "10", default-features = false, features = ["rust_crypto", "use_pem"] }
 local-ip-address = "0.6"
 sha2 = "0.10"
 toml = "0.8"

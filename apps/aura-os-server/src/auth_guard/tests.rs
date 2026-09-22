@@ -437,6 +437,9 @@ fn mock_app_state_with_cache(cache: crate::state::ValidationCache) -> AppState {
         public_rate_limiter: crate::handlers::public::RateLimiter::new(),
         public_demo_agent_id: Arc::new(tokio::sync::OnceCell::new()),
         mixpanel: None,
+        push_notifications: Arc::new(
+            crate::push_notifications::PushNotificationService::disabled(store.clone()),
+        ),
         channel_service: Arc::new(aura_os_channels::ChannelService::new(store.clone())),
         telegram_bot_username: Arc::new(tokio::sync::OnceCell::new()),
     }

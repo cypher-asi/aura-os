@@ -42,7 +42,12 @@ test.describe("tablet reporting a desktop user agent", () => {
 for (const native of [false, true]) {
   test(`${native ? "native" : "web"} billing preserves the intended purchase controls`, async ({ page }) => {
     if (native) await page.addInitScript(() => {
-      Object.defineProperty(window, "Capacitor", { value: { isNativePlatform: () => true, getPlatform: () => "ios" }, configurable: true });
+      Object.defineProperty(window, "androidBridge", { configurable: true, value: {} });
+      Object.defineProperty(window, "Capacitor", {
+        configurable: true,
+        writable: true,
+        value: { isNativePlatform: () => true, getPlatform: () => "ios" },
+      });
     });
     await page.goto("/projects/organization");
     await page.getByRole("button", { name: "Team settings", exact: true }).click();
@@ -65,7 +70,12 @@ for (const native of [false, true]) {
 
 test("native chat hides browser dictation even when the WebView exposes the API", async ({ page }) => {
   await page.addInitScript(() => {
-    Object.defineProperty(window, "Capacitor", { value: { isNativePlatform: () => true, getPlatform: () => "ios" }, configurable: true });
+    Object.defineProperty(window, "androidBridge", { configurable: true, value: {} });
+    Object.defineProperty(window, "Capacitor", {
+      configurable: true,
+      writable: true,
+      value: { isNativePlatform: () => true, getPlatform: () => "ios" },
+    });
     Object.defineProperty(window, "webkitSpeechRecognition", { value: class {}, configurable: true });
   });
   await page.goto("/projects/proj-1/agents/agent-inst-1");
@@ -118,8 +128,10 @@ test("native mobile creates a hosted web agent without provisioning a remote VM"
     hostedLocalHarness: true,
   });
   await page.addInitScript(() => {
+    Object.defineProperty(window, "androidBridge", { configurable: true, value: {} });
     Object.defineProperty(window, "Capacitor", {
       configurable: true,
+      writable: true,
       value: { isNativePlatform: () => true, getPlatform: () => "android" },
     });
   });
