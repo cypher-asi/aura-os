@@ -1,5 +1,5 @@
 import { Button, Text } from "@cypher-asi/zui";
-import { FolderCode, MessageSquare } from "lucide-react";
+import { FolderCode, GitCompare, MessageSquare } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { ChatsTab } from "../../../apps/agents/AgentInfoPanel/ChatsTab";
@@ -14,12 +14,27 @@ export function MobileAgentResumeSection({ agentId }: { agentId: string }) {
   const navigate = useNavigate();
   const mostRecentSession = useMostRecentSession(agentSessionsSurfaceKey(agentId));
   const queryProjectId = new URLSearchParams(location.search).get("project");
+  const queryAgentInstanceId = new URLSearchParams(location.search).get("instance");
   const workspaceProjectId = queryProjectId ?? mostRecentSession?._projectId ?? null;
+  const workspaceAgentInstanceId = queryAgentInstanceId ?? (
+    !queryProjectId || queryProjectId === mostRecentSession?._projectId
+      ? mostRecentSession?._agentInstanceId ?? null
+      : null
+  );
 
   const openChat = () => {
     const params = new URLSearchParams(location.search);
     params.delete("view");
     navigate(`${location.pathname}${params.size > 0 ? `?${params.toString()}` : ""}`);
+  };
+
+  const openWorkspace = (view: "files" | "changes") => {
+    if (!workspaceProjectId) return;
+    const params = new URLSearchParams();
+    if (workspaceAgentInstanceId) params.set("instance", workspaceAgentInstanceId);
+    if (view === "changes") params.set("view", "changes");
+    const search = params.size > 0 ? `?${params.toString()}` : "";
+    navigate(`/projects/${encodeURIComponent(workspaceProjectId)}/files${search}`);
   };
 
   return (
@@ -40,10 +55,20 @@ export function MobileAgentResumeSection({ agentId }: { agentId: string }) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate(`/projects/${workspaceProjectId}/files`)}
+              onClick={() => openWorkspace("files")}
             >
               <FolderCode size={14} aria-hidden="true" />
               Browse code
+            </Button>
+          ) : null}
+          {workspaceProjectId ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => openWorkspace("changes")}
+            >
+              <GitCompare size={14} aria-hidden="true" />
+              Review changes
             </Button>
           ) : null}
         </div>

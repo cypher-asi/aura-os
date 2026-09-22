@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { api } from "../../../api/client";
 import { FileExplorer } from "../../../components/FileExplorer";
 import { PanelSearch } from "../../../components/PanelSearch";
+import { SourceControlWorkbench } from "../../../components/SourceControlWorkbench";
 import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../../hooks/use-terminal-target";
 import type { HostedWorkspaceTarget } from "../../../shared/api/hosted-workspace";
@@ -12,6 +13,7 @@ import { useProjectsListStore } from "../../../stores/projects-list-store";
 import styles from "./ProjectFilesScreen.module.css";
 
 interface ProjectFilesContentProps {
+  projectId: string;
   rootPath: string | null;
   remoteAgentId?: string;
   hostedWorkspace?: HostedWorkspaceTarget;
@@ -19,18 +21,26 @@ interface ProjectFilesContentProps {
   workspaceSourceLabel: string;
   workspaceDisplay: string | null;
   projectName: string;
+  sourceControlAgentInstanceId?: string;
 }
 
 export function MobileProjectFilesScreen() {
   const { projectId } = useParams<{ projectId: string }>();
+  const [routeSearchParams] = useSearchParams();
+  const requestedAgentInstanceId = routeSearchParams.get("instance") ?? undefined;
   const { hostedLocalHarness } = useAuraCapabilities();
   const {
     remoteAgentId,
+    remoteAgentInstanceId,
     localAgentInstanceId,
     remoteWorkspacePath,
     workspacePath,
     status,
-  } = useTerminalTarget({ projectId, preferLocalWorkspace: hostedLocalHarness });
+  } = useTerminalTarget({
+    projectId,
+    agentInstanceId: requestedAgentInstanceId,
+    preferLocalWorkspace: hostedLocalHarness,
+  });
   const project = useProjectsListStore((state) => (
     projectId ? state.projects.find((candidate) => candidate.project_id === projectId) ?? null : null
   ));
@@ -43,6 +53,7 @@ export function MobileProjectFilesScreen() {
 
   return (
     <MobileProjectFilesContent
+      projectId={projectId}
       rootPath={remoteWorkspacePath ?? null}
       remoteAgentId={remoteAgentId}
       hostedWorkspace={hostedWorkspace}
@@ -50,11 +61,13 @@ export function MobileProjectFilesScreen() {
       workspaceSourceLabel={hostedWorkspace ? "Project workspace" : "Remote workspace"}
       workspaceDisplay={remoteWorkspacePath ?? workspacePath ?? null}
       projectName={project?.name ?? "Project"}
+      sourceControlAgentInstanceId={localAgentInstanceId ?? remoteAgentInstanceId}
     />
   );
 }
 
 function MobileProjectFilesContent({
+  projectId,
   rootPath,
   remoteAgentId,
   hostedWorkspace,
@@ -62,10 +75,12 @@ function MobileProjectFilesContent({
   workspaceSourceLabel,
   workspaceDisplay,
   projectName,
+  sourceControlAgentInstanceId,
 }: ProjectFilesContentProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedFilePath = searchParams.get("file");
+  const activeView = searchParams.get("view") === "changes" ? "changes" : "files";
   const canBrowseWorkspace = Boolean(hostedWorkspace) || (Boolean(rootPath) && Boolean(remoteAgentId));
 
   const handleFileSelect = useCallback((filePath: string) => {
@@ -79,6 +94,16 @@ function MobileProjectFilesContent({
   const clearSelectedFile = useCallback(() => {
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
+      next.delete("file");
+      return next;
+    });
+  }, [setSearchParams]);
+
+  const selectView = useCallback((view: "files" | "changes") => {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (view === "changes") next.set("view", "changes");
+      else next.delete("view");
       next.delete("file");
       return next;
     });
@@ -123,7 +148,7 @@ function MobileProjectFilesContent({
     );
   }
 
-  if (!canBrowseWorkspace) {
+  if (!canBrowseWorkspace && activeView === "files") {
     return (
       <div className={styles.remoteRoot}>
         <div className={styles.remoteCard}>
@@ -140,12 +165,17 @@ function MobileProjectFilesContent({
             <Text size="sm" weight="medium">{projectName}</Text>
             <Text size="sm" variant="muted">Waiting for a live workspace.</Text>
           </div>
+          {sourceControlAgentInstanceId ? (
+            <Button variant="secondary" onClick={() => selectView("changes")}>
+              Review changes
+            </Button>
+          ) : null}
         </div>
       </div>
     );
   }
 
-  if (selectedFilePath) {
+  if (activeView === "files" && selectedFilePath) {
     return (
       <MobileRemoteFilePreview
         filePath={selectedFilePath}
@@ -159,26 +189,60 @@ function MobileProjectFilesContent({
 
   return (
     <div className={styles.container}>
-      <div className={styles.summary}>
-        <Text size="sm" weight="medium">{workspaceSourceLabel}</Text>
+      <div className={styles.workspaceHeader}>
+        <div className={styles.summary}>
+          <Text size="sm" weight="medium">{workspaceSourceLabel}</Text>
+        </div>
+        <div className={styles.viewTabs} role="tablist" aria-label="Workspace view">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeView === "files"}
+            className={`${styles.viewTab}${activeView === "files" ? ` ${styles.viewTabActive}` : ""}`}
+            onClick={() => selectView("files")}
+          >
+            Files
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeView === "changes"}
+            className={`${styles.viewTab}${activeView === "changes" ? ` ${styles.viewTabActive}` : ""}`}
+            onClick={() => selectView("changes")}
+          >
+            Changes
+          </button>
+        </div>
       </div>
-      <div className={styles.searchHeader}>
-        <PanelSearch
-          placeholder="Search files"
-          value={searchQuery}
-          onChange={setSearchQuery}
-        />
-      </div>
-      <div className={styles.explorerArea}>
-        <FileExplorer
-          rootPath={hostedWorkspace ? undefined : rootPath ?? undefined}
-          remoteAgentId={remoteAgentId}
-          hostedWorkspace={hostedWorkspace}
-          rootLabel={hostedWorkspace ? "Project files" : undefined}
-          searchQuery={searchQuery}
-          onFileSelect={handleFileSelect}
-        />
-      </div>
+      {activeView === "changes" ? (
+        <div className={styles.changesArea}>
+          <SourceControlWorkbench
+            projectId={projectId}
+            agentInstanceId={sourceControlAgentInstanceId}
+            readOnly
+          />
+        </div>
+      ) : (
+        <>
+          <div className={styles.searchHeader}>
+            <PanelSearch
+              placeholder="Search files"
+              value={searchQuery}
+              onChange={setSearchQuery}
+            />
+          </div>
+          <div className={styles.explorerArea}>
+            <FileExplorer
+              rootPath={hostedWorkspace ? undefined : rootPath ?? undefined}
+              remoteAgentId={remoteAgentId}
+              hostedWorkspace={hostedWorkspace}
+              rootLabel={hostedWorkspace ? "Project files" : undefined}
+              searchQuery={searchQuery}
+              onFileSelect={handleFileSelect}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }
