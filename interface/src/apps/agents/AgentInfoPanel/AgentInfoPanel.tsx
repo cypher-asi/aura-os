@@ -275,7 +275,7 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
     >
       <div className={styles.scrollArea}>
         {isMobileStandalone && (
-          <MobileAgentResumeSection agentId={a.agent_id} isRemote={a.machine_type === "remote"} />
+          <MobileAgentResumeSection agentId={a.agent_id} />
         )}
         {effectiveTab === "profile" && (
           <ProfileTab

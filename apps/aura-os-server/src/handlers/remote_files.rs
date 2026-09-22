@@ -5,6 +5,7 @@
 use axum::extract::{Path, State};
 use axum::Json;
 use reqwest::Method;
+use std::time::Duration;
 use tracing::warn;
 
 use aura_os_core::HarnessMode;
@@ -22,6 +23,18 @@ pub(crate) struct RemoteFileWriteRequest {
     path: String,
     content_base64: String,
     expected_revision: String,
+}
+
+#[derive(serde::Deserialize)]
+pub(crate) struct RemoteGitStatusRequest {
+    path: String,
+}
+
+#[derive(serde::Deserialize)]
+pub(crate) struct RemoteGitDiffRequest {
+    path: String,
+    file: String,
+    area: String,
 }
 
 /// Validate that the agent is remote and return the swarm base URL + JWT.
@@ -88,6 +101,21 @@ fn map_write_gateway_status(status: u16) -> (axum::http::StatusCode, Json<ApiErr
     }
 }
 
+fn map_git_gateway_status(status: u16) -> (axum::http::StatusCode, Json<ApiError>) {
+    match status {
+        413 => (
+            axum::http::StatusCode::PAYLOAD_TOO_LARGE,
+            Json(ApiError {
+                error: "remote Git result exceeds the review limit".to_string(),
+                code: "payload_too_large".to_string(),
+                details: None,
+                data: None,
+            }),
+        ),
+        _ => map_gateway_status(status),
+    }
+}
+
 /// Build a request whose origin is fixed by the configured Swarm gateway.
 ///
 /// Agent IDs come from the request path, so they must be appended as one
@@ -97,7 +125,7 @@ fn trusted_swarm_request(
     configured_base: &str,
     method: Method,
     agent_id: &str,
-    action: &'static str,
+    action: &[&str],
 ) -> ApiResult<reqwest::RequestBuilder> {
     let mut url = reqwest::Url::parse(configured_base.trim())
         .map_err(|_| ApiError::service_unavailable("swarm gateway URL is invalid"))?;
@@ -118,9 +146,8 @@ fn trusted_swarm_request(
         let mut segments = url.path_segments_mut().map_err(|_| {
             ApiError::service_unavailable("swarm gateway URL cannot contain path segments")
         })?;
-        segments
-            .pop_if_empty()
-            .extend(["v1", "agents", agent_id, action]);
+        segments.pop_if_empty().extend(["v1", "agents", agent_id]);
+        segments.extend(action.iter().copied());
     }
 
     // The configured URL above owns the validated origin, while `agent_id` is
@@ -147,7 +174,7 @@ pub(crate) async fn list_remote_directory(
         &base_url,
         Method::POST,
         &agent_id,
-        "files",
+        &["files"],
     )?
     .json(&serde_json::json!({ "path": req.path, "depth": 20 }))
     // `bearer_auth` sets a sensitive HTTP header; it does not write to logs.
@@ -192,7 +219,7 @@ pub(crate) async fn read_remote_file(
         &base_url,
         Method::POST,
         &agent_id,
-        "read-file",
+        &["read-file"],
     )?
     .json(&serde_json::json!({ "path": req.path }))
     // `bearer_auth` sets a sensitive HTTP header; it does not write to logs.
@@ -219,6 +246,124 @@ pub(crate) async fn read_remote_file(
     Ok(Json(body))
 }
 
+async fn proxy_remote_git(
+    state: &AppState,
+    agent_id: &str,
+    jwt: &str,
+    action: &'static str,
+    body: serde_json::Value,
+) -> ApiResult<Json<serde_json::Value>> {
+    let (base_url, jwt) = resolve_remote_context(state, agent_id, jwt).await?;
+    let network = state.require_network_client()?;
+    let response = trusted_swarm_request(
+        network.http_client(),
+        &base_url,
+        Method::POST,
+        agent_id,
+        &["git", action],
+    )?
+    .json(&body)
+    .bearer_auth(&jwt)
+    .timeout(Duration::from_secs(15))
+    .send()
+    .await
+    .map_err(|_| ApiError::bad_gateway("swarm gateway unreachable"))?;
+    if !response.status().is_success() {
+        let status = response.status().as_u16();
+        warn!(status, "remote Git inspection failed");
+        return Err(map_git_gateway_status(status));
+    }
+    let body: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|_| ApiError::bad_gateway("invalid remote Git response"))?;
+    if !valid_remote_git_response(action, &body) {
+        return Err(ApiError::bad_gateway("invalid remote Git response"));
+    }
+    Ok(Json(body))
+}
+
+fn valid_remote_git_response(action: &str, body: &serde_json::Value) -> bool {
+    match action {
+        "status" => {
+            body.get("available")
+                .and_then(serde_json::Value::as_bool)
+                .is_some()
+                && body
+                    .get("files")
+                    .and_then(serde_json::Value::as_array)
+                    .is_some()
+        }
+        "diff" => {
+            body.get("path")
+                .and_then(serde_json::Value::as_str)
+                .is_some()
+                && body
+                    .get("area")
+                    .and_then(serde_json::Value::as_str)
+                    .is_some()
+                && body
+                    .get("diff")
+                    .and_then(serde_json::Value::as_str)
+                    .is_some()
+                && body
+                    .get("truncated")
+                    .and_then(serde_json::Value::as_bool)
+                    .is_some()
+                && body
+                    .get("binary")
+                    .and_then(serde_json::Value::as_bool)
+                    .is_some()
+        }
+        _ => false,
+    }
+}
+
+/// Read-only source-control status from the agent's own remote workspace.
+pub(crate) async fn remote_git_status(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path(agent_id): Path<String>,
+    Json(request): Json<RemoteGitStatusRequest>,
+) -> ApiResult<Json<serde_json::Value>> {
+    if request.path.trim().is_empty() || request.path.len() > 4096 {
+        return Err(ApiError::bad_request("invalid remote Git workspace path"));
+    }
+    proxy_remote_git(
+        &state,
+        &agent_id,
+        &jwt,
+        "status",
+        serde_json::json!({ "path": request.path }),
+    )
+    .await
+}
+
+/// Read-only staged or worktree diff from the agent's own remote workspace.
+pub(crate) async fn remote_git_diff(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path(agent_id): Path<String>,
+    Json(request): Json<RemoteGitDiffRequest>,
+) -> ApiResult<Json<serde_json::Value>> {
+    if request.path.trim().is_empty()
+        || request.path.len() > 4096
+        || request.file.trim().is_empty()
+        || request.file.len() > 4096
+        || !matches!(request.area.as_str(), "staged" | "worktree")
+    {
+        return Err(ApiError::bad_request("invalid remote Git diff request"));
+    }
+    proxy_remote_git(
+        &state,
+        &agent_id,
+        &jwt,
+        "diff",
+        serde_json::json!({ "path": request.path, "file": request.file, "area": request.area }),
+    )
+    .await
+}
+
 /// `PUT /api/agents/:agent_id/remote_agent/write-file`
 ///
 /// Proxy a revision-checked text-file replacement to the remote agent.
@@ -235,7 +380,7 @@ pub(crate) async fn write_remote_file(
         &base_url,
         Method::PUT,
         &agent_id,
-        "write-file",
+        &["write-file"],
     )?
     .json(&serde_json::json!({
         "path": &req.path,
@@ -297,7 +442,7 @@ mod tests {
             "https://swarm.example/gateway/",
             Method::PUT,
             "../../https://attacker.example/?redirect=true",
-            "write-file",
+            &["write-file"],
         )
         .expect("request URL should be constructed")
         .build()
@@ -308,5 +453,35 @@ mod tests {
         assert_eq!(request.url().query(), None);
         assert!(request.url().path().starts_with("/gateway/v1/agents/"));
         assert!(request.url().path().contains("%2F"));
+    }
+
+    #[test]
+    fn remote_git_proxy_builds_fixed_subroutes_and_rejects_malformed_responses() {
+        let (status, Json(error)) = map_git_gateway_status(413);
+        assert_eq!(status, axum::http::StatusCode::PAYLOAD_TOO_LARGE);
+        assert!(error.error.contains("review limit"));
+        let request = trusted_swarm_request(
+            &reqwest::Client::new(),
+            "https://swarm.example/gateway/",
+            Method::POST,
+            "agent-1",
+            &["git", "diff"],
+        )
+        .unwrap()
+        .build()
+        .unwrap();
+        assert_eq!(request.url().path(), "/gateway/v1/agents/agent-1/git/diff");
+        assert!(valid_remote_git_response(
+            "status",
+            &serde_json::json!({"available": false, "files": []}),
+        ));
+        assert!(!valid_remote_git_response(
+            "status",
+            &serde_json::json!({"available": true}),
+        ));
+        assert!(!valid_remote_git_response(
+            "diff",
+            &serde_json::json!({"path": "src/main.rs", "diff": "text"}),
+        ));
     }
 }

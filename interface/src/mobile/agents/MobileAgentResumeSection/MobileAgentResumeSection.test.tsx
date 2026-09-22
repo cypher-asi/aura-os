@@ -36,7 +36,7 @@ function LocationProbe() {
   return <div data-testid="location">{`${location.pathname}${location.search}`}</div>;
 }
 
-function renderSection(initialEntry: string, isRemote = false) {
+function renderSection(initialEntry: string) {
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
@@ -44,7 +44,7 @@ function renderSection(initialEntry: string, isRemote = false) {
           path="*"
           element={(
             <>
-              <MobileAgentResumeSection agentId="agent-1" isRemote={isRemote} />
+              <MobileAgentResumeSection agentId="agent-1" />
               <LocationProbe />
             </>
           )}
@@ -111,13 +111,6 @@ describe("MobileAgentResumeSection", () => {
     expect(screen.getByTestId("location")).toHaveTextContent(
       "/projects/project-1/files?instance=route-instance&agent=agent-1&session=route-session",
     );
-  });
-
-  it("keeps code browsing but does not advertise an unsupported remote Git diff", () => {
-    renderSection("/agents/agent-1?view=details", true);
-
-    expect(screen.getByRole("button", { name: "Browse code" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Review changes" })).not.toBeInTheDocument();
   });
 
   it("filters the agent's shared session list on touch", async () => {

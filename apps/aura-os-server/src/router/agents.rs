@@ -85,6 +85,14 @@ pub(super) fn agent_routes() -> Router<AppState> {
             post(remote_files::read_remote_file),
         )
         .route(
+            "/api/agents/:agent_id/remote_agent/git/status",
+            post(remote_files::remote_git_status),
+        )
+        .route(
+            "/api/agents/:agent_id/remote_agent/git/diff",
+            post(remote_files::remote_git_diff),
+        )
+        .route(
             "/api/agents/:agent_id/remote_agent/write-file",
             put(remote_files::write_remote_file)
                 .layer(DefaultBodyLimit::max(WORKSPACE_WRITE_REQUEST_MAX_BYTES)),

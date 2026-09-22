@@ -11,7 +11,7 @@ import {
 } from "../../../stores/sessions-list-store";
 import styles from "./MobileAgentResumeSection.module.css";
 
-export function MobileAgentResumeSection({ agentId, isRemote = false }: { agentId: string; isRemote?: boolean }) {
+export function MobileAgentResumeSection({ agentId }: { agentId: string }) {
   const [sessionSearchQuery, setSessionSearchQuery] = useState("");
   const location = useLocation();
   const navigate = useNavigate();
@@ -72,7 +72,7 @@ export function MobileAgentResumeSection({ agentId, isRemote = false }: { agentI
               Browse code
             </Button>
           ) : null}
-          {workspaceProjectId && !isRemote ? (
+          {workspaceProjectId ? (
             <Button
               variant="ghost"
               size="sm"

@@ -85,12 +85,14 @@ The first Aura slice now implements that boundary:
   by a profile-only screen.
 - Agent details move to `?view=details`, preserving the canonical `project`, `instance`, and
   `session` query identity when moving between chat and controls.
-- The mobile details surface adds Continue chat, recent canonical sessions, Browse code, and local
+- The mobile details surface adds Continue chat, recent canonical sessions, Browse code, and
   Review changes when a project workspace is known. Workspace navigation carries the exact
   canonical agent-instance identity instead of resolving whichever project runtime happens to be
-  newest. Remote agents retain live file browsing but no longer advertise server-local Git review
-  as though it could inspect their pod. A direct remote Changes link explains the missing
-  capability and offers file browsing or an agent-review draft.
+  newest. Local changes use Aura OS's server-local Git service; remote changes now use a separate
+  read-only status/diff contract executed inside the agent's Harness pod, authorized through Swarm,
+  and displayed in the same review-only mobile workbench. Older or offline remote environments
+  report unavailability instead of falling back to Git on the wrong host. This path requires the
+  corresponding Harness and Swarm branches to be deployed with Aura OS.
 - Remote file proxies now preserve a pod's authorization, missing-path, and unavailable-agent
   failures instead of converting them into HTTP 200. Aura sanitizes gateway error bodies, and
   mobile file preview distinguishes those states without exposing pod paths. This fixes the
@@ -290,7 +292,9 @@ The first Aura slice now implements that boundary:
   follow-up, and a failed IndexedDB queue write hid its inline error. The mobile composer now
   offers a separate touch-sized Queue control beside Stop, accepts Enter for that same intent, and
   renders external queue-persistence errors without clearing the draft. Automation-only busy state
-  still cannot create a chat follow-up queue.
+  still cannot create a chat follow-up queue. Android production-WebView retest confirmed physical
+  Queue and IME Enter each persisted a follow-up, forced IndexedDB abort left the draft intact and
+  showed the inline alert, and Queue/Stop stayed 44×44 CSS px without overflow at 320px width.
 - The mobile agent library now has an explicit touch-sized refresh action for agents, projects,
   canonical sessions, approvals, questions, and active runs. The attention hydration is
   independently fail-safe per endpoint: a transient failure preserves the last known slice, while
@@ -327,13 +331,13 @@ question waits so a server restart can reconstruct status or explicitly fail the
 environment-owned turn instead of relying on an in-memory channel. Do not make the cloud relay an
 execution proxy or present an unacknowledged prompt as accepted work.
 
-Remote source-control inspection also needs a real cross-service addition rather than a client
-workaround. The current Swarm gateway exposes authenticated pod proxies for files, file reads, and
-terminal I/O, while the Harness pod HTTP surface exposes `/api/files` and `/api/read-file`; neither
-currently publishes the provider-neutral Git status/diff contract used by Aura OS. Implementing
-remote Changes therefore requires a read-only Harness endpoint plus an authenticated Swarm gateway
-proxy before Aura OS can advertise that capability. Do not tunnel arbitrary Git commands through
-the terminal to simulate it.
+Remote source-control inspection now has that real cross-service addition in branches: the Harness
+pod exposes bounded, sandbox-scoped, read-only Git status/diff; Swarm verifies agent ownership and
+proxies only those fixed routes; Aura OS validates the response and routes mobile review to the
+owning remote agent. Git operations are timed, output-limited, and concurrency-limited in Harness,
+with no terminal-command workaround or remote stage/commit action. This remains unverified on a
+deployed pod and must not be counted as production-ready until the three service versions and
+Android review UI are exercised together.
 
 ### P0 — finish the safety foundation
 

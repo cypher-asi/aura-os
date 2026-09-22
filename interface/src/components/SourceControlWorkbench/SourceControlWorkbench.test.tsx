@@ -9,9 +9,16 @@ const sourceControl = vi.hoisted(() => ({
   unstage: vi.fn(),
   commit: vi.fn(),
 }));
+const swarm = vi.hoisted(() => ({
+  getRemoteGitStatus: vi.fn(),
+  getRemoteGitDiff: vi.fn(),
+}));
 
 vi.mock("../../api/client", () => ({
-  api: { sourceControl },
+  api: { sourceControl, swarm },
+  ApiClientError: class ApiClientError extends Error {
+    constructor(public status: number, message: string) { super(message); }
+  },
 }));
 
 import { SourceControlWorkbench } from "./SourceControlWorkbench";
@@ -52,6 +59,14 @@ describe("SourceControlWorkbench", () => {
     sourceControl.commit.mockReset().mockResolvedValue({
       ok: true,
       commit: "abc123def456",
+    });
+    swarm.getRemoteGitStatus.mockReset().mockResolvedValue(status);
+    swarm.getRemoteGitDiff.mockReset().mockResolvedValue({
+      path: "src/app.ts",
+      area: "worktree",
+      diff: "@@ -1 +1 @@\n-old\n+next\n",
+      truncated: false,
+      binary: false,
     });
   });
 
@@ -142,6 +157,28 @@ describe("SourceControlWorkbench", () => {
     expect(sourceControl.stage).not.toHaveBeenCalled();
     expect(sourceControl.unstage).not.toHaveBeenCalled();
     expect(sourceControl.commit).not.toHaveBeenCalled();
+  });
+
+  it("uses the remote environment for status and diff without offering mutations", async () => {
+    render(
+      <SourceControlWorkbench
+        projectId="project-1"
+        agentInstanceId="instance-1"
+        remoteAgentId="remote-1"
+        remoteWorkspacePath="/workspace/project"
+      />,
+    );
+
+    expect(await screen.findByText("codex/source-control-workbench")).toBeInTheDocument();
+    expect(swarm.getRemoteGitStatus).toHaveBeenCalledWith("remote-1", "/workspace/project");
+    await waitFor(() => expect(swarm.getRemoteGitDiff).toHaveBeenCalledWith(
+      "remote-1", "/workspace/project", "src/app.ts", "worktree",
+    ));
+    expect(sourceControl.getStatus).not.toHaveBeenCalled();
+    expect(sourceControl.getDiff).not.toHaveBeenCalled();
+    expect(screen.getByTestId("source-control-workbench")).toHaveAttribute("data-source-control-mode", "review");
+    expect(screen.queryByRole("button", { name: /Stage src\/app.ts/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Commit message" })).not.toBeInTheDocument();
   });
 
   it("hands an exact changed line to the review callback", async () => {

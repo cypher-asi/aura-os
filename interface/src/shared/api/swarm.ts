@@ -1,5 +1,6 @@
 import type { RemoteVmLogs, RemoteVmState } from "../types"
 import type { DirEntry } from "./desktop"
+import type { SourceControlArea, SourceControlDiff, SourceControlStatus } from "./source-control"
 import { apiFetch } from "./core"
 import {
   encodeUtf8Base64,
@@ -52,6 +53,23 @@ export const swarmApi = {
     apiFetch<WorkspaceFileReadResult>(
       `/api/agents/${agentId}/remote_agent/read-file`,
       { method: "POST", body: JSON.stringify({ path }) },
+    ),
+
+  getRemoteGitStatus: (agentId: string, path: string) =>
+    apiFetch<SourceControlStatus>(
+      `/api/agents/${encodeURIComponent(agentId)}/remote_agent/git/status`,
+      { method: "POST", body: JSON.stringify({ path }), timeoutMs: 18_000 },
+    ),
+
+  getRemoteGitDiff: (
+    agentId: string,
+    path: string,
+    file: string,
+    area: SourceControlArea,
+  ) =>
+    apiFetch<SourceControlDiff>(
+      `/api/agents/${encodeURIComponent(agentId)}/remote_agent/git/diff`,
+      { method: "POST", body: JSON.stringify({ path, file, area }), timeoutMs: 18_000 },
     ),
 
   writeRemoteFile: (

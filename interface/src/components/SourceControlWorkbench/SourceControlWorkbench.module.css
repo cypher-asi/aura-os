@@ -408,3 +408,19 @@
     flex-basis: 48%;
   }
 }
+
+@media (pointer: coarse) {
+  .iconButton,
+  .fileAction,
+  .groupAction,
+  .retryButton,
+  .pullRequest,
+  .diffLineButton {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .fileRow {
+    min-height: 44px;
+  }
+}

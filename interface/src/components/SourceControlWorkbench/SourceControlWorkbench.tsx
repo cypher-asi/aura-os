@@ -10,7 +10,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 
-import { api } from "../../api/client";
+import { api, ApiClientError } from "../../api/client";
 import type {
   SourceControlArea,
   SourceControlDiff,
@@ -23,6 +23,8 @@ import styles from "./SourceControlWorkbench.module.css";
 interface SourceControlWorkbenchProps {
   projectId: string;
   agentInstanceId?: string;
+  remoteAgentId?: string;
+  remoteWorkspacePath?: string;
   /** Review-only mode for mobile: status and diffs without repository mutations. */
   readOnly?: boolean;
   /**
@@ -58,7 +60,12 @@ const STATUS_LABELS: Record<string, string> = {
   U: "Unmerged",
 };
 
-function errorMessage(error: unknown): string {
+function errorMessage(error: unknown, remote = false): string {
+  if (remote && error instanceof ApiClientError) {
+    if (error.status === 404) return "Remote changes are unavailable for this agent. Update its environment or refresh the workspace.";
+    if (error.status === 503 || error.status === 502 || error.status === 504) return "The remote agent is offline. Its saved conversation is still available.";
+    if (error.status === 403) return "Access to this remote workspace was denied.";
+  }
   return error instanceof Error ? error.message : "Source-control action failed.";
 }
 
@@ -90,6 +97,8 @@ function selectionExists(
 export function SourceControlWorkbench({
   projectId,
   agentInstanceId,
+  remoteAgentId,
+  remoteWorkspacePath,
   readOnly = false,
   onDiscussChange,
 }: SourceControlWorkbenchProps) {
@@ -103,6 +112,7 @@ export function SourceControlWorkbench({
   const [commitMessage, setCommitMessage] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const effectiveReadOnly = readOnly || Boolean(remoteAgentId);
 
   const refresh = useCallback(() => {
     setNotice(null);
@@ -113,8 +123,21 @@ export function SourceControlWorkbench({
     let cancelled = false;
     setStatusLoading(true);
     setStatusError(null);
-    void api.sourceControl
-      .getStatus(projectId, agentInstanceId)
+    setStatus(null);
+    setSelection(null);
+    setDiff(null);
+    const request = remoteAgentId
+      ? remoteWorkspacePath
+        ? api.swarm.getRemoteGitStatus(remoteAgentId, remoteWorkspacePath)
+        : Promise.resolve<SourceControlStatus>({
+            available: false,
+            unavailable_reason: "The remote agent has not exposed a live workspace yet.",
+            ahead: 0,
+            behind: 0,
+            files: [],
+          })
+      : api.sourceControl.getStatus(projectId, agentInstanceId);
+    void request
       .then((nextStatus) => {
         if (cancelled) return;
         setStatus(nextStatus);
@@ -126,7 +149,7 @@ export function SourceControlWorkbench({
       })
       .catch((error: unknown) => {
         if (cancelled) return;
-        setStatusError(errorMessage(error));
+        setStatusError(errorMessage(error, Boolean(remoteAgentId)));
       })
       .finally(() => {
         if (!cancelled) setStatusLoading(false);
@@ -134,7 +157,7 @@ export function SourceControlWorkbench({
     return () => {
       cancelled = true;
     };
-  }, [agentInstanceId, projectId, refreshKey]);
+  }, [agentInstanceId, projectId, refreshKey, remoteAgentId, remoteWorkspacePath]);
 
   useEffect(() => {
     if (!selection) {
@@ -144,8 +167,10 @@ export function SourceControlWorkbench({
     let cancelled = false;
     setDiff(null);
     setDiffLoading(true);
-    void api.sourceControl
-      .getDiff(projectId, selection.path, selection.area, agentInstanceId)
+    const request = remoteAgentId && remoteWorkspacePath
+      ? api.swarm.getRemoteGitDiff(remoteAgentId, remoteWorkspacePath, selection.path, selection.area)
+      : api.sourceControl.getDiff(projectId, selection.path, selection.area, agentInstanceId);
+    void request
       .then((nextDiff) => {
         if (!cancelled) setDiff(nextDiff);
       })
@@ -154,7 +179,7 @@ export function SourceControlWorkbench({
         setDiff({
           path: selection.path,
           area: selection.area,
-          diff: errorMessage(error),
+          diff: errorMessage(error, Boolean(remoteAgentId)),
           truncated: false,
           binary: false,
         });
@@ -165,7 +190,7 @@ export function SourceControlWorkbench({
     return () => {
       cancelled = true;
     };
-  }, [agentInstanceId, projectId, refreshKey, selection]);
+  }, [agentInstanceId, projectId, refreshKey, remoteAgentId, remoteWorkspacePath, selection]);
 
   const stagedFiles = useMemo(
     () => status?.files.filter((file) => file.staged_status) ?? [],
@@ -255,7 +280,7 @@ export function SourceControlWorkbench({
     <div
       className={styles.root}
       data-testid="source-control-workbench"
-      data-source-control-mode={readOnly ? "review" : "manage"}
+      data-source-control-mode={effectiveReadOnly ? "review" : "manage"}
     >
       <header className={styles.repositoryHeader}>
         <div className={styles.branchRow}>
@@ -308,10 +333,10 @@ export function SourceControlWorkbench({
           selection={selection}
           pendingAction={pendingAction}
           onSelect={setSelection}
-          onMutate={readOnly ? undefined : mutateFiles}
+          onMutate={effectiveReadOnly ? undefined : mutateFiles}
         />
 
-        {!readOnly ? (
+        {!effectiveReadOnly ? (
           <div className={styles.commitBox}>
             <textarea
               className={styles.commitInput}
@@ -350,7 +375,7 @@ export function SourceControlWorkbench({
           selection={selection}
           pendingAction={pendingAction}
           onSelect={setSelection}
-          onMutate={readOnly ? undefined : mutateFiles}
+          onMutate={effectiveReadOnly ? undefined : mutateFiles}
         />
         {notice ? <div className={styles.notice} role="status">{notice}</div> : null}
       </div>

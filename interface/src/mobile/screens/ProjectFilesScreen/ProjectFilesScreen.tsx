@@ -139,7 +139,6 @@ function MobileProjectFilesContent({
   const selectedFilePath = searchParams.get("file");
   const activeView = searchParams.get("view") === "changes" ? "changes" : "files";
   const canBrowseWorkspace = Boolean(hostedWorkspace) || (Boolean(rootPath) && Boolean(remoteAgentId));
-  const remoteChangesUnavailable = Boolean(remoteAgentId) && !hostedWorkspace;
 
   const openAgentDraft = useCallback((prompt: string) => {
     if (!sourceControlAgentInstanceId || !conversationContextReady) return;
@@ -279,35 +278,9 @@ function MobileProjectFilesContent({
             <Text size="sm" weight="medium">{projectName}</Text>
             <Text size="sm" variant="muted">Waiting for a live workspace.</Text>
           </div>
-          {sourceControlAgentInstanceId && !remoteChangesUnavailable ? (
+          {sourceControlAgentInstanceId ? (
             <Button variant="secondary" onClick={() => selectView("changes")}>
               Review changes
-            </Button>
-          ) : null}
-        </div>
-      </div>
-    );
-  }
-
-  if (activeView === "changes" && remoteChangesUnavailable) {
-    return (
-      <div className={styles.remoteRoot}>
-        <div className={styles.remoteCard}>
-          <div className={styles.remoteHeader}>
-            <Text size="xs" variant="muted" className={styles.eyebrow}>Changes</Text>
-            <Text size="lg" weight="medium">Remote Git changes are not available yet.</Text>
-            <Text size="sm" variant="muted">
-              Aura can browse this agent’s live workspace files, but its remote environment does not yet expose a read-only Git diff.
-            </Text>
-          </div>
-          <Button variant="secondary" onClick={() => selectView("files")}>Browse files</Button>
-          {sourceControlAgentInstanceId ? (
-            <Button
-              variant="secondary"
-              disabled={!conversationContextReady}
-              onClick={discussChanges}
-            >
-              Ask agent to review changes
             </Button>
           ) : null}
         </div>
@@ -355,17 +328,15 @@ function MobileProjectFilesContent({
           >
             Files
           </button>
-          {!remoteChangesUnavailable ? (
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeView === "changes"}
-              className={`${styles.viewTab}${activeView === "changes" ? ` ${styles.viewTabActive}` : ""}`}
-              onClick={() => selectView("changes")}
-            >
-              Changes
-            </button>
-          ) : null}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeView === "changes"}
+            className={`${styles.viewTab}${activeView === "changes" ? ` ${styles.viewTabActive}` : ""}`}
+            onClick={() => selectView("changes")}
+          >
+            Changes
+          </button>
         </div>
       </div>
       {activeView === "changes" ? (
@@ -387,6 +358,8 @@ function MobileProjectFilesContent({
             <SourceControlWorkbench
               projectId={projectId}
               agentInstanceId={sourceControlAgentInstanceId}
+              remoteAgentId={hostedWorkspace ? undefined : remoteAgentId}
+              remoteWorkspacePath={hostedWorkspace ? undefined : rootPath ?? undefined}
               readOnly
               onDiscussChange={conversationContextReady ? discussChangedLine : undefined}
             />
