@@ -357,6 +357,9 @@ pub fn build_test_app_from_store_with_remote_only(
         data_dir.join("loop_logs"),
     ));
     let channel_service = Arc::new(aura_os_channels::ChannelService::new(store.clone()));
+    let push_notifications = Arc::new(
+        aura_os_server::push_notifications::PushNotificationService::disabled(store.clone()),
+    );
     let state = AppState {
         store,
         data_dir,
@@ -415,6 +418,7 @@ pub fn build_test_app_from_store_with_remote_only(
         public_rate_limiter: aura_os_server::PublicRateLimiter::new(),
         public_demo_agent_id: Arc::new(tokio::sync::OnceCell::new()),
         mixpanel: None,
+        push_notifications,
         channel_service,
         telegram_bot_username: Arc::new(tokio::sync::OnceCell::new()),
     };

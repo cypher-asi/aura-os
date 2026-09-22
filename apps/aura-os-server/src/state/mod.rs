@@ -496,6 +496,11 @@ pub struct AppState {
     /// Optional Mixpanel tracker for server-side `session_active` events.
     /// `None` when `MIXPANEL_TOKEN` is not set.
     pub mixpanel: Option<crate::mixpanel::MixpanelTracker>,
+    /// Authenticated mobile device registry and optional FCM transport.
+    /// Registrations remain available even when delivery credentials are
+    /// absent so a deployment can enable FCM without requiring clients to
+    /// re-register their device tokens.
+    pub push_notifications: Arc<crate::push_notifications::PushNotificationService>,
     /// Persistence for external-chat (Telegram) link records. Backed by
     /// the same [`SettingsStore`] as the rest of the server; used by the
     /// `/api/agents/:agent_id/channels*` routes to mint pending-link

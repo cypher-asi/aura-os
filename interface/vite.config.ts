@@ -186,6 +186,13 @@ export default defineConfig(({ mode, command }) => {
             if (id.includes("/@xterm/")) {
               return "terminal-vendor";
             }
+            // Capacitor initializes and replaces window.Capacitor as soon as
+            // its module is evaluated. Keep it out of the entry-critical
+            // vendor chunk so web sessions only load it after native runtime
+            // detection succeeds.
+            if (id.includes("/@capacitor/")) {
+              return "capacitor-native";
+            }
             return "vendor";
           },
         },

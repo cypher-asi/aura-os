@@ -329,6 +329,17 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
     // frames without a protocol change.
     crate::loop_events_bridge::spawn_loop_events_bridge(event_hub.clone(), event_broadcast.clone());
 
+    let push_notifications = Arc::new(
+        crate::push_notifications::PushNotificationService::from_env(
+            store.clone(),
+            reqwest::Client::new(),
+        ),
+    );
+    crate::push_notifications::spawn_push_dispatcher(
+        push_notifications.clone(),
+        event_broadcast.subscribe(),
+    );
+
     let validation_cache = {
         let cache = Arc::new(dashmap::DashMap::new());
         crate::state::spawn_cache_eviction(cache.clone());
@@ -518,6 +529,7 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
             }
             tracker
         },
+        push_notifications,
         channel_service,
         telegram_bot_username,
     })

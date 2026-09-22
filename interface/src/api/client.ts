@@ -68,6 +68,7 @@ import { streamsApi } from "../shared/api/streams";
 import { sharesApi } from "../shared/api/shares";
 import { sourceControlApi } from "../shared/api/source-control";
 import { hostedWorkspaceApi } from "../shared/api/hosted-workspace";
+import { pushNotificationsApi } from "../shared/api/push-notifications";
 
 export const api = {
   auth: authApi,
@@ -103,4 +104,5 @@ export const api = {
   shares: sharesApi,
   sourceControl: sourceControlApi,
   hostedWorkspace: hostedWorkspaceApi,
+  pushNotifications: pushNotificationsApi,
 };

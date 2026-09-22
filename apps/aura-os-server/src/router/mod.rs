@@ -23,6 +23,7 @@ mod feedback;
 mod harness_proxy;
 mod marketplace_bootstrap;
 mod notes;
+mod notifications;
 mod process_generation;
 mod projects_files;
 mod public;
@@ -55,6 +56,7 @@ use feedback::feedback_routes;
 use harness_proxy::harness_proxy_routes;
 use marketplace_bootstrap::{agent_bootstrap_routes, marketplace_routes};
 use notes::notes_routes;
+use notifications::notification_routes;
 use process_generation::{generation_routes, process_routes};
 use projects_files::project_routes;
 use public::public_routes;
@@ -95,6 +97,7 @@ pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathB
         .merge(generation_routes())
         .merge(harness_proxy_routes())
         .merge(notes_routes())
+        .merge(notification_routes())
         .merge(marketplace_routes())
         .merge(debug_routes())
         .merge(loops_routes())

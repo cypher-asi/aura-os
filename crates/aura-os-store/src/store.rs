@@ -32,14 +32,16 @@ enum KnownCf {
     SuperAgentOrchestrations,
     BugReports,
     Channels,
+    PushDevices,
 }
 
 impl KnownCf {
-    const ALL: [Self; 4] = [
+    const ALL: [Self; 5] = [
         Self::Settings,
         Self::SuperAgentOrchestrations,
         Self::BugReports,
         Self::Channels,
+        Self::PushDevices,
     ];
 
     fn parse(cf_name: &str) -> StoreResult<Self> {
@@ -48,6 +50,7 @@ impl KnownCf {
             "super_agent_orchestrations" => Ok(Self::SuperAgentOrchestrations),
             "bug_reports" => Ok(Self::BugReports),
             "channels" => Ok(Self::Channels),
+            "push_devices" => Ok(Self::PushDevices),
             _ => Err(StoreError::NotFound(format!("column family '{cf_name}'"))),
         }
     }
@@ -58,6 +61,7 @@ impl KnownCf {
             Self::SuperAgentOrchestrations => "super_agent_orchestrations",
             Self::BugReports => "bug_reports",
             Self::Channels => "channels",
+            Self::PushDevices => "push_devices",
         }
     }
 
@@ -67,6 +71,7 @@ impl KnownCf {
             Self::SuperAgentOrchestrations => "super_agent_orchestrations.json",
             Self::BugReports => "bug_reports.json",
             Self::Channels => "channels.json",
+            Self::PushDevices => "push_devices.json",
         }
     }
 
@@ -76,6 +81,7 @@ impl KnownCf {
             Self::SuperAgentOrchestrations => "super_agent_orchestrations.json.tmp",
             Self::BugReports => "bug_reports.json.tmp",
             Self::Channels => "channels.json.tmp",
+            Self::PushDevices => "push_devices.json.tmp",
         }
     }
 }
