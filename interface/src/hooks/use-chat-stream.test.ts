@@ -132,8 +132,26 @@ describe("useChatStream", () => {
       result.current.stopStreaming();
     });
 
-    expect(api.cancelInstanceTurn).toHaveBeenCalledWith("p-1", "ai-1");
+    expect(api.cancelInstanceTurn).toHaveBeenCalledWith("p-1", "ai-1", null);
     expect(api.cancelInstanceTurn).toHaveBeenCalledTimes(1);
+  });
+
+  it("scopes Stop to the canonical session opened on this client", () => {
+    const { result } = renderHook(() =>
+      useChatStream({
+        projectId: "p-1",
+        agentInstanceId: "ai-1",
+        sessionId: "session-from-desktop",
+      }),
+    );
+
+    act(() => result.current.stopStreaming());
+
+    expect(api.cancelInstanceTurn).toHaveBeenCalledWith(
+      "p-1",
+      "ai-1",
+      "session-from-desktop",
+    );
   });
 
   // Companion to the test above: the cancel POST is fire-and-forget,
@@ -233,12 +251,7 @@ describe("useChatStream", () => {
     expect(event.deliveryStatus).toBeUndefined();
   });
 
-  it("keeps a project command retryable when the stream ends before acceptance", async () => {
-    vi.mocked(api.sendEventStream).mockImplementation(
-      async (_projectId, _instanceId, _content, _action, _model, _attachments, handler) => {
-        handler?.onDone?.();
-      },
-    );
+  it("marks a project command not sent when no acceptance receipt arrives", async () => {
     const { result } = renderHook(() =>
       useChatStream({ projectId: "p-1", agentInstanceId: "ai-1" }),
     );
@@ -248,7 +261,7 @@ describe("useChatStream", () => {
     });
 
     const event = useStreamStore.getState().entries[result.current.streamKey].events[0];
-    expect(event.deliveryStatus).toBe("retrying");
+    expect(event.deliveryStatus).toBe("failed");
   });
 
   it("preserves the retrying state after a transient transport rejection", async () => {

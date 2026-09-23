@@ -1,8 +1,49 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { useMessageQueueStore } from "./message-queue-store";
+
+const persistence = vi.hoisted(() => ({
+  stored: [] as unknown[],
+  outbox: [] as unknown[],
+  durableError: null as Error | null,
+}));
+
+vi.mock("../shared/lib/auth-token", () => ({
+  getStoredSession: () => ({ user_id: "user-1" }),
+}));
+
+vi.mock("../shared/lib/host-config", () => ({
+  getResolvedHostOrigin: () => "https://environment-1.example",
+}));
+
+vi.mock("../shared/lib/browser-db", () => ({
+  BROWSER_DB_STORES: {
+    chatFollowUpQueue: "chatFollowUpQueue",
+    chatCommandOutbox: "chatCommandOutbox",
+  },
+  browserDbGet: vi.fn(async (store: string) => structuredClone(
+    store === "chatCommandOutbox" ? persistence.outbox : persistence.stored,
+  )),
+  browserDbSetDurable: vi.fn(async (store: string, _key: string, value: unknown[]) => {
+    if (persistence.durableError) throw persistence.durableError;
+    if (store === "chatCommandOutbox") persistence.outbox = structuredClone(value);
+    else persistence.stored = structuredClone(value);
+  }),
+}));
+
+import {
+  _resetMessageQueuePersistenceForTests,
+  enqueueQueuedMessage,
+  hydrateMessageQueues,
+  MessageQueueUnavailableError,
+  resumeQueuedMessages,
+  takeNextQueuedMessage,
+  useMessageQueueStore,
+} from "./message-queue-store";
 
 beforeEach(() => {
-  useMessageQueueStore.setState({ queues: {} });
+  persistence.stored = [];
+  persistence.outbox = [];
+  persistence.durableError = null;
+  _resetMessageQueuePersistenceForTests();
   vi.clearAllMocks();
 });
 
@@ -145,6 +186,106 @@ describe("message-queue-store", () => {
       const before = useMessageQueueStore.getState();
       useMessageQueueStore.getState().clear("nope");
       expect(useMessageQueueStore.getState()).toBe(before);
+    });
+  });
+
+  describe("durable mobile recovery", () => {
+    it("persists the exact attachment-bearing follow-up before publishing it", async () => {
+      const attachment = {
+        type: "image" as const,
+        media_type: "image/png",
+        data: "aGVsbG8=",
+        name: "screen.png",
+      };
+
+      const entry = await enqueueQueuedMessage("agent:a:session:s", {
+        content: "Review this screenshot",
+        action: null,
+        attachments: [attachment],
+      });
+
+      expect(persistence.stored).toEqual([
+        expect.objectContaining({
+          id: entry.id,
+          ownerId: "user-1",
+          hostOrigin: "https://environment-1.example",
+          streamKey: "agent:a:session:s",
+          content: "Review this screenshot",
+          attachments: [attachment],
+          heldAfterRestart: false,
+        }),
+      ]);
+      expect(useMessageQueueStore.getState().queues["agent:a:session:s"]).toEqual([
+        expect.objectContaining({ id: entry.id, attachments: [attachment] }),
+      ]);
+    });
+
+    it("keeps the composer-owned intent out of memory when durable storage fails", async () => {
+      persistence.durableError = new Error("quota");
+
+      await expect(
+        enqueueQueuedMessage("agent:a:session:s", {
+          content: "Do not lose me",
+          action: null,
+        }),
+      ).rejects.toBeInstanceOf(MessageQueueUnavailableError);
+
+      expect(useMessageQueueStore.getState().queues).toEqual({});
+    });
+
+    it("restores queued work as held and requires resume before taking it", async () => {
+      persistence.stored = [
+        {
+          id: "q-restored",
+          ownerId: "user-1",
+          hostOrigin: "https://environment-1.example",
+          streamKey: "agent:a:session:s",
+          createdAt: Date.now(),
+          content: "Continue after restart",
+          action: null,
+          heldAfterRestart: false,
+        },
+      ];
+
+      await hydrateMessageQueues();
+
+      expect(useMessageQueueStore.getState().queues["agent:a:session:s"][0])
+        .toMatchObject({ id: "q-restored", heldAfterRestart: true });
+      await expect(takeNextQueuedMessage("agent:a:session:s")).resolves.toBeUndefined();
+
+      await resumeQueuedMessages("agent:a:session:s");
+      await expect(takeNextQueuedMessage("agent:a:session:s")).resolves.toMatchObject({
+        id: "q-restored",
+        content: "Continue after restart",
+        heldAfterRestart: false,
+      });
+      expect(persistence.stored).toEqual([]);
+    });
+
+    it("drops a recovered queue copy after the same id reached the command outbox", async () => {
+      persistence.stored = [
+        {
+          id: "q-handed-off",
+          ownerId: "user-1",
+          hostOrigin: "https://environment-1.example",
+          streamKey: "agent:a:session:s",
+          createdAt: Date.now(),
+          content: "Already handed off",
+          action: null,
+        },
+      ];
+      persistence.outbox = [
+        {
+          commandId: "q-handed-off",
+          ownerId: "user-1",
+          hostOrigin: "https://environment-1.example",
+        },
+      ];
+
+      await hydrateMessageQueues();
+
+      expect(useMessageQueueStore.getState().queues).toEqual({});
+      expect(persistence.stored).toEqual([]);
     });
   });
 });

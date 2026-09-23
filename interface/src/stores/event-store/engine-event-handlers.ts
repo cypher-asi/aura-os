@@ -251,12 +251,14 @@ function handleTaskFinish(event: AuraEvent, u: OutputUpdate): void {
 }
 
 function handleSpecSaved(event: AuraEvent, _u: OutputUpdate): void {
+  void _u;
   const spec = (event.content as AuraEventContent<typeof EventType.SpecSaved>).spec;
   if (!spec) return;
   useSidekickStore.getState().pushSpec(spec);
 }
 
 function handleTaskSaved(event: AuraEvent, _u: OutputUpdate): void {
+  void _u;
   const task = (event.content as AuraEventContent<typeof EventType.TaskSaved>).task;
   if (!task) return;
   useSidekickStore.getState().pushTask(task);
@@ -363,6 +365,8 @@ const DISPATCH: Partial<Record<EventType, EngineHandler>> = {
   [EventType.AssistantMessageEnd]: handleAgentAttention,
   [EventType.ToolApprovalPrompt]: handleAgentAttention,
   [EventType.ToolApprovalResolved]: handleAgentAttention,
+  [EventType.AgentUserInputRequested]: handleAgentAttention,
+  [EventType.AgentUserInputResolved]: handleAgentAttention,
 };
 
 export function handleEngineEvent(event: AuraEvent): void {

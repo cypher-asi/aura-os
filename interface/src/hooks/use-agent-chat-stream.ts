@@ -54,7 +54,10 @@ import {
 } from "../stores/context-usage-store";
 import { bumpEstimatedTokensThrottled } from "../stores/context-usage-throttle";
 import { useSessionsListStore } from "../stores/sessions-list-store";
-import { useMessageQueueStore } from "../stores/message-queue-store";
+import {
+  enqueueQueuedMessage,
+  removeQueuedMessage,
+} from "../stores/message-queue-store";
 import {
   createSetters,
   ensureEntry,
@@ -85,6 +88,8 @@ import {
 } from "../stores/tool-approval-store";
 import {
   enqueueChatCommand,
+  markChatCommandAccepted,
+  markChatCommandExecutionFailed,
   recordChatCommandFailure,
   removeChatCommand,
   shouldReplayChatCommandError,
@@ -300,7 +305,7 @@ export function useAgentChatStream({
         const lastEventAt = getLastEventAt(getPartitionKey());
         const isStuck =
           lastEventAt != null && Date.now() - lastEventAt >= STUCK_THRESHOLD_MS;
-        useMessageQueueStore.getState().enqueue(getPartitionKey(), {
+        await enqueueQueuedMessage(getPartitionKey(), {
           content,
           action,
           model: selectedModel ?? null,
@@ -325,6 +330,7 @@ export function useAgentChatStream({
         ...(!_generationMode ? { deliveryStatus: "sending" as const } : {}),
       };
       let commandAccepted = false;
+      let commandDeliveryClassified = false;
       const updateCommandDelivery = (
         status: DisplaySessionEvent["deliveryStatus"],
       ) => {
@@ -684,6 +690,7 @@ export function useAgentChatStream({
         onError: (error) => {
           if (controller.signal.aborted) return;
           if (!_generationMode && !commandAccepted) {
+            commandDeliveryClassified = true;
             updateCommandDelivery(
               shouldReplayChatCommandError(error) ? "retrying" : "failed",
             );
@@ -700,6 +707,7 @@ export function useAgentChatStream({
         onDone: () => {
           if (controller.signal.aborted) return;
           if (!_generationMode && !commandAccepted) {
+            commandDeliveryClassified = true;
             updateCommandDelivery("retrying");
             void recordChatCommandFailure(
               userMsg.clientId ?? userMsg.id,
@@ -721,8 +729,21 @@ export function useAgentChatStream({
             useSessionsListStore.getState().bumpVersion();
           }
           commandAccepted = true;
-          void removeChatCommand(receipt.commandId);
-          updateCommandDelivery(undefined);
+          if (receipt.executionStatus === "completed") {
+            void removeChatCommand(receipt.commandId);
+          } else if (receipt.executionStatus === "failed") {
+            void markChatCommandExecutionFailed(receipt.commandId, receipt.sessionId);
+          } else {
+            void markChatCommandAccepted(
+              receipt.commandId,
+              receipt.executionStatus === "unconfirmed" ? "unconfirmed" : "attached",
+              receipt.sessionId,
+            );
+          }
+          updateCommandDelivery(
+            receipt.executionStatus === "unconfirmed" ? "unconfirmed" :
+              receipt.executionStatus === "failed" ? "executionFailed" : undefined,
+          );
         },
       };
 
@@ -973,6 +994,9 @@ export function useAgentChatStream({
           mixture,
           originallyStartedNewSession: shouldStartNewSession,
         });
+        if (clientMessageId?.startsWith("q-")) {
+          await removeQueuedMessage(getPartitionKey(), clientMessageId);
+        }
         await api.agents.sendEventStream(
           agentId,
           userMsg.content,
@@ -993,6 +1017,7 @@ export function useAgentChatStream({
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         if (!_generationMode && !commandAccepted) {
+          commandDeliveryClassified = true;
           updateCommandDelivery(
             shouldReplayChatCommandError(err) ? "retrying" : "failed",
           );
@@ -1010,6 +1035,9 @@ export function useAgentChatStream({
         // otherwise clobber that new latch even though `abortRef`
         // has moved on.
         if (partitionAbortRef.current === controller) {
+          if (!_generationMode && !commandAccepted && !commandDeliveryClassified) {
+            updateCommandDelivery("failed");
+          }
           partitionSetters.setIsStreaming(false);
           controller.abort();
           partitionAbortRef.current = null;
@@ -1357,7 +1385,7 @@ export function useAgentChatStream({
   const stopStreaming = useCallback(() => {
     inFlightRef.current = false;
     if (agentId) {
-      api.agents.cancelTurn(agentId).catch(() => {});
+      api.agents.cancelTurn(agentId, sessionIdRef.current).catch(() => {});
     }
     core.baseStopStreaming();
   }, [agentId, core.baseStopStreaming]);

@@ -1,6 +1,6 @@
 //! Axum handler for `POST /v1/projects/:project_id/agents/:instance_id/chat/stream`.
 
-use aura_os_core::{AgentInstanceId, ProjectId, SessionId};
+use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, SessionId};
 use aura_os_harness::SessionConfig;
 use axum::extract::{Path, State};
 use axum::Json;
@@ -56,6 +56,32 @@ pub(crate) async fn send_event_stream(
     headers: axum::http::HeaderMap,
     Json(body): Json<SendChatRequest>,
 ) -> ApiResult<SseResponse> {
+    if let Some(environment_id) = headers
+        .get(crate::desktop_relay::DESKTOP_ENVIRONMENT_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        let instance = state
+            .agent_instance_service
+            .get_instance(&project_id, &agent_instance_id)
+            .await
+            .map_err(|error| ApiError::not_found(format!("agent instance not found: {error}")))?;
+        if instance.harness_mode() == HarnessMode::Local {
+            let body = serde_json::to_vec(&body).map_err(|error| {
+                ApiError::internal(format!("serializing desktop relay request: {error}"))
+            })?;
+            return crate::desktop_relay::forward_chat_stream(
+                &state,
+                &auth_session.user_id,
+                environment_id,
+                &format!("/api/projects/{project_id}/agents/{agent_instance_id}/events/stream"),
+                &headers,
+                body,
+            )
+            .await;
+        }
+    }
     // Phase 5 observability (5.3): the chat client sets
     // `X-Aura-Client-Retry: <n>` on every auto-retry POST so the
     // server-side counter reflects the same close-reason the client
@@ -69,12 +95,24 @@ pub(crate) async fn send_event_stream(
             .inc_client_auto_retry_streamdropped();
     }
     let is_command_replay = super::super::request::header_indicates_command_replay(&headers);
+    let is_command_resume = super::super::request::header_indicates_command_resume(&headers);
+    let was_previously_accepted =
+        super::super::request::header_indicates_previously_accepted(&headers);
 
     let instance = state
         .agent_instance_service
         .get_instance(&project_id, &agent_instance_id)
         .await
-        .map_err(|e| ApiError::internal(format!("looking up agent instance: {e}")))?;
+        .map_err(|e| match e {
+            aura_os_agents::AgentError::NotFound => ApiError::not_found("agent instance not found"),
+            other => ApiError::internal(format!("looking up agent instance: {other}")),
+        })?;
+    // The instance service resolves by instance ID; the URL's project ID is
+    // not part of that storage lookup. Do not let a mismatched project path
+    // start a turn against another project's agent instance.
+    if instance.project_id != project_id {
+        return Err(ApiError::not_found("agent instance not found"));
+    }
     ensure_chat_runtime_allowed(&state, instance.harness_mode())?;
     if !is_command_replay {
         require_credits_for_auth_source(&state, &jwt, &instance.auth_source).await?;
@@ -492,6 +530,8 @@ pub(crate) async fn send_event_stream(
             user_content: body.content,
             client_command_id: body.client_command_id,
             is_command_replay,
+            is_command_resume,
+            was_previously_accepted,
             replay_auth_source: is_command_replay.then(|| instance.auth_source.clone()),
             requested_model: body.model,
             persist_ctx,

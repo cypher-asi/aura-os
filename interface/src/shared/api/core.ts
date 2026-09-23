@@ -278,10 +278,23 @@ export async function apiFetch<T>(
       ? resolveControlPlaneUrl(path)
       : resolveApiUrl(path);
 
+  // Preserve authentication when a caller adds a routing hint (such as a
+  // paired desktop environment id). A shallow spread of `headers` here would
+  // otherwise silently replace the default Authorization header.
+  const mergedHeaders: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...authHeaders(),
+  };
+  if (rest.headers) {
+    new Headers(rest.headers).forEach((value, name) => {
+      mergedHeaders[name] = value;
+    });
+  }
+
   try {
     const res = await fetch(url, {
-      headers: { "Content-Type": "application/json", ...authHeaders() },
       ...rest,
+      headers: mergedHeaders,
       signal,
     });
     if (!res.ok) {

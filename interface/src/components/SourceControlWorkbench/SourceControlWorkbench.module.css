@@ -322,11 +322,31 @@
   min-width: max-content;
 }
 
-.diff code > span {
+.diffLine,
+.diffLineButton {
   display: block;
+  width: 100%;
   min-height: 14px;
+  box-sizing: border-box;
   padding: 0 var(--space-3);
   white-space: pre;
+}
+
+.diffLineButton {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  line-height: inherit;
+  text-align: left;
+}
+
+.diffLineButton:hover,
+.diffLineButton:focus-visible {
+  box-shadow: inset 2px 0 0 currentColor;
+  filter: brightness(1.08);
+  outline: none;
 }
 
 .addition {
@@ -386,5 +406,21 @@
 
   .diffPane {
     flex-basis: 48%;
+  }
+}
+
+@media (pointer: coarse) {
+  .iconButton,
+  .fileAction,
+  .groupAction,
+  .retryButton,
+  .pullRequest,
+  .diffLineButton {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .fileRow {
+    min-height: 44px;
   }
 }

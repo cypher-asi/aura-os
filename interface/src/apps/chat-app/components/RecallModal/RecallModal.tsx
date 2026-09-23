@@ -9,9 +9,11 @@ interface RecallModalProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenSource: (result: RecallSearchResult) => void;
-  onAddToDraft: (result: RecallSearchResult) => void;
+  onAddToDraft?: (result: RecallSearchResult) => void;
   canAddToDraft: boolean;
   resolveMetadata: (result: RecallSearchResult) => RecallResultMetadata;
+  initialQuery?: string;
+  showDraftAction?: boolean;
 }
 
 export interface RecallResultMetadata {
@@ -32,8 +34,10 @@ export function RecallModal({
   onAddToDraft,
   canAddToDraft,
   resolveMetadata,
+  initialQuery = "",
+  showDraftAction = true,
 }: RecallModalProps) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<RecallSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +66,7 @@ export function RecallModal({
   }, [onOpenSource, reset]);
 
   const addToDraft = useCallback((result: RecallSearchResult) => {
+    if (!onAddToDraft) return;
     reset();
     onAddToDraft(result);
   }, [onAddToDraft, reset]);
@@ -151,15 +156,17 @@ export function RecallModal({
                 >
                   Open source chat
                 </button>
-                <button
-                  type="button"
-                  className={styles.actionButton}
-                  disabled={!canAddToDraft}
-                  title={canAddToDraft ? "Add this evidence to the current draft" : "Open a chat before adding evidence"}
-                  onClick={() => addToDraft(result)}
-                >
-                  Add to current draft
-                </button>
+                {showDraftAction ? (
+                  <button
+                    type="button"
+                    className={styles.actionButton}
+                    disabled={!canAddToDraft}
+                    title={canAddToDraft ? "Add this evidence to the current draft" : "Open a chat before adding evidence"}
+                    onClick={() => addToDraft(result)}
+                  >
+                    Add to current draft
+                  </button>
+                ) : null}
               </span>
             </article>
           );

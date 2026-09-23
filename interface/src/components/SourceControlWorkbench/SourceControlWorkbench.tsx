@@ -10,7 +10,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 
-import { api } from "../../api/client";
+import { api, ApiClientError } from "../../api/client";
 import type {
   SourceControlArea,
   SourceControlDiff,
@@ -23,6 +23,24 @@ import styles from "./SourceControlWorkbench.module.css";
 interface SourceControlWorkbenchProps {
   projectId: string;
   agentInstanceId?: string;
+  remoteAgentId?: string;
+  remoteWorkspacePath?: string;
+  /** Review-only mode for mobile: status and diffs without repository mutations. */
+  readOnly?: boolean;
+  /**
+   * Optional review handoff. When present, changed diff lines become explicit
+   * actions that can be sent back to the owning conversation without making
+   * the source-control surface responsible for chat routing or draft state.
+   */
+  onDiscussChange?: (context: SourceControlReviewContext) => void;
+}
+
+export interface SourceControlReviewContext {
+  path: string;
+  area: SourceControlArea;
+  line: string;
+  oldLine: number | null;
+  newLine: number | null;
 }
 
 interface Selection {
@@ -42,7 +60,12 @@ const STATUS_LABELS: Record<string, string> = {
   U: "Unmerged",
 };
 
-function errorMessage(error: unknown): string {
+function errorMessage(error: unknown, remote = false): string {
+  if (remote && error instanceof ApiClientError) {
+    if (error.status === 404) return "Remote changes are unavailable for this agent. Update its environment or refresh the workspace.";
+    if (error.status === 503 || error.status === 502 || error.status === 504) return "The remote agent is offline. Its saved conversation is still available.";
+    if (error.status === 403) return "Access to this remote workspace was denied.";
+  }
   return error instanceof Error ? error.message : "Source-control action failed.";
 }
 
@@ -74,6 +97,10 @@ function selectionExists(
 export function SourceControlWorkbench({
   projectId,
   agentInstanceId,
+  remoteAgentId,
+  remoteWorkspacePath,
+  readOnly = false,
+  onDiscussChange,
 }: SourceControlWorkbenchProps) {
   const [status, setStatus] = useState<SourceControlStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
@@ -85,6 +112,7 @@ export function SourceControlWorkbench({
   const [commitMessage, setCommitMessage] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const effectiveReadOnly = readOnly || Boolean(remoteAgentId);
 
   const refresh = useCallback(() => {
     setNotice(null);
@@ -95,8 +123,21 @@ export function SourceControlWorkbench({
     let cancelled = false;
     setStatusLoading(true);
     setStatusError(null);
-    void api.sourceControl
-      .getStatus(projectId, agentInstanceId)
+    setStatus(null);
+    setSelection(null);
+    setDiff(null);
+    const request = remoteAgentId
+      ? remoteWorkspacePath
+        ? api.swarm.getRemoteGitStatus(remoteAgentId, remoteWorkspacePath)
+        : Promise.resolve<SourceControlStatus>({
+            available: false,
+            unavailable_reason: "The remote agent has not exposed a live workspace yet.",
+            ahead: 0,
+            behind: 0,
+            files: [],
+          })
+      : api.sourceControl.getStatus(projectId, agentInstanceId);
+    void request
       .then((nextStatus) => {
         if (cancelled) return;
         setStatus(nextStatus);
@@ -108,7 +149,7 @@ export function SourceControlWorkbench({
       })
       .catch((error: unknown) => {
         if (cancelled) return;
-        setStatusError(errorMessage(error));
+        setStatusError(errorMessage(error, Boolean(remoteAgentId)));
       })
       .finally(() => {
         if (!cancelled) setStatusLoading(false);
@@ -116,7 +157,7 @@ export function SourceControlWorkbench({
     return () => {
       cancelled = true;
     };
-  }, [agentInstanceId, projectId, refreshKey]);
+  }, [agentInstanceId, projectId, refreshKey, remoteAgentId, remoteWorkspacePath]);
 
   useEffect(() => {
     if (!selection) {
@@ -126,8 +167,10 @@ export function SourceControlWorkbench({
     let cancelled = false;
     setDiff(null);
     setDiffLoading(true);
-    void api.sourceControl
-      .getDiff(projectId, selection.path, selection.area, agentInstanceId)
+    const request = remoteAgentId && remoteWorkspacePath
+      ? api.swarm.getRemoteGitDiff(remoteAgentId, remoteWorkspacePath, selection.path, selection.area)
+      : api.sourceControl.getDiff(projectId, selection.path, selection.area, agentInstanceId);
+    void request
       .then((nextDiff) => {
         if (!cancelled) setDiff(nextDiff);
       })
@@ -136,7 +179,7 @@ export function SourceControlWorkbench({
         setDiff({
           path: selection.path,
           area: selection.area,
-          diff: errorMessage(error),
+          diff: errorMessage(error, Boolean(remoteAgentId)),
           truncated: false,
           binary: false,
         });
@@ -147,7 +190,7 @@ export function SourceControlWorkbench({
     return () => {
       cancelled = true;
     };
-  }, [agentInstanceId, projectId, refreshKey, selection]);
+  }, [agentInstanceId, projectId, refreshKey, remoteAgentId, remoteWorkspacePath, selection]);
 
   const stagedFiles = useMemo(
     () => status?.files.filter((file) => file.staged_status) ?? [],
@@ -234,7 +277,11 @@ export function SourceControlWorkbench({
   }
 
   return (
-    <div className={styles.root} data-testid="source-control-workbench">
+    <div
+      className={styles.root}
+      data-testid="source-control-workbench"
+      data-source-control-mode={effectiveReadOnly ? "review" : "manage"}
+    >
       <header className={styles.repositoryHeader}>
         <div className={styles.branchRow}>
           <div className={styles.branchName} title={status.branch ?? "Detached HEAD"}>
@@ -286,38 +333,40 @@ export function SourceControlWorkbench({
           selection={selection}
           pendingAction={pendingAction}
           onSelect={setSelection}
-          onMutate={mutateFiles}
+          onMutate={effectiveReadOnly ? undefined : mutateFiles}
         />
 
-        <div className={styles.commitBox}>
-          <textarea
-            className={styles.commitInput}
-            value={commitMessage}
-            onChange={(event) => setCommitMessage(event.target.value)}
-            onKeyDown={(event) => {
-              if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-                event.preventDefault();
-                void createCommit();
+        {!effectiveReadOnly ? (
+          <div className={styles.commitBox}>
+            <textarea
+              className={styles.commitInput}
+              value={commitMessage}
+              onChange={(event) => setCommitMessage(event.target.value)}
+              onKeyDown={(event) => {
+                if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                  event.preventDefault();
+                  void createCommit();
+                }
+              }}
+              placeholder="Commit message"
+              aria-label="Commit message"
+              rows={2}
+            />
+            <button
+              type="button"
+              className={styles.commitButton}
+              onClick={() => void createCommit()}
+              disabled={
+                stagedFiles.length === 0 ||
+                !commitMessage.trim() ||
+                Boolean(pendingAction)
               }
-            }}
-            placeholder="Commit message"
-            aria-label="Commit message"
-            rows={2}
-          />
-          <button
-            type="button"
-            className={styles.commitButton}
-            onClick={() => void createCommit()}
-            disabled={
-              stagedFiles.length === 0 ||
-              !commitMessage.trim() ||
-              Boolean(pendingAction)
-            }
-          >
-            <Check size={13} />
-            {pendingAction === "commit" ? "Committing…" : "Commit"}
-          </button>
-        </div>
+            >
+              <Check size={13} />
+              {pendingAction === "commit" ? "Committing…" : "Commit"}
+            </button>
+          </div>
+        ) : null}
 
         <FileGroup
           title="Changes"
@@ -326,7 +375,7 @@ export function SourceControlWorkbench({
           selection={selection}
           pendingAction={pendingAction}
           onSelect={setSelection}
-          onMutate={mutateFiles}
+          onMutate={effectiveReadOnly ? undefined : mutateFiles}
         />
         {notice ? <div className={styles.notice} role="status">{notice}</div> : null}
       </div>
@@ -340,7 +389,11 @@ export function SourceControlWorkbench({
                 {selection.area === "staged" ? "INDEX" : "WORKTREE"}
               </span>
             </div>
-            <DiffView loading={diffLoading} diff={diff} />
+            <DiffView
+              loading={diffLoading}
+              diff={diff}
+              onDiscussChange={onDiscussChange}
+            />
           </>
         ) : (
           <div className={styles.cleanState}>
@@ -360,7 +413,7 @@ interface FileGroupProps {
   selection: Selection | null;
   pendingAction: string | null;
   onSelect: (selection: Selection) => void;
-  onMutate: (area: SourceControlArea, paths: string[]) => Promise<void>;
+  onMutate?: (area: SourceControlArea, paths: string[]) => Promise<void>;
 }
 
 function FileGroup({
@@ -378,7 +431,7 @@ function FileGroup({
       <div className={styles.groupHeader}>
         <span>{title}</span>
         <span className={styles.fileCount}>{files.length}</span>
-        {files.length > 1 ? (
+        {files.length > 1 && onMutate ? (
           <button
             type="button"
             className={styles.groupAction}
@@ -431,23 +484,25 @@ function FileGroup({
                   {file.path}
                 </span>
               </button>
-              <button
-                type="button"
-                className={styles.fileAction}
-                onClick={() =>
-                  void onMutate(
-                    area,
-                    file.original_path
-                      ? [file.path, file.original_path]
-                      : [file.path],
-                  )
-                }
-                disabled={Boolean(pendingAction)}
-                aria-label={`${verb} ${file.path}`}
-                title={`${verb} ${file.path}`}
-              >
-                {area === "worktree" ? <Plus size={13} /> : <Minus size={13} />}
-              </button>
+              {onMutate ? (
+                <button
+                  type="button"
+                  className={styles.fileAction}
+                  onClick={() =>
+                    void onMutate(
+                      area,
+                      file.original_path
+                        ? [file.path, file.original_path]
+                        : [file.path],
+                    )
+                  }
+                  disabled={Boolean(pendingAction)}
+                  aria-label={`${verb} ${file.path}`}
+                  title={`${verb} ${file.path}`}
+                >
+                  {area === "worktree" ? <Plus size={13} /> : <Minus size={13} />}
+                </button>
+              ) : null}
             </div>
           );
         })
@@ -459,9 +514,11 @@ function FileGroup({
 function DiffView({
   loading,
   diff,
+  onDiscussChange,
 }: {
   loading: boolean;
   diff: SourceControlDiff | null;
+  onDiscussChange?: (context: SourceControlReviewContext) => void;
 }) {
   if (loading) {
     return <div className={styles.diffMessage}>Loading diff…</div>;
@@ -475,10 +532,11 @@ function DiffView({
   if (!diff.diff) {
     return <div className={styles.diffMessage}>No textual diff available.</div>;
   }
+  const lines = parseReviewableDiffLines(diff.diff);
   return (
     <pre className={styles.diff} tabIndex={0}>
       <code>
-        {diff.diff.split("\n").map((line, index) => {
+        {lines.map(({ line, oldLine, newLine }, index) => {
           const kind = line.startsWith("+") && !line.startsWith("+++")
             ? styles.addition
             : line.startsWith("-") && !line.startsWith("---")
@@ -491,8 +549,33 @@ function DiffView({
                     line.startsWith("+++")
                   ? styles.diffMeta
                   : undefined;
+          const reviewable = Boolean(onDiscussChange) && (oldLine !== null || newLine !== null)
+            && (line.startsWith("+") || line.startsWith("-"));
+          const lineLabel = newLine !== null
+            ? `new line ${newLine}`
+            : `old line ${oldLine}`;
+          if (reviewable) {
+            return (
+              <button
+                type="button"
+                className={`${styles.diffLineButton}${kind ? ` ${kind}` : ""}`}
+                key={`${index}:${line}`}
+                onClick={() => onDiscussChange?.({
+                  path: diff.path,
+                  area: diff.area,
+                  line,
+                  oldLine,
+                  newLine,
+                })}
+                aria-label={`Ask agent about ${diff.path} ${lineLabel}`}
+                title={`Ask agent about ${lineLabel}`}
+              >
+                {line || " "}
+              </button>
+            );
+          }
           return (
-            <span className={kind} key={`${index}:${line}`}>
+            <span className={`${styles.diffLine}${kind ? ` ${kind}` : ""}`} key={`${index}:${line}`}>
               {line || " "}
               {"\n"}
             </span>
@@ -501,4 +584,44 @@ function DiffView({
       </code>
     </pre>
   );
+}
+
+interface ParsedDiffLine {
+  line: string;
+  oldLine: number | null;
+  newLine: number | null;
+}
+
+/** Track unified-diff hunk positions so review actions cite source lines. */
+function parseReviewableDiffLines(diff: string): ParsedDiffLine[] {
+  let oldLine = 0;
+  let newLine = 0;
+  let inHunk = false;
+
+  return diff.split("\n").map((line) => {
+    const hunk = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(line);
+    if (hunk) {
+      oldLine = Number(hunk[1]);
+      newLine = Number(hunk[2]);
+      inHunk = true;
+      return { line, oldLine: null, newLine: null };
+    }
+    if (!inHunk || line.startsWith("\\ No newline")) {
+      return { line, oldLine: null, newLine: null };
+    }
+    if (line.startsWith("+") && !line.startsWith("+++")) {
+      const result = { line, oldLine: null, newLine };
+      newLine += 1;
+      return result;
+    }
+    if (line.startsWith("-") && !line.startsWith("---")) {
+      const result = { line, oldLine, newLine: null };
+      oldLine += 1;
+      return result;
+    }
+    const result = { line, oldLine, newLine };
+    oldLine += 1;
+    newLine += 1;
+    return result;
+  });
 }

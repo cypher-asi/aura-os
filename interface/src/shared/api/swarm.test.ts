@@ -60,6 +60,25 @@ describe("swarmApi", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/agents/a1/remote_agent/state", expect.any(Object));
   });
 
+  it("requests read-only Git status and diff from the remote agent", async () => {
+    const fetchMock = mockFetch(200, { available: true, files: [] });
+    globalThis.fetch = fetchMock;
+    await swarmApi.getRemoteGitStatus("agent-1", "/workspace/project");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/agents/agent-1/remote_agent/git/status",
+      expect.objectContaining({ method: "POST", body: JSON.stringify({ path: "/workspace/project" }) }),
+    );
+
+    await swarmApi.getRemoteGitDiff("agent-1", "/workspace/project", "src/main.rs", "worktree");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/agents/agent-1/remote_agent/git/diff",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ path: "/workspace/project", file: "src/main.rs", area: "worktree" }),
+      }),
+    );
+  });
+
   it("remoteAgentAction sends POST for hibernate", async () => {
     const fetchMock = mockFetch(200, { agent_id: "a1", status: "hibernating" });
     globalThis.fetch = fetchMock;

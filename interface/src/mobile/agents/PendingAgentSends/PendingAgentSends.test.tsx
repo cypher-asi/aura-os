@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   commands: [] as Array<Record<string, unknown>>,
   retry: vi.fn().mockResolvedValue(true),
+  resume: vi.fn().mockResolvedValue(true),
   cancel: vi.fn().mockResolvedValue(true),
 }));
 
@@ -13,6 +14,7 @@ vi.mock("../../../stores/chat-command-outbox", () => ({
     selector: (state: { commands: Array<Record<string, unknown>> }) => unknown,
   ) => selector({ commands: mocks.commands }),
   retryChatCommandNow: mocks.retry,
+  resumeChatCommandNow: mocks.resume,
   cancelChatCommandReplay: mocks.cancel,
 }));
 
@@ -33,6 +35,7 @@ describe("PendingAgentSends", () => {
   beforeEach(() => {
     mocks.commands = [];
     mocks.retry.mockClear();
+    mocks.resume.mockClear();
     mocks.cancel.mockClear();
   });
 
@@ -64,7 +67,8 @@ describe("PendingAgentSends", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("1 message waiting")).toBeInTheDocument();
+    expect(screen.getByText("1 message to check")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Waiting to send");
     fireEvent.click(screen.getByRole("button", {
       name: "Open conversation for: Continue the migration after reconnecting",
     }));
@@ -112,5 +116,32 @@ describe("PendingAgentSends", () => {
     expect(screen.getByTestId("location")).toHaveTextContent(
       "/agents/agent-1?project=project-1&session=session-2",
     );
+  });
+
+  it("distinguishes a saved-but-unconfirmed run from a message waiting to send", async () => {
+    mocks.commands = [{
+      surface: "agent",
+      commandId: "command-unconfirmed",
+      ownerId: "user-1",
+      hostOrigin: "https://environment.example",
+      agentId: "agent-1",
+      sessionId: "session-1",
+      content: "Inspect the failure",
+      action: null,
+      originallyStartedNewSession: false,
+      createdAt: Date.now(),
+      attempts: 1,
+      nextAttemptAt: Date.now(),
+      accepted: true,
+      executionStatus: "unconfirmed",
+    }];
+    render(<MemoryRouter><PendingAgentSends /></MemoryRouter>);
+    expect(screen.getByRole("status")).toHaveTextContent("Agent run unconfirmed");
+    fireEvent.click(screen.getByRole("button", { name: "Check run: Inspect the failure" }));
+    await waitFor(() => expect(mocks.retry).toHaveBeenCalledWith("command-unconfirmed"));
+    fireEvent.click(screen.getByRole("button", { name: "Resume agent run: Inspect the failure" }));
+    await waitFor(() => expect(mocks.resume).toHaveBeenCalledWith("command-unconfirmed"));
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss run status: Inspect the failure" }));
+    await waitFor(() => expect(mocks.cancel).toHaveBeenCalledWith("command-unconfirmed"));
   });
 });

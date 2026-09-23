@@ -384,6 +384,7 @@ pub fn build_test_app_from_store_with_remote_only(
         live_streams: aura_os_server::live_streams::LiveStreamRegistry::from_env(),
         event_broadcast,
         event_hub,
+        desktop_relays: Arc::new(aura_os_server::desktop_relay::DesktopRelayRegistry::new()),
         loop_registry,
         terminal_manager: Arc::new(aura_os_terminal::TerminalManager::new()),
         browser_manager: Arc::new(aura_os_browser::BrowserManager::new(

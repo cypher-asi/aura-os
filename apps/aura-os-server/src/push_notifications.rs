@@ -197,6 +197,7 @@ pub fn classify_event(event: &Value) -> Option<(String, PushNotification)> {
         "loop_ended" => loop_notification(event)?,
         "project_push_stuck" => project_push_stuck_notification(event)?,
         "tool_approval_prompt" => approval_notification(event)?,
+        "agent_user_input_requested" => user_input_notification(event)?,
         _ => return None,
     };
     Some((user_id, notification))
@@ -294,6 +295,23 @@ fn approval_notification(event: &Value) -> Option<PushNotification> {
         kind: "approval_required".to_string(),
         title: "Agent needs approval".to_string(),
         body: format!("Review {tool_name} before the agent can continue."),
+        route: route_for_event(event),
+    })
+}
+
+fn user_input_notification(event: &Value) -> Option<PushNotification> {
+    let request_id = field(event, "request_id")?;
+    let body = event
+        .pointer("/questions/0/question")
+        .or_else(|| event.pointer("/content/questions/0/question"))
+        .and_then(Value::as_str)
+        .filter(|question| !question.trim().is_empty())
+        .unwrap_or("Open Aura to answer the agent's question.");
+    Some(PushNotification {
+        id: format!("user_input:{request_id}"),
+        kind: "user_input_required".to_string(),
+        title: "Agent needs your answer".to_string(),
+        body: body.to_string(),
         route: route_for_event(event),
     })
 }
@@ -607,6 +625,48 @@ mod tests {
         assert_eq!(
             notification.route.as_deref(),
             Some("/projects/project-1/agents/instance-1?session=session-1")
+        );
+    }
+
+    #[test]
+    fn classifies_user_input_with_question_and_exact_fcm_route() {
+        let event = json!({
+            "type": "agent_user_input_requested",
+            "user_id": "user-1",
+            "project_id": "project-1",
+            "project_agent_id": "instance-1",
+            "agent_id": "agent-1",
+            "session_id": "session-1",
+            "request_id": "input-1",
+            "questions": [{
+                "id": "scope",
+                "header": "Scope",
+                "question": "Should I update the API too?",
+                "options": []
+            }]
+        });
+        let (user_id, notification) = classify_event(&event).expect("notification");
+        assert_eq!(user_id, "user-1");
+        assert_eq!(notification.id, "user_input:input-1");
+        assert_eq!(notification.kind, "user_input_required");
+        assert_eq!(notification.body, "Should I update the API too?");
+        assert_eq!(
+            notification.route.as_deref(),
+            Some("/projects/project-1/agents/instance-1?session=session-1")
+        );
+
+        let request = fcm_request("android-token-1234567890", &notification);
+        assert_eq!(
+            request
+                .pointer("/message/data/route")
+                .and_then(Value::as_str),
+            Some("/projects/project-1/agents/instance-1?session=session-1")
+        );
+        assert_eq!(
+            request
+                .pointer("/message/data/kind")
+                .and_then(Value::as_str),
+            Some("user_input_required")
         );
     }
 

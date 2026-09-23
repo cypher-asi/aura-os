@@ -39,6 +39,19 @@ export function buildAgentSessionRoute({
   return `/agents/${encodeURIComponent(agent)}${query ? `?${query}` : ""}`;
 }
 
+/** Compare canonical agent routes while ignoring unrelated view/search state. */
+export function isAgentSessionRouteCurrent(
+  route: string | undefined,
+  currentUrl: string,
+): boolean {
+  if (!route) return false;
+  const target = new URL(route, "https://aura.invalid");
+  const current = new URL(currentUrl, "https://aura.invalid");
+  if (target.pathname !== current.pathname) return false;
+  const targetSession = target.searchParams.get("session");
+  return !targetSession || targetSession === current.searchParams.get("session");
+}
+
 function appendSession(path: string, sessionId: string | undefined): string {
   if (!sessionId) return path;
   const params = new URLSearchParams({ session: sessionId });

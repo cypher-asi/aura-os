@@ -408,7 +408,7 @@ impl AgentInstanceService {
 
     pub async fn get_instance(
         &self,
-        _project_id: &ProjectId,
+        project_id: &ProjectId,
         agent_instance_id: &AgentInstanceId,
     ) -> Result<AgentInstance, AgentError> {
         let storage = self.require_storage()?;
@@ -420,6 +420,15 @@ impl AgentInstanceService {
                 aura_os_storage::StorageError::Server { status: 404, .. } => AgentError::NotFound,
                 _ => AgentError::Storage(e),
             })?;
+        // `get_project_agent` is keyed by instance ID, so the caller's
+        // project path is otherwise only advisory. Enforce the relationship
+        // here once for every project-scoped consumer (chat, files, tasks,
+        // safe workspace, and automations) instead of relying on each route
+        // to remember a second check.
+        let expected_project_id = project_id.to_string();
+        if spa.project_id.as_deref() != Some(expected_project_id.as_str()) {
+            return Err(AgentError::NotFound);
+        }
         let agent = self.resolve_agent_for_project_agent(&spa).await;
         let runtime_map = self.runtime_state.lock().await;
         let runtime = runtime_map.get(agent_instance_id);

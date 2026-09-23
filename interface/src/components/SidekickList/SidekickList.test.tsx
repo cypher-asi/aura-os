@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { SidekickList, type SidekickListSection } from "./SidekickList";
 
 function sections(): SidekickListSection[] {
@@ -132,5 +132,23 @@ describe("SidekickList", () => {
     );
     fireEvent.click(screen.getByText("Restore"));
     expect(onMenuAction).toHaveBeenCalledWith("restore", "row-3");
+  });
+
+  it("offers the same row actions through a touch-friendly button", () => {
+    const onMenuAction = vi.fn();
+    render(
+      <SidekickList
+        sections={sections()}
+        menuActions={(row) => row.id === "row-1" ? ["pin"] : ["archive"]}
+        onMenuAction={onMenuAction}
+        showMenuButtons
+      />,
+    );
+
+    const firstRow = screen.getByText("First").closest("[data-list-item]") as HTMLElement;
+    fireEvent.click(within(firstRow).getByRole("button", { name: "More actions for First" }));
+    fireEvent.click(screen.getByText("Pin to top"));
+
+    expect(onMenuAction).toHaveBeenCalledWith("pin", "row-1");
   });
 });

@@ -23,6 +23,11 @@ import {
   _resetAllPartitionSendControl,
   getPartitionSendControl,
 } from "../../../hooks/use-chat-stream/partition-send-control";
+import {
+  markStreamInterrupted,
+  streamMetaMap,
+  useStreamStore,
+} from "../../../hooks/stream/store";
 
 const mockSubagentOnSend = vi.hoisted(() => vi.fn());
 const mockSubagentOnStop = vi.hoisted(() => vi.fn());
@@ -53,6 +58,9 @@ const sampleHistoryMessages: DisplaySessionEvent[] = [
 vi.mock("@cypher-asi/zui", () => ({
   Text: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
   Badge: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
+  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+    <button {...props}>{children}</button>
+  ),
 }));
 
 vi.mock("../../../hooks/use-subagent-chat-stream", () => ({
@@ -71,6 +79,14 @@ vi.mock("../../../hooks/stream/hooks", () => ({
 
 vi.mock("../../../hooks/use-aura-capabilities", () => ({
   useAuraCapabilities: () => mockUseAuraCapabilities(),
+}));
+
+vi.mock("./UserInputPromptCard", () => ({
+  UserInputPromptCard: () => null,
+}));
+
+vi.mock("../../../components/ReportBugButton", () => ({
+  ReportBugButton: () => <button type="button">Report bug</button>,
 }));
 
 vi.mock("../ChatMessageList", () => ({
@@ -186,6 +202,14 @@ vi.mock("../MessageQueue", () => ({
 }));
 
 vi.mock("../../../stores/message-queue-store", () => ({
+  enqueueQueuedMessage: vi.fn(async () => ({ id: "queued-id" })),
+  prepareNextQueuedMessage: vi.fn(async () => undefined),
+  removeQueuedMessage: vi.fn(async () => {}),
+  resumeQueuedMessages: vi.fn(async () => {}),
+  clearQueuedMessages: (...args: unknown[]) => {
+    mockClearQueue(...args);
+    return Promise.resolve();
+  },
   useMessageQueueStore: {
     getState: () => ({
       enqueue: vi.fn(),
@@ -244,6 +268,8 @@ describe("ChatPanel", () => {
     });
     mockModelPersistence.reset();
     _resetAllPartitionSendControl();
+    streamMetaMap.clear();
+    useStreamStore.setState({ entries: {} });
     useMessageStore.setState({ messages: {}, orderedIds: {} });
     useChatUIStore.setState({ streams: {}, drafts: {} });
     useChatViewStore.setState({ threads: {} });
@@ -407,7 +433,7 @@ describe("ChatPanel", () => {
     expect(getInputBar()).toHaveAttribute("data-visible", "true");
   });
 
-  it("clears the draft and queued messages before starting a new chat", () => {
+  it("clears the draft and queued messages before starting a new chat", async () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
     const onNewChat = vi.fn();
 
@@ -416,14 +442,16 @@ describe("ChatPanel", () => {
     fireEvent.change(input, { target: { value: "draft message" } });
     expect(input.value).toBe("draft message");
 
-    fireEvent.click(screen.getByRole("button", { name: "new chat" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "new chat" }));
+    });
 
     expect(input.value).toBe("");
     expect(mockClearQueue).toHaveBeenCalledWith("stream-1");
     expect(onNewChat).toHaveBeenCalledTimes(1);
   });
 
-  it("focuses the input after pressing the new-chat button on desktop", () => {
+  it("focuses the input after pressing the new-chat button on desktop", async () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
     const onNewChat = vi.fn();
 
@@ -438,7 +466,9 @@ describe("ChatPanel", () => {
     input.blur();
     expect(input).not.toHaveFocus();
 
-    fireEvent.click(screen.getByRole("button", { name: "new chat" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "new chat" }));
+    });
 
     expect(getInputBar()).toHaveFocus();
   });
@@ -972,6 +1002,38 @@ describe("ChatPanel", () => {
       "image",
       undefined,
       undefined,
+    );
+  });
+
+  it("restarts an interrupted post-restart turn from its persisted prompt", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
+    const onSend = vi.fn();
+    const onStop = vi.fn();
+    markStreamInterrupted("stream-1");
+
+    renderPanel({
+      onSend,
+      onStop,
+      defaultModel: "gpt-5.4",
+      historyResolved: true,
+      historyMessages: [
+        { id: "user-1", role: "user", content: "Finish the migration" },
+        {
+          id: "assistant-1",
+          role: "assistant",
+          content: "I updated the schema…",
+          inFlight: true,
+        },
+      ],
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Restart turn" }));
+
+    expect(onStop).toHaveBeenCalledTimes(1);
+    expect(onSend).toHaveBeenCalledWith(
+      "Finish the migration",
+      null,
+      "gpt-5.4",
     );
   });
 

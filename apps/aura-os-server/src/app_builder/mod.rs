@@ -487,6 +487,7 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         event_log,
         live_streams: crate::live_streams::LiveStreamRegistry::from_env(),
         event_hub,
+        desktop_relays: std::sync::Arc::new(crate::desktop_relay::DesktopRelayRegistry::new()),
         loop_registry,
         require_zero_pro: std::env::var("REQUIRE_ZERO_PRO")
             .map(|v| v == "true" || v == "1")

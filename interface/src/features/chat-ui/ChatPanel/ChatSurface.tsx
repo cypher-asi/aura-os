@@ -26,17 +26,24 @@ import { useChatPanelState } from "./useChatPanelState";
 import { findLatestGeneratedImage } from "./latest-generated-image";
 import { appendQueuedDisplayMessages } from "./queued-display-message";
 import { useChatUIStore } from "../../../stores/chat-ui-store";
-import { useMessageQueueStore } from "../../../stores/message-queue-store";
+import { clearQueuedMessages } from "../../../stores/message-queue-store";
+import {
+  cancelChatCommandReplay,
+  resumeChatCommandNow,
+  retryChatCommandNow,
+  useChatCommandOutboxStore,
+} from "../../../stores/chat-command-outbox";
 import {
   useStreamHealth,
   useStuckStreamAutoTimeout,
 } from "../../../hooks/stream/use-stream-health";
-import { createSetters, ensureEntry } from "../../../hooks/stream/store";
+import { createSetters, ensureEntry, getStreamEntry } from "../../../hooks/stream/store";
 import { getLastSendArgs as getLastAgentChatSendArgs } from "../../../hooks/use-agent-chat-stream";
 import { getPartitionSendControl } from "../../../hooks/use-chat-stream/partition-send-control";
 import { recordStreamCloseReason } from "../../../shared/observability/stream-breadcrumbs";
 import { AsideModal } from "./AsideModal";
 import { ToolApprovalPromptCard } from "./ToolApprovalPromptCard";
+import { UserInputPromptCard } from "./UserInputPromptCard";
 import { useErrorReportAgentInfo } from "../../../hooks/use-error-report-agent-info";
 import type { AgentMentionTarget, ChatAttachment } from "../../../api/streams";
 import type { AgentInstance, Project } from "../../../shared/types";
@@ -221,6 +228,7 @@ export function ChatSurface({
     answer?: string;
     error?: string;
   } | null>(null);
+  const [newChatQueueError, setNewChatQueueError] = useState<string | null>(null);
   const asideRequestRef = useRef(0);
   const handleAside = useCallback(
     (question: string) => {
@@ -274,6 +282,8 @@ export function ChatSurface({
     handleQueueEdit,
     handleQueueRemove,
     handleQueueSendNow,
+    handleQueueResume,
+    queuePersistenceError,
     loadOlder,
     isLoadingOlder,
     hasOlderMessages,
@@ -353,8 +363,25 @@ export function ChatSurface({
         partitionArgs.sourceImageUrl,
         partitionArgs.agentMentions,
       );
+      return;
     }
-  }, [onSend, onStop, sendDisabled, streamKey]);
+    // A hard runtime restart loses the in-memory replay cache along with the
+    // active stream. The persisted transcript still has the canonical prompt,
+    // so an explicit user retry can restart it without pretending to resume
+    // the lost execution. Never take this fallback for ordinary errors.
+    if (getStreamEntry(streamKey)?.interruptionReason) {
+      const persistedPrompt = [...(historyMessages ?? [])]
+        .reverse()
+        .find((message) => message.role === "user" && message.content.trim());
+      if (persistedPrompt) {
+        onSend(
+          persistedPrompt.content,
+          null,
+          modelForRetry(streamKey, defaultModel),
+        );
+      }
+    }
+  }, [defaultModel, historyMessages, onSend, onStop, sendDisabled, streamKey]);
 
   const handleStuckStreamAutoTimeout = useCallback(() => {
     onStop();
@@ -380,12 +407,20 @@ export function ChatSurface({
 
   useStuckStreamAutoTimeout(streamHealth, handleStuckStreamAutoTimeout);
 
-  const handleNewChat = useCallback(() => {
+  const handleNewChat = useCallback(async () => {
     if (!onNewChat) return;
     useChatUIStore.getState().setDraft(streamKey, "");
     setAttachments([]);
     setCommands([]);
-    useMessageQueueStore.getState().clear(streamKey);
+    try {
+      await clearQueuedMessages(streamKey);
+      setNewChatQueueError(null);
+    } catch {
+      setNewChatQueueError(
+        "Couldn't safely clear the saved follow-up queue. The current chat was kept open.",
+      );
+      return;
+    }
     onNewChat();
     // Place the cursor back in the input on the fresh canvas. The
     // standing focus effect below only re-fires when `inputFocusReadyRef`
@@ -429,6 +464,27 @@ export function ChatSurface({
 
   const hasBridgeFrame = bridgeMessages.length > 0;
   const renderedMessages = messages.length > 0 ? messages : bridgeMessages;
+  const pendingCommands = useChatCommandOutboxStore((state) => state.commands);
+  const unconfirmedCommands = useMemo(
+    () => pendingCommands.filter((command) =>
+      command.executionStatus === "unconfirmed" &&
+      (command.surface === "project"
+        ? Boolean(currentAgentInstanceId) &&
+          command.agentInstanceId === currentAgentInstanceId
+        : Boolean(agentId) && command.agentId === agentId),
+    ),
+    [pendingCommands, currentAgentInstanceId, agentId],
+  );
+  const failedCommands = useMemo(
+    () => pendingCommands.filter((command) =>
+      command.executionStatus === "failed" &&
+      (command.surface === "project"
+        ? Boolean(currentAgentInstanceId) &&
+          command.agentInstanceId === currentAgentInstanceId
+        : Boolean(agentId) && command.agentId === agentId),
+    ),
+    [pendingCommands, currentAgentInstanceId, agentId],
+  );
   const transcriptMessages = useMemo(
     () => appendQueuedDisplayMessages(renderedMessages, queue),
     [queue, renderedMessages],
@@ -833,6 +889,53 @@ export function ChatSurface({
     >
       {header}
       <div className={styles.chatArea} ref={chatAreaRef}>
+        {failedCommands.length > 0 && (
+          <div className={styles.commandExecutionWarning} role="alert">
+            <span>
+              {failedCommands.length === 1 ? "A prompt was" : `${failedCommands.length} prompts were`}
+              {" "}saved, but the agent run failed. Review this conversation before trying a new prompt.
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                for (const command of failedCommands) {
+                  void cancelChatCommandReplay(command.commandId);
+                }
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+        {unconfirmedCommands.length > 0 && (
+          <div className={styles.commandExecutionWarning} role="alert">
+            <span>
+              {unconfirmedCommands.length === 1 ? "A prompt was" : `${unconfirmedCommands.length} prompts were`}
+              {" "}saved, but the agent run could not be confirmed after reconnecting.
+              Check the receipt or explicitly resume the saved run.
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                for (const command of unconfirmedCommands) {
+                  void retryChatCommandNow(command.commandId);
+                }
+              }}
+            >
+              Check again
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                for (const command of unconfirmedCommands) {
+                  void resumeChatCommandNow(command.commandId);
+                }
+              }}
+            >
+              Resume run
+            </button>
+          </div>
+        )}
         <div className={styles.messageAreaShell}>
           <div
             className={`${styles.messageArea}${isAutoFollowing ? ` ${styles.messageAreaFollowing}` : ` ${styles.messageAreaReading}`}`}
@@ -889,6 +992,7 @@ export function ChatSurface({
               onEdit={handleQueueEdit}
               onRemove={handleQueueRemove}
               onSendNow={handleQueueSendNow}
+              onResume={handleQueueResume}
             />
           </div>
         )}
@@ -898,6 +1002,8 @@ export function ChatSurface({
           onStop={onStop}
           onRetry={handleRetryLastSend}
         />
+
+        <UserInputPromptCard />
 
         <ToolApprovalPromptCard streamKey={streamKey} />
 
@@ -938,6 +1044,7 @@ export function ChatSurface({
           onNewChat={onNewChat ? handleNewChat : undefined}
           sendDisabled={sendDisabled}
           sendDisabledReason={sendDisabledReason}
+          externalValidationMessage={newChatQueueError ?? queuePersistenceError}
         />
       </div>
       {aside ? (

@@ -43,7 +43,10 @@ import {
   keyForProjectSession,
 } from "../stream/store";
 import { STUCK_THRESHOLD_MS } from "../stream/use-stream-health";
-import { useMessageQueueStore } from "../../stores/message-queue-store";
+import {
+  enqueueQueuedMessage,
+  removeQueuedMessage,
+} from "../../stores/message-queue-store";
 import {
   buildUserChatMessage,
   updateUserMessageDeliveryStatus,
@@ -56,6 +59,8 @@ import {
 import type { ActiveStreamSummary } from "../../shared/api/streams";
 import {
   enqueueChatCommand,
+  markChatCommandAccepted,
+  markChatCommandExecutionFailed,
   recordChatCommandFailure,
   removeChatCommand,
   shouldReplayChatCommandError,
@@ -259,7 +264,7 @@ export function useChatStream({
         const lastEventAt = getLastEventAt(getPartitionKey());
         const isStuck =
           lastEventAt != null && Date.now() - lastEventAt >= STUCK_THRESHOLD_MS;
-        useMessageQueueStore.getState().enqueue(getPartitionKey(), {
+        await enqueueQueuedMessage(getPartitionKey(), {
           content: args.content,
           action: args.action ?? null,
           model: args.selectedModel ?? null,
@@ -322,6 +327,7 @@ export function useChatStream({
         ...(!_generationMode ? { deliveryStatus: "sending" as const } : {}),
       };
       let commandAccepted = false;
+      let commandDeliveryClassified = false;
       const updateCommandDelivery = (
         status: (typeof userMsg)["deliveryStatus"] | undefined,
       ) => {
@@ -472,6 +478,7 @@ export function useChatStream({
         onError: (error) => {
           if (controller.signal.aborted) return;
           if (!_generationMode && !commandAccepted) {
+            commandDeliveryClassified = true;
             updateCommandDelivery(
               shouldReplayChatCommandError(error) ? "retrying" : "failed",
             );
@@ -483,6 +490,7 @@ export function useChatStream({
           ? () => {
               if (controller.signal.aborted) return;
               if (!_generationMode && !commandAccepted) {
+                commandDeliveryClassified = true;
                 updateCommandDelivery("retrying");
                 void recordChatCommandFailure(
                   userMsg.clientId ?? userMsg.id,
@@ -501,8 +509,21 @@ export function useChatStream({
             } as unknown as import("../../shared/types/aura-events").AuraEvent);
           }
           commandAccepted = true;
-          void removeChatCommand(receipt.commandId);
-          updateCommandDelivery(undefined);
+          if (receipt.executionStatus === "completed") {
+            void removeChatCommand(receipt.commandId);
+          } else if (receipt.executionStatus === "failed") {
+            void markChatCommandExecutionFailed(receipt.commandId, receipt.sessionId);
+          } else {
+            void markChatCommandAccepted(
+              receipt.commandId,
+              receipt.executionStatus === "unconfirmed" ? "unconfirmed" : "attached",
+              receipt.sessionId,
+            );
+          }
+          updateCommandDelivery(
+            receipt.executionStatus === "unconfirmed" ? "unconfirmed" :
+              receipt.executionStatus === "failed" ? "executionFailed" : undefined,
+          );
         },
       };
 
@@ -737,6 +758,9 @@ export function useChatStream({
           safeWorkspace: safeWorkspaceRef.current,
           originallyStartedNewSession: shouldStartNewSession,
         });
+        if (clientMessageId?.startsWith("q-")) {
+          await removeQueuedMessage(getPartitionKey(), clientMessageId);
+        }
         await api.sendEventStream(
           capturedProjectId,
           capturedInstanceId,
@@ -759,6 +783,7 @@ export function useChatStream({
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         if (!_generationMode && !commandAccepted) {
+          commandDeliveryClassified = true;
           updateCommandDelivery(
             shouldReplayChatCommandError(err) ? "retrying" : "failed",
           );
@@ -784,6 +809,9 @@ export function useChatStream({
         // microtask-deferred `finally` would clobber the new send's
         // latch.
         if (ctrl.currentController === controller) {
+          if (!_generationMode && !commandAccepted && !commandDeliveryClassified) {
+            updateCommandDelivery("failed");
+          }
           partitionSetters.setIsStreaming(false);
           sidekickRef.current.setAgentStreaming(capturedInstanceId, false);
           controller.abort();
@@ -1097,7 +1125,11 @@ export function useChatStream({
     // mode turn leaves the slot held until the 90s SSE idle timeout
     // and the next send appears to "time out" with no error surfaced.
     if (projectId && agentInstanceId) {
-      api.cancelInstanceTurn(projectId, agentInstanceId).catch(() => {});
+      api.cancelInstanceTurn(
+        projectId,
+        agentInstanceId,
+        sessionIdRef.current,
+      ).catch(() => {});
     }
     // The per-partition send-control refactor moved the controller
     // actually wired into the fetch off `streamMetaMap[key].abort`

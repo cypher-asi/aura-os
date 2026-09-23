@@ -65,6 +65,8 @@ export const EventType = {
   ToolUseStart:              "tool_use_start",
   ToolApprovalPrompt:        "tool_approval_prompt",
   ToolApprovalResolved:      "tool_approval_resolved",
+  AgentUserInputRequested:   "agent_user_input_requested",
+  AgentUserInputResolved:    "agent_user_input_resolved",
 
   /**
    * Throttled live-progress heartbeat published by

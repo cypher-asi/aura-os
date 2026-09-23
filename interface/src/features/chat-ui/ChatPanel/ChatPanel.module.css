@@ -7,6 +7,41 @@
   position: relative;
 }
 
+.commandExecutionWarning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+  background: var(--color-overlay-subtle);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.commandExecutionWarning span {
+  min-width: 0;
+}
+
+.commandExecutionWarning button {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  color: var(--color-text);
+  background: var(--color-bg);
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .commandExecutionWarning {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
 /* A single chat thread's full surface (header + chat area + input bar).
    `ChatPanel` stacks two: the parent thread as the base layer and the
    subagent as an absolute slide-over. */

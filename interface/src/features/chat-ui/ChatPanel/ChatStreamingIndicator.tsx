@@ -58,9 +58,10 @@ export const ChatStreamingIndicator = memo(function ChatStreamingIndicator({
   onRetry,
   onReport,
 }: ChatStreamingIndicatorProps) {
-  const { isStreaming, streamingText, thinkingText, toolCalls, progressText } = useStreamStore(
+  const { isStreaming, interruptionReason, streamingText, thinkingText, toolCalls, progressText } = useStreamStore(
     useShallow((state) => ({
       isStreaming: state.entries[streamKey]?.isStreaming ?? false,
+      interruptionReason: state.entries[streamKey]?.interruptionReason ?? null,
       streamingText: state.entries[streamKey]?.streamingText ?? "",
       thinkingText: state.entries[streamKey]?.thinkingText ?? "",
       toolCalls: state.entries[streamKey]?.activeToolCalls ?? EMPTY_TOOL_CALLS,
@@ -73,8 +74,25 @@ export const ChatStreamingIndicator = memo(function ChatStreamingIndicator({
   const nowStreaming =
     isStreaming || !!streamingText || !!thinkingText || toolCalls.length > 0;
 
-  if (!nowStreaming) {
+  if (!nowStreaming && !interruptionReason) {
     return null;
+  }
+
+  if (interruptionReason) {
+    return (
+      <div className={styles.pinnedStreamingIndicator}>
+        <div className={styles.pinnedStreamingIndicatorInner}>
+          <StuckStreamPill
+            interrupted
+            stuckForMs={null}
+            streamKey={streamKey}
+            onStop={onStop ?? (() => {})}
+            onRetry={onRetry ?? (() => {})}
+            onReport={onReport}
+          />
+        </div>
+      </div>
+    );
   }
 
   if (health.isStuck) {

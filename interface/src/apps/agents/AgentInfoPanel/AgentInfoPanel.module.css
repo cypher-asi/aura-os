@@ -659,6 +659,44 @@
   border-color: color-mix(in srgb, var(--color-warning) 30%, var(--color-border));
 }
 
+.mobileRuntimeActions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  gap: 8px;
+}
+
+.mobileRuntimeAction {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mobileRuntimeAction span {
+  display: block;
+  margin-top: 2px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.mobileRuntimeActionPrimary {
+  border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-border));
+}
+
+.mobileRuntimeActionDanger {
+  border-color: color-mix(in srgb, var(--color-error) 55%, var(--color-border));
+}
+
+.mobileRuntimeAction:disabled {
+  opacity: 0.6;
+}
+
 .mobileSkillList {
   display: flex;
   flex-direction: column;

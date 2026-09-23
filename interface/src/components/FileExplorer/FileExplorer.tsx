@@ -63,12 +63,12 @@ export function FileExplorer({
     );
   }
 
-  if (s.error) {
+  if (s.error && s.entries.length === 0) {
     return (
       <PageEmptyState
         icon={<Folder size={32} />}
-        title={getFileExplorerErrorTitle(s.isRemote, s.isHosted)}
-        description={getFileExplorerErrorDescription(s.error, s.isRemote, s.isHosted)}
+        title={getFileExplorerErrorTitle(s.isRemote, s.isHosted, s.errorStatus)}
+        description={getFileExplorerErrorDescription(s.error, s.isRemote, s.isHosted, s.errorStatus)}
       />
     );
   }
@@ -84,18 +84,25 @@ export function FileExplorer({
   }
 
   return (
-    <FileExplorerContent
-      key={
-        hostedWorkspace
-          ? `hosted:${hostedWorkspace.projectId}:${hostedWorkspace.agentInstanceId}`
-          : `${remoteAgentId ?? "local"}:${rootPath ?? ""}`
-      }
-      state={s}
-      rootPath={rootPath}
-      rootLabel={rootLabel}
-      searchQuery={searchQuery}
-      onFileSelect={onFileSelect}
-    />
+    <div className={styles.resultRoot}>
+      {s.error && s.isRemote ? (
+        <div className={styles.staleNotice} role="status">
+          Couldn’t refresh remote files. Showing the last list from this session; opening a file still requires the agent to be online.
+        </div>
+      ) : null}
+      <FileExplorerContent
+        key={
+          hostedWorkspace
+            ? `hosted:${hostedWorkspace.projectId}:${hostedWorkspace.agentInstanceId}`
+            : `${remoteAgentId ?? "local"}:${rootPath ?? ""}`
+        }
+        state={s}
+        rootPath={rootPath}
+        rootLabel={rootLabel}
+        searchQuery={searchQuery}
+        onFileSelect={onFileSelect}
+      />
+    </div>
   );
 }
 

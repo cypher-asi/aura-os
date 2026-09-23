@@ -7,6 +7,7 @@ import type {
   StreamEventHandler,
 } from "../api/streams";
 import { sendAgentEventStream, sendEventStream } from "../api/streams";
+import { getChatCommandStatus } from "../shared/api/chat-commands";
 import { ApiClientError } from "../shared/api/core";
 import { getStoredSession } from "../shared/lib/auth-token";
 import { getResolvedHostOrigin } from "../shared/lib/host-config";
@@ -14,13 +15,16 @@ import {
   BROWSER_DB_STORES,
   browserDbGet,
   browserDbSet,
+  browserDbSetDurable,
 } from "../shared/lib/browser-db";
 import { useStreamStore } from "../hooks/stream/store";
 
 const OUTBOX_KEY = "pending";
 const MAX_OUTBOX_COMMANDS = 50;
 const COMMAND_TTL_MS = 24 * 60 * 60 * 1_000;
+const ACCEPTED_COMMAND_TTL_MS = 7 * COMMAND_TTL_MS;
 const MAX_REPLAY_ATTEMPTS = 8;
+const ACCEPTED_CHECK_DELAY_MS = 15_000;
 
 type CouncilRequest = {
   models: MultiModelSlot[];
@@ -44,6 +48,9 @@ interface ChatCommandBase {
   createdAt: number;
   attempts: number;
   nextAttemptAt: number;
+  /** Saved by Aura, but not yet verified against a durable terminal marker. */
+  accepted?: boolean;
+  executionStatus?: "attached" | "unconfirmed" | "failed";
 }
 
 export interface ProjectChatCommand extends ChatCommandBase {
@@ -76,7 +83,8 @@ export const useChatCommandOutboxStore = create<ChatCommandOutboxProjection>(() 
 type WithoutOutboxMetadata<T> = T extends PendingChatCommand
   ? Omit<
       T,
-      "ownerId" | "hostOrigin" | "createdAt" | "attempts" | "nextAttemptAt"
+      "ownerId" | "hostOrigin" | "createdAt" | "attempts" | "nextAttemptAt" |
+      "accepted" | "executionStatus"
     >
   : never;
 
@@ -86,6 +94,16 @@ let mutationTail: Promise<void> = Promise.resolve();
 let drainPromise: Promise<void> | null = null;
 let retryTimer: ReturnType<typeof setTimeout> | null = null;
 let bootstrapInstalled = false;
+
+export class ChatCommandOutboxUnavailableError extends Error {
+  override name = "ChatCommandOutboxUnavailableError";
+
+  constructor() {
+    super(
+      "Couldn't safely save this message on this device. Free some storage and try again.",
+    );
+  }
+}
 
 function currentOwnerId(): string | null {
   return getStoredSession()?.user_id ?? null;
@@ -101,7 +119,8 @@ function publishCurrentScope(commands: PendingChatCommand[]): void {
           (command) =>
             command.ownerId === ownerId &&
             command.hostOrigin === hostOrigin &&
-            now - command.createdAt < COMMAND_TTL_MS,
+            now - command.createdAt <
+              (command.accepted ? ACCEPTED_COMMAND_TTL_MS : COMMAND_TTL_MS),
         )
       : [],
     hydrated: true,
@@ -110,6 +129,7 @@ function publishCurrentScope(commands: PendingChatCommand[]): void {
 
 function mutateOutbox(
   mutation: (commands: PendingChatCommand[]) => PendingChatCommand[],
+  requireDurableCommit = false,
 ): Promise<void> {
   const work = mutationTail.then(async () => {
     const stored =
@@ -118,11 +138,23 @@ function mutateOutbox(
         OUTBOX_KEY,
       )) ?? [];
     const next = mutation(stored);
-    await browserDbSet(
-      BROWSER_DB_STORES.chatCommandOutbox,
-      OUTBOX_KEY,
-      next,
-    );
+    if (requireDurableCommit) {
+      await browserDbSetDurable(
+        BROWSER_DB_STORES.chatCommandOutbox,
+        OUTBOX_KEY,
+        next,
+      );
+    } else {
+      // Once a command has been durably enqueued, later bookkeeping is
+      // best-effort. If a removal/backoff write fails, replaying the same
+      // command id is safe because the server's acceptance receipt is
+      // idempotent; blocking the UI on cache cleanup would be worse.
+      await browserDbSet(
+        BROWSER_DB_STORES.chatCommandOutbox,
+        OUTBOX_KEY,
+        next,
+      );
+    }
     publishCurrentScope(next);
   });
   mutationTail = work.catch(() => {});
@@ -142,18 +174,25 @@ export async function enqueueChatCommand(command: NewChatCommand): Promise<void>
     attempts: 0,
     nextAttemptAt: now,
   } as PendingChatCommand;
-  await mutateOutbox((commands) => {
-    const live = commands.filter(
-      (item) =>
-        now - item.createdAt < COMMAND_TTL_MS &&
-        !(
-          item.ownerId === ownerId &&
-          item.hostOrigin === hostOrigin &&
-          item.commandId === command.commandId
-        ),
+  try {
+    await mutateOutbox(
+      (commands) => {
+        const live = commands.filter(
+          (item) =>
+            now - item.createdAt < COMMAND_TTL_MS &&
+            !(
+              item.ownerId === ownerId &&
+              item.hostOrigin === hostOrigin &&
+              item.commandId === command.commandId
+            ),
+        );
+        return [...live, pending].slice(-MAX_OUTBOX_COMMANDS);
+      },
+      true,
     );
-    return [...live, pending].slice(-MAX_OUTBOX_COMMANDS);
-  });
+  } catch {
+    throw new ChatCommandOutboxUnavailableError();
+  }
 }
 
 export function removeChatCommand(commandId: string): Promise<void> {
@@ -170,6 +209,49 @@ export function removeChatCommand(commandId: string): Promise<void> {
   );
   setOptimisticDeliveryStatus(commandId, undefined);
   return removal;
+}
+
+/** Keep the accepted command until its agent turn has a durable outcome. */
+export async function markChatCommandAccepted(
+  commandId: string,
+  executionStatus: "attached" | "unconfirmed" = "attached",
+  sessionId?: string | null,
+): Promise<void> {
+  const ownerId = currentOwnerId();
+  if (!ownerId) return;
+  const hostOrigin = getResolvedHostOrigin();
+  const nextAttemptAt = Date.now() + ACCEPTED_CHECK_DELAY_MS;
+  await mutateOutbox((commands) => commands.map((command) =>
+    command.ownerId === ownerId && command.hostOrigin === hostOrigin &&
+    command.commandId === commandId
+      ? { ...command, accepted: true, executionStatus, nextAttemptAt,
+          sessionId: sessionId ?? command.sessionId }
+      : command,
+  ));
+  setOptimisticDeliveryStatus(
+    commandId,
+    executionStatus === "unconfirmed" ? "unconfirmed" : undefined,
+  );
+  scheduleReplay(ACCEPTED_CHECK_DELAY_MS + 50);
+}
+
+/** Preserve a saved prompt's failed run for review instead of losing it. */
+export async function markChatCommandExecutionFailed(
+  commandId: string,
+  sessionId?: string | null,
+): Promise<void> {
+  const ownerId = currentOwnerId();
+  if (!ownerId) return;
+  const hostOrigin = getResolvedHostOrigin();
+  await mutateOutbox((commands) => commands.map((command) =>
+    command.ownerId === ownerId && command.hostOrigin === hostOrigin &&
+    command.commandId === commandId
+      ? { ...command, accepted: true, executionStatus: "failed" as const,
+          sessionId: sessionId ?? command.sessionId,
+          nextAttemptAt: Number.MAX_SAFE_INTEGER }
+      : command,
+  ));
+  setOptimisticDeliveryStatus(commandId, "executionFailed");
 }
 
 /** Stop future replay attempts for a command that has not been acknowledged. */
@@ -198,6 +280,7 @@ export async function retryChatCommandNow(commandId: string): Promise<boolean> {
   if (!ownerId) return false;
   const hostOrigin = getResolvedHostOrigin();
   let found = false;
+  let accepted = false;
   await mutateOutbox((commands) =>
     commands.map((command) => {
       if (
@@ -208,11 +291,12 @@ export async function retryChatCommandNow(commandId: string): Promise<boolean> {
         return command;
       }
       found = true;
+      accepted = Boolean(command.accepted);
       return { ...command, nextAttemptAt: Date.now() };
     }),
   );
   if (!found) return false;
-  setOptimisticDeliveryStatus(commandId, "retrying");
+  setOptimisticDeliveryStatus(commandId, accepted ? "unconfirmed" : "retrying");
   // A drain may already hold an older snapshot that skipped this command.
   // Running again after it settles guarantees the newly eligible row is seen.
   await drainChatCommandOutbox();
@@ -220,7 +304,38 @@ export async function retryChatCommandNow(commandId: string): Promise<boolean> {
   return true;
 }
 
+/** Explicitly resume an accepted command whose execution became unconfirmed
+ * after a server/runtime restart. The server receives the same command id and
+ * session pin, recovers the saved user event, and only starts work after this
+ * user-initiated action. Attachments are recovered from the persisted event,
+ * so the phone does not upload them again. */
+export async function resumeChatCommandNow(commandId: string): Promise<boolean> {
+  const ownerId = currentOwnerId();
+  if (!ownerId) return false;
+  const hostOrigin = getResolvedHostOrigin();
+  const commands =
+    (await browserDbGet<PendingChatCommand[]>(
+      BROWSER_DB_STORES.chatCommandOutbox,
+      OUTBOX_KEY,
+    )) ?? [];
+  const command = commands.find((item) =>
+    item.ownerId === ownerId && item.hostOrigin === hostOrigin &&
+    item.commandId === commandId && item.accepted &&
+    item.executionStatus === "unconfirmed" && Boolean(item.sessionId),
+  );
+  if (!command) return false;
+  await mutateOutbox((items) => items.map((item) =>
+    item.ownerId === ownerId && item.hostOrigin === hostOrigin &&
+    item.commandId === commandId
+      ? { ...item, nextAttemptAt: Number.MAX_SAFE_INTEGER }
+      : item,
+  ));
+  await sendCommandToServer(command, true);
+  return true;
+}
+
 export function shouldReplayChatCommandError(error: unknown): boolean {
+  if (error instanceof ChatCommandOutboxUnavailableError) return false;
   if (!(error instanceof ApiClientError)) return true;
   return (
     error.status === 408 ||
@@ -245,6 +360,7 @@ export async function recordChatCommandFailure(
   const now = Date.now();
   let nextDelay = 1_000;
   let retainedForReplay = false;
+  let acceptedForReplay = false;
   await mutateOutbox((commands) =>
     commands.flatMap((command) => {
       if (
@@ -257,31 +373,36 @@ export async function recordChatCommandFailure(
       // A deterministic rejection (validation, permissions, credits, etc.)
       // must remain a visible failed bubble, not surprise the user later.
       if (
-        !shouldReplayChatCommandError(error) ||
-        command.attempts >= MAX_REPLAY_ATTEMPTS
+        (!command.accepted && !shouldReplayChatCommandError(error)) ||
+        (!command.accepted && command.attempts >= MAX_REPLAY_ATTEMPTS)
       ) {
         return [];
       }
       const attempts = command.attempts + 1;
-      nextDelay = retryDelayMs(attempts);
+      acceptedForReplay = Boolean(command.accepted);
+      nextDelay = command.accepted
+        ? Math.max(ACCEPTED_CHECK_DELAY_MS, retryDelayMs(attempts))
+        : retryDelayMs(attempts);
       retainedForReplay = true;
       return [{
         ...command,
         attempts,
         nextAttemptAt: now + nextDelay,
+        ...(command.accepted ? { executionStatus: "unconfirmed" as const } : {}),
       }];
     }),
   );
   setOptimisticDeliveryStatus(
     commandId,
-    retainedForReplay ? "retrying" : "failed",
+    retainedForReplay ? (acceptedForReplay ? "unconfirmed" : "retrying") : "failed",
   );
   if (retainedForReplay) scheduleReplay(nextDelay + 50);
 }
 
 function setOptimisticDeliveryStatus(
   commandId: string,
-  status: "sending" | "retrying" | "failed" | "cancelled" | undefined,
+  status: "sending" | "retrying" | "unconfirmed" | "executionFailed" |
+    "failed" | "cancelled" | undefined,
 ): void {
   useStreamStore.setState((state) => {
     let changed = false;
@@ -304,7 +425,10 @@ function setOptimisticDeliveryStatus(
   });
 }
 
-async function replayCommand(command: PendingChatCommand): Promise<void> {
+async function sendCommandToServer(
+  command: PendingChatCommand,
+  isResume = false,
+): Promise<void> {
   setOptimisticDeliveryStatus(command.commandId, "sending");
   await new Promise<void>((resolve) => {
     let settled = false;
@@ -313,13 +437,26 @@ async function replayCommand(command: PendingChatCommand): Promise<void> {
       if (settled) return;
       settled = true;
       controller.abort();
-      void work.finally(resolve);
+      void work.then(resolve, resolve);
     };
     const handler: StreamEventHandler = {
       onEvent: () => {},
       onAccepted: (receipt) => {
         if (receipt.commandId !== command.commandId) return;
-        settle(removeChatCommand(command.commandId));
+        if (receipt.executionStatus === "attached" ||
+            receipt.executionStatus === "unconfirmed") {
+          settle(markChatCommandAccepted(
+            command.commandId,
+            receipt.executionStatus,
+            receipt.sessionId,
+          ));
+        } else if (receipt.executionStatus === "failed") {
+          settle(markChatCommandExecutionFailed(command.commandId, receipt.sessionId));
+        } else {
+          // Older servers have no execution-status header. Preserve their
+          // previous receipt behavior rather than polling forever.
+          settle(removeChatCommand(command.commandId));
+        }
       },
       onError: (error) => {
         settle(recordChatCommandFailure(command.commandId, error));
@@ -334,6 +471,7 @@ async function replayCommand(command: PendingChatCommand): Promise<void> {
       },
     };
 
+    const attachments = isResume ? undefined : command.attachments;
     const request = command.surface === "project"
       ? sendEventStream(
           command.projectId,
@@ -341,7 +479,7 @@ async function replayCommand(command: PendingChatCommand): Promise<void> {
           command.content,
           command.action,
           command.model,
-          command.attachments,
+          attachments,
           handler,
           controller.signal,
           command.commands,
@@ -354,13 +492,15 @@ async function replayCommand(command: PendingChatCommand): Promise<void> {
           command.safeWorkspace,
           command.commandId,
           true,
+          command.accepted === true,
+          isResume,
         )
       : sendAgentEventStream(
           command.agentId,
           command.content,
           command.action,
           command.model,
-          command.attachments,
+          attachments,
           handler,
           controller.signal,
           command.commands,
@@ -372,11 +512,47 @@ async function replayCommand(command: PendingChatCommand): Promise<void> {
           command.mixture,
           command.commandId,
           true,
+          command.accepted === true,
+          isResume,
         );
     void request.catch((error) => {
       settle(recordChatCommandFailure(command.commandId, error));
     });
   });
+}
+
+async function replayCommand(command: PendingChatCommand): Promise<void> {
+  if (command.accepted) {
+    // Once the server has acknowledged persistence, polling is a read-only
+    // status check. Never re-upload large attachments or open another turn.
+    if (!command.sessionId) {
+      await markChatCommandAccepted(command.commandId, "unconfirmed");
+      return;
+    }
+    try {
+      const target = command.surface === "project"
+        ? { surface: "project" as const, projectId: command.projectId,
+            agentInstanceId: command.agentInstanceId, sessionId: command.sessionId }
+        : { surface: "agent" as const, agentId: command.agentId,
+            sessionId: command.sessionId };
+      const status = await getChatCommandStatus(target, command.commandId);
+      if (status.executionStatus === "completed") {
+        await removeChatCommand(command.commandId);
+      } else if (status.executionStatus === "failed") {
+        await markChatCommandExecutionFailed(command.commandId, status.sessionId);
+      } else {
+        await markChatCommandAccepted(
+          command.commandId,
+          status.executionStatus,
+          status.sessionId,
+        );
+      }
+    } catch (error) {
+      await recordChatCommandFailure(command.commandId, error);
+    }
+    return;
+  }
+  await sendCommandToServer(command);
 }
 
 export function drainChatCommandOutbox(): Promise<void> {
@@ -393,15 +569,27 @@ export function drainChatCommandOutbox(): Promise<void> {
     const hostOrigin = getResolvedHostOrigin();
     if (!ownerId || (typeof navigator !== "undefined" && !navigator.onLine)) return;
     const now = Date.now();
+    let nextDueAt = Number.POSITIVE_INFINITY;
     for (const command of commands) {
       if (currentOwnerId() !== ownerId) break;
       if (command.ownerId !== ownerId || command.hostOrigin !== hostOrigin) continue;
-      if (now - command.createdAt >= COMMAND_TTL_MS) {
+      if (now - command.createdAt >=
+        (command.accepted ? ACCEPTED_COMMAND_TTL_MS : COMMAND_TTL_MS)) {
         await removeChatCommand(command.commandId);
         continue;
       }
-      if (command.nextAttemptAt > Date.now()) continue;
+      if (command.executionStatus === "failed") continue;
+      if (command.nextAttemptAt > Date.now()) {
+        nextDueAt = Math.min(nextDueAt, command.nextAttemptAt);
+        continue;
+      }
       await replayCommand(command);
+    }
+    // A restored WebView can boot before the saved retry deadline. It must
+    // still wake itself at that deadline; otherwise no future foreground or
+    // network event means an accepted command never gets checked again.
+    if (Number.isFinite(nextDueAt)) {
+      scheduleReplay(Math.max(50, nextDueAt - Date.now() + 50));
     }
   })().finally(() => {
     drainPromise = null;

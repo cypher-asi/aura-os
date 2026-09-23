@@ -2,8 +2,8 @@
 //! task that hosts the desktop-specific routes alongside the shared
 //! `aura_os_server` API surface.
 
-use axum::routing::{get as axum_get, post as axum_post};
 use axum::Router;
+use axum::routing::{get as axum_get, post as axum_post};
 use std::net::TcpListener as StdTcpListener;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -136,6 +136,17 @@ pub(crate) fn spawn_server(
                 }
             };
             let computer_state = computer_use::ComputerUseState::new();
+            // Keep the desktop-local runtime authoritative while allowing
+            // authenticated web/mobile clients to use it through the
+            // control-plane relay (the same model as Codex's local host).
+            let local_api = format!(
+                "http://127.0.0.1:{}",
+                std_listener
+                    .local_addr()
+                    .map(|address| address.port())
+                    .unwrap_or_else(|_| preferred_port())
+            );
+            aura_os_server::spawn_desktop_relay(app_state.clone(), local_api);
             let browser_route_state = app_state.clone();
             // Register the global abort hotkey (Ctrl+Alt+Q) so a user can stop
             // synthetic input even when AURA is unfocused. Best-effort and

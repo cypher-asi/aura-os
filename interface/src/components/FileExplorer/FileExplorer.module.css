@@ -4,6 +4,23 @@
   padding: var(--space-8);
 }
 
+.resultRoot {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.staleNotice {
+  flex-shrink: 0;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .mobileScrollContainer {
   display: block;
   flex: 1;
@@ -169,6 +186,8 @@
 
 .mobileRow {
   display: flex;
+  min-height: 44px;
+  box-sizing: border-box;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);

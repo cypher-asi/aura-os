@@ -10,7 +10,11 @@ vi.mock("@cypher-asi/zui", () => ({
 
 const mockUseAuraCapabilities = vi.fn();
 const mockUseProjectAgentState = vi.fn();
-const mockUseRemoteAgentState = vi.fn();
+const mockUseRemoteAgentVm = vi.fn();
+const mockHandleRuntimeAction = vi.fn(async () => {});
+const mockFetchAgents = vi.fn(async () => {});
+let mockAgentOwnerId = "user-1";
+let mockAgentRecordAvailable = true;
 const mockListSkills = vi.fn();
 const mockListAgentSkills = vi.fn();
 const mockInstallAgentSkill = vi.fn();
@@ -24,8 +28,28 @@ vi.mock("../../apps/chat/components/ChatView/useProjectAgentState", () => ({
   useProjectAgentState: () => mockUseProjectAgentState(),
 }));
 
-vi.mock("../../hooks/use-remote-agent-state", () => ({
-  useRemoteAgentState: () => mockUseRemoteAgentState(),
+vi.mock("../../apps/agents/components/AgentEnvironment/useRemoteAgentVm", () => ({
+  useRemoteAgentVm: () => mockUseRemoteAgentVm(),
+}));
+
+vi.mock("../../apps/agents/stores/agent-store", () => ({
+  useAgentStore: (selector: (state: {
+    agents: Array<{ agent_id: string; user_id: string }>;
+    agentsStatus: string;
+    fetchAgents: typeof mockFetchAgents;
+  }) => unknown) => selector({
+    agents: mockAgentRecordAvailable ? [{ agent_id: "agent-1", user_id: mockAgentOwnerId }] : [],
+    agentsStatus: "ready",
+    fetchAgents: mockFetchAgents,
+  }),
+}));
+
+vi.mock("../../stores/auth-store", () => ({
+  useAuthStore: (selector: (state: {
+    user: { user_id: string; network_user_id: string };
+  }) => unknown) => selector({
+    user: { user_id: "user-1", network_user_id: "network-user-1" },
+  }),
 }));
 
 vi.mock("../../api/client", () => ({
@@ -43,6 +67,10 @@ vi.mock("../../components/Avatar", () => ({
   Avatar: ({ name }: { name: string }) => <div>{name}</div>,
 }));
 
+vi.mock("../../components/RemoteLogsPanel", () => ({
+  RemoteLogsPanel: () => <div>VM logs</div>,
+}));
+
 vi.mock("../../apps/agents/AgentInfoPanel/agent-info-utils", () => ({
   formatAdapterLabel: () => "Codex CLI",
   formatAuthSourceLabel: () => "Managed by Aura",
@@ -57,6 +85,8 @@ import { ProjectAgentDetailsView } from "./ProjectAgentDetailsView";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockAgentOwnerId = "user-1";
+  mockAgentRecordAvailable = true;
   mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
   mockUseProjectAgentState.mockReturnValue({
     selectedProjectAgent: {
@@ -74,15 +104,20 @@ beforeEach(() => {
     agentDisplayName: "Builder Bot",
     contextUsagePercent: 42,
   });
-  mockUseRemoteAgentState.mockReturnValue({
-    data: {
+  mockUseRemoteAgentVm.mockReturnValue({
+    vmState: {
       state: "running",
       uptime_seconds: 4000,
       active_sessions: 2,
       endpoint: "ssh://builder-bot.remote",
     },
-    loading: false,
-    error: null,
+    remoteStateError: null,
+    remoteStateRecoverable: true,
+    recoveryNotice: null,
+    pendingRecovery: false,
+    actionLoading: null,
+    actionError: null,
+    handleAction: mockHandleRuntimeAction,
   });
   mockListSkills.mockResolvedValue([
     {
@@ -143,6 +178,81 @@ describe("ProjectAgentDetailsView", () => {
 
     await user.click(screen.getByRole("button", { name: /Remove github/i }));
     await waitFor(() => expect(mockUninstallAgentSkill).toHaveBeenCalledWith("agent-1", "github"));
+  });
+
+  it("lets the owner control the project agent's remote runtime", async () => {
+    const user = userEvent.setup();
+    render(
+      <Routes>
+        <Route path="/projects/:projectId/agents/:agentInstanceId/details" element={<ProjectAgentDetailsView />} />
+      </Routes>,
+      { routerProps: { initialEntries: ["/projects/proj-1/agents/agent-inst-1/details"] } },
+    );
+
+    await user.click(screen.getByRole("button", { name: /Show runtime/i }));
+    expect(screen.getByText("Remote agent is running")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Hibernate/i }));
+    expect(mockHandleRuntimeAction).toHaveBeenCalledWith("hibernate");
+  });
+
+  it("keeps a teammate's project agent runtime read only", async () => {
+    mockAgentOwnerId = "teammate-1";
+    const user = userEvent.setup();
+    render(
+      <Routes>
+        <Route path="/projects/:projectId/agents/:agentInstanceId/details" element={<ProjectAgentDetailsView />} />
+      </Routes>,
+      { routerProps: { initialEntries: ["/projects/proj-1/agents/agent-inst-1/details"] } },
+    );
+
+    await user.click(screen.getByRole("button", { name: /Show runtime/i }));
+    expect(screen.getByText("Remote agent is running")).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Remote runtime controls" })).not.toBeInTheDocument();
+  });
+
+  it("keeps controls hidden when the canonical agent owner is unavailable", async () => {
+    mockAgentRecordAvailable = false;
+    const user = userEvent.setup();
+    render(
+      <Routes>
+        <Route path="/projects/:projectId/agents/:agentInstanceId/details" element={<ProjectAgentDetailsView />} />
+      </Routes>,
+      { routerProps: { initialEntries: ["/projects/proj-1/agents/agent-inst-1/details"] } },
+    );
+
+    await user.click(screen.getByRole("button", { name: /Show runtime/i }));
+    expect(screen.getByText("Remote agent is running")).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Remote runtime controls" })).not.toBeInTheDocument();
+    expect(mockFetchAgents).toHaveBeenCalledWith({ force: true });
+  });
+
+  it("hides project runtime controls after a non-recoverable auth error", async () => {
+    mockUseRemoteAgentVm.mockReturnValue({
+      vmState: {
+        state: "error",
+        uptime_seconds: 4000,
+        active_sessions: 2,
+        error_message: "Your session expired.",
+      },
+      remoteStateError: "Your session expired.",
+      remoteStateRecoverable: false,
+      recoveryNotice: null,
+      pendingRecovery: false,
+      actionLoading: null,
+      actionError: null,
+      handleAction: mockHandleRuntimeAction,
+    });
+    const user = userEvent.setup();
+    render(
+      <Routes>
+        <Route path="/projects/:projectId/agents/:agentInstanceId/details" element={<ProjectAgentDetailsView />} />
+      </Routes>,
+      { routerProps: { initialEntries: ["/projects/proj-1/agents/agent-inst-1/details"] } },
+    );
+
+    await user.click(screen.getByRole("button", { name: /Show runtime/i }));
+    expect(screen.getAllByText("Your session expired.")).toHaveLength(1);
+    expect(screen.queryByRole("group", { name: "Remote runtime controls" })).not.toBeInTheDocument();
   });
 
   it("redirects desktop layouts back to project chat", () => {

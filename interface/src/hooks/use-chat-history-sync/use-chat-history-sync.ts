@@ -25,8 +25,15 @@ import { useShallow } from "zustand/react/shallow";
 import { useChatHistoryStore, useChatHistory } from "../../stores/chat-history-store";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { useIsStreaming } from "../stream/hooks";
-import { getIsStreaming, getStreamEntry } from "../stream/store";
+import {
+  clearStreamInterrupted,
+  getIsStreaming,
+  getStreamEntry,
+  markStreamInterrupted,
+} from "../stream/store";
 import { getIsReattaching } from "../stream/partition-state";
+import { api } from "../../api/client";
+import { selectReattachableChatStream } from "../../api/streams";
 import { useEventStore } from "../../stores/event-store/index";
 import { isAuraCaptureSessionActive } from "../../lib/screenshot-bridge";
 import { EventType } from "../../shared/types/aura-events";
@@ -552,12 +559,11 @@ export function useChatHistorySync({
     streamKey,
   ]);
 
-  // Mid-turn refresh recovery: when the server reports an in-flight
-  // assistant turn for the agent we are watching, re-arm
-  // `streamingAgentInstanceId` so SpecList / TaskList / ChatPanel keep
-  // rendering the streaming affordances after a hard reload. The flag
-  // is cleared again when the in-flight marker disappears (turn ended)
-  // or when a local stream takes over via `useChatStream.sendMessage`.
+  // Mid-turn refresh recovery: retain the working affordances only while the
+  // server can still prove that the canonical session has an attachable
+  // execution. A successful active-stream response with no match means the
+  // environment-owned run was lost (for example, by a server restart). A
+  // failed lookup remains unknown and must not be presented as interruption.
   const inFlightRecoveryRef = useRef<string | null>(null);
   // Per-hook tracking of placeholder ids we have re-pushed from the
   // server-reported in-flight turn. Carries the same role
@@ -567,19 +573,27 @@ export function useChatHistorySync({
   // pending id is already tracked here.
   const recoveredPendingSpecIdsRef = useRef<string[]>([]);
   const recoveredPendingTaskIdsRef = useRef<string[]>([]);
+  const reconciledInFlightTurnRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!watchAgentInstanceId) return;
+    if (historyStatus !== "ready") return;
     const trailing = findTrailingInFlightAssistant(historyMessages);
     const sidekick = useSidekickStore.getState();
     if (trailing) {
       const localStream = getStreamEntry(streamKey);
       const localIsStreaming = !!localStream?.isStreaming;
-      if (localIsStreaming) return;
-      if (!sidekick.streamingAgentInstanceIds.includes(watchAgentInstanceId)) {
+      if (localIsStreaming) {
+        clearStreamInterrupted(streamKey);
+        return;
+      }
+      if (
+        watchAgentInstanceId &&
+        !localStream?.interruptionReason &&
+        !sidekick.streamingAgentInstanceIds.includes(watchAgentInstanceId)
+      ) {
         sidekick.setAgentStreaming(watchAgentInstanceId, true);
       }
-      inFlightRecoveryRef.current = watchAgentInstanceId;
-      if (projectIdForSidekick) {
+      inFlightRecoveryRef.current = watchAgentInstanceId ?? null;
+      if (watchAgentInstanceId && projectIdForSidekick) {
         rebuildPendingArtifactsFromHistory(
           historyMessages,
           projectIdForSidekick,
@@ -590,7 +604,62 @@ export function useChatHistorySync({
           },
         );
       }
+
+      if (!watchSessionId) return;
+      const reconciliationKey = `${watchSessionId}:${trailing.id}`;
+      if (reconciledInFlightTurnRef.current === reconciliationKey) return;
+      reconciledInFlightTurnRef.current = reconciliationKey;
+      let cancelled = false;
+      let completed = false;
+      void (async () => {
+        try {
+          const { streams } = await api.streams.listActiveStreams(
+            watchAgentInstanceId
+              ? { agent_instance_id: watchAgentInstanceId }
+              : {},
+          );
+          if (cancelled) return;
+          const active = selectReattachableChatStream(streams, watchSessionId);
+          if (active) {
+            completed = true;
+            clearStreamInterrupted(streamKey);
+            return;
+          }
+
+          completed = true;
+          markStreamInterrupted(streamKey);
+          if (watchAgentInstanceId) {
+            useSidekickStore
+              .getState()
+              .setAgentStreaming(watchAgentInstanceId, false);
+            if (inFlightRecoveryRef.current === watchAgentInstanceId) {
+              inFlightRecoveryRef.current = null;
+            }
+          }
+          recoveredPendingSpecIdsRef.current = [];
+          recoveredPendingTaskIdsRef.current = [];
+        } catch {
+          // Connectivity failure is not evidence that the execution ended.
+          // Leave recovery state intact so a later refresh can reattach.
+          if (
+            !cancelled &&
+            reconciledInFlightTurnRef.current === reconciliationKey
+          ) {
+            reconciledInFlightTurnRef.current = null;
+          }
+        }
+      })();
+      return () => {
+        cancelled = true;
+        if (
+          !completed &&
+          reconciledInFlightTurnRef.current === reconciliationKey
+        ) {
+          reconciledInFlightTurnRef.current = null;
+        }
+      };
     } else if (
+      watchAgentInstanceId &&
       inFlightRecoveryRef.current === watchAgentInstanceId &&
       sidekick.streamingAgentInstanceIds.includes(watchAgentInstanceId)
     ) {
@@ -603,7 +672,18 @@ export function useChatHistorySync({
       recoveredPendingSpecIdsRef.current = [];
       recoveredPendingTaskIdsRef.current = [];
     }
-  }, [historyMessages, streamKey, watchAgentInstanceId, projectIdForSidekick]);
+    if (!trailing) {
+      reconciledInFlightTurnRef.current = null;
+      clearStreamInterrupted(streamKey);
+    }
+  }, [
+    historyMessages,
+    historyStatus,
+    streamKey,
+    watchAgentInstanceId,
+    watchSessionId,
+    projectIdForSidekick,
+  ]);
 
   // After invalidateHistory the entry keeps status "ready" with fetchedAt=0
   // while the background re-fetch is in flight. Treat this as unresolved so

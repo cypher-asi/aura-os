@@ -214,7 +214,7 @@ describe("sendAgentEventStream", () => {
     await sendAgentEventStream(
       "a1", "hello", null, undefined, undefined, handler,
       undefined, undefined, undefined, false, "session-1", undefined,
-      undefined, undefined, "command-1", true,
+      undefined, undefined, "command-1", true, true, true,
     );
 
     const [, init, , , options] = streamSSE.mock.calls[0] as [
@@ -225,6 +225,8 @@ describe("sendAgentEventStream", () => {
       { onResponse: (response: Response) => void },
     ];
     expect((init.headers as Record<string, string>)["X-Aura-Command-Replay"]).toBe("1");
+    expect((init.headers as Record<string, string>)["X-Aura-Command-Previously-Accepted"]).toBe("1");
+    expect((init.headers as Record<string, string>)["X-Aura-Command-Resume"]).toBe("1");
     options.onResponse(new Response(null, {
       headers: {
         "x-aura-chat-persisted": "true",
@@ -233,6 +235,7 @@ describe("sendAgentEventStream", () => {
         "x-aura-chat-project-id": "project-1",
         "x-aura-attach-id": "attach-1",
         "x-aura-chat-command-replayed": "true",
+        "x-aura-chat-execution-status": "unconfirmed",
       },
     }));
     expect(handler.onAccepted).toHaveBeenCalledWith({
@@ -241,6 +244,7 @@ describe("sendAgentEventStream", () => {
       projectId: "project-1",
       attachId: "attach-1",
       replayed: true,
+      executionStatus: "unconfirmed",
     });
   });
 

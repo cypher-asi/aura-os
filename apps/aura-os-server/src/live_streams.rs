@@ -19,13 +19,13 @@
 //! streams linger for a TTL so a client that reconnects just after the
 //! final frame still receives the tail of the output.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex, Weak};
 use std::time::{Duration, Instant};
 
 use dashmap::DashMap;
 use serde::Serialize;
-use tokio::sync::{broadcast, Mutex as AsyncMutex};
+use tokio::sync::{broadcast, oneshot, Mutex as AsyncMutex};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, warn};
 
@@ -51,6 +51,76 @@ pub const DEFAULT_STREAM_TTL_SECS: u64 = 300;
 /// Env var overriding [`DEFAULT_STREAM_TTL_SECS`].
 pub const STREAM_TTL_SECS_ENV: &str = "AURA_STREAM_TTL_SECS";
 const CHAT_COMMAND_RECEIPT_TTL: Duration = Duration::from_secs(24 * 60 * 60);
+const USER_INPUT_RECEIPT_TTL: Duration = Duration::from_secs(24 * 60 * 60);
+const USER_INPUT_PENDING_TTL: Duration = Duration::from_secs(31 * 60);
+
+/// One selectable answer advertised by Aura's `request_user_input` tool.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, serde::Deserialize)]
+pub struct UserInputQuestionOption {
+    pub label: String,
+    pub description: String,
+}
+
+/// A typed question that can be answered by any authenticated Aura client.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, serde::Deserialize)]
+pub struct UserInputQuestion {
+    pub id: String,
+    pub header: String,
+    pub question: String,
+    pub options: Vec<UserInputQuestionOption>,
+    #[serde(default)]
+    pub multi_select: bool,
+}
+
+/// Wire answer shape. Single-select/free-text questions use a string;
+/// multi-select questions use a non-empty string array.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, serde::Deserialize)]
+#[serde(untagged)]
+pub enum UserInputAnswer {
+    Single(String),
+    Multiple(Vec<String>),
+}
+
+pub type UserInputAnswers = HashMap<String, UserInputAnswer>;
+
+/// Safe cold-start projection of an unresolved question. The owner id stays
+/// private in the registry and is used only for authorization filtering.
+#[derive(Clone, Debug, Serialize)]
+pub struct PendingUserInputSummary {
+    pub request_id: String,
+    pub questions: Vec<UserInputQuestion>,
+    pub agent_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub agent_instance_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<String>,
+    pub started_at_ms: i64,
+}
+
+struct PendingUserInputResolution {
+    sender: Option<oneshot::Sender<UserInputAnswers>>,
+    answers: Option<UserInputAnswers>,
+}
+
+struct PendingUserInput {
+    owner_id: String,
+    summary: PendingUserInputSummary,
+    resolution: Mutex<PendingUserInputResolution>,
+    created_at: Instant,
+}
+
+struct UserInputReceipt {
+    owner_id: String,
+    answers: UserInputAnswers,
+    recorded_at: Instant,
+}
+
+pub struct UserInputRegistration {
+    pub summary: PendingUserInputSummary,
+    pub receiver: oneshot::Receiver<UserInputAnswers>,
+}
 
 /// Kind of harness flow a stream represents. Lets the client route a
 /// reattached stream back into the right UI surface.
@@ -347,15 +417,118 @@ impl LiveStream {
 
     /// Build the listing summary for `GET /api/streams/active`.
     pub fn summary(&self) -> ActiveStreamSummary {
+        let terminated = self.is_terminated();
+        let events = if terminated {
+            Vec::new()
+        } else {
+            self.events.snapshot_values()
+        };
         ActiveStreamSummary {
             attach_id: self.attach_id.clone(),
             kind: self.kind,
             scope: self.scope.clone(),
             latest_seq: self.events.latest_seq(),
-            terminated: self.is_terminated(),
+            terminated,
             started_at_ms: self.started_at_ms,
+            activity: current_activity(&events),
+            active_subagent_count: active_subagent_count(&events),
         }
     }
+}
+
+/// Return a content-free description of the newest useful harness frame.
+/// This powers mobile activity surfaces without exposing prompts, model
+/// output, command text, file paths, or tool arguments in a shell-level
+/// snapshot.
+fn current_activity(events: &[Arc<serde_json::Value>]) -> Option<String> {
+    events
+        .iter()
+        .rev()
+        .find_map(|value| redacted_stream_activity(value))
+}
+
+/// Count live child runs without exposing their ids, prompts, models, or
+/// failure reasons. This shell projection deliberately stays within the
+/// bounded replay ring. If an old spawn ages out without a newer running
+/// status, the count fails closed by under-reporting rather than retaining
+/// stale or sensitive child metadata elsewhere.
+fn active_subagent_count(events: &[Arc<serde_json::Value>]) -> usize {
+    let mut active = HashSet::new();
+    for value in events {
+        let event_type = value.get("type").and_then(|entry| entry.as_str());
+        let child_run_id = value
+            .get("child_run_id")
+            .and_then(|entry| entry.as_str())
+            .filter(|entry| !entry.is_empty());
+        match (event_type, child_run_id) {
+            (Some("subagent_spawned"), Some(child_run_id)) => {
+                active.insert(child_run_id.to_string());
+            }
+            (Some("subagent_status"), Some(child_run_id)) => {
+                if value.get("state").and_then(|entry| entry.as_str()) == Some("running") {
+                    active.insert(child_run_id.to_string());
+                } else {
+                    active.remove(child_run_id);
+                }
+            }
+            _ => {}
+        }
+    }
+    active.len()
+}
+
+fn redacted_stream_activity(value: &serde_json::Value) -> Option<String> {
+    let event_type = value.get("type").and_then(|entry| entry.as_str())?;
+    let label = match event_type {
+        "tool_approval_prompt" => "Waiting for approval",
+        "agent_user_input_requested" => "Waiting for your answer",
+        "thinking_delta" => "Thinking",
+        "text_delta" => "Responding",
+        "assistant_message_start" => "Starting response",
+        "tool_result" => "Reviewing tool results",
+        "subagent_spawned" => "Coordinating agents",
+        "subagent_status" => {
+            if value.get("state").and_then(|entry| entry.as_str()) == Some("running") {
+                "Coordinating agents"
+            } else {
+                "Reviewing agent results"
+            }
+        }
+        "tool_use_start" | "tool_call_snapshot" => {
+            return Some(tool_activity_label(
+                value.get("name").and_then(|entry| entry.as_str()),
+            ));
+        }
+        "progress" => {
+            let stage = value.get("stage").and_then(|entry| entry.as_str());
+            if stage == Some("tool_running") {
+                return Some(tool_activity_label(
+                    value.get("tool_name").and_then(|entry| entry.as_str()),
+                ));
+            }
+            if matches!(stage, Some("forked_for_context" | "auto_fork")) {
+                "Managing context"
+            } else {
+                return None;
+            }
+        }
+        _ => return None,
+    };
+    Some(label.to_string())
+}
+
+fn tool_activity_label(name: Option<&str>) -> String {
+    let label = match name.unwrap_or_default().to_ascii_lowercase().as_str() {
+        "read_file" | "list_files" | "find_files" | "search_code" | "stat_file" => {
+            "Inspecting code"
+        }
+        "write_file" | "edit_file" | "apply_patch" => "Editing code",
+        "run_command" | "run_terminal" | "shell" | "terminal" => "Running a command",
+        "task" | "send_to_agent" | "list_agents" | "council" => "Coordinating agents",
+        "web_search" | "web_fetch" | "browser" => "Researching",
+        _ => "Using a tool",
+    };
+    label.to_string()
 }
 
 /// JSON row in the `GET /api/streams/active` response.
@@ -367,6 +540,16 @@ pub struct ActiveStreamSummary {
     pub latest_seq: u64,
     pub terminated: bool,
     pub started_at_ms: i64,
+    /// Content-free current activity suitable for mobile shell surfaces.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub activity: Option<String>,
+    /// Number of child agents currently running under this parent turn.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub active_subagent_count: usize,
+}
+
+fn is_zero(value: &usize) -> bool {
+    *value == 0
 }
 
 /// User-facing identity for an unresolved protected-tool request.
@@ -403,6 +586,8 @@ pub struct LiveStreamRegistry {
     inner: DashMap<AttachId, Arc<LiveStream>>,
     chat_command_receipts: DashMap<String, ChatCommandReceipt>,
     chat_command_locks: DashMap<String, Weak<AsyncMutex<()>>>,
+    pending_user_inputs: DashMap<String, Arc<PendingUserInput>>,
+    user_input_receipts: DashMap<String, UserInputReceipt>,
     stream_capacity: usize,
     ttl: Duration,
 }
@@ -424,6 +609,8 @@ impl LiveStreamRegistry {
             inner: DashMap::new(),
             chat_command_receipts: DashMap::new(),
             chat_command_locks: DashMap::new(),
+            pending_user_inputs: DashMap::new(),
+            user_input_receipts: DashMap::new(),
             stream_capacity,
             ttl: Duration::from_secs(ttl_secs),
         });
@@ -601,6 +788,149 @@ impl LiveStreamRegistry {
         })
     }
 
+    /// Register one environment-owned structured question and return the
+    /// receiver the installed tool handler waits on. The prompt remains
+    /// discoverable independently of the originating HTTP client.
+    pub fn register_user_input(
+        &self,
+        owner_id: String,
+        agent_id: String,
+        project_id: Option<String>,
+        agent_instance_id: Option<String>,
+        session_id: Option<String>,
+        questions: Vec<UserInputQuestion>,
+    ) -> UserInputRegistration {
+        let request_id = uuid::Uuid::new_v4().to_string();
+        let summary = PendingUserInputSummary {
+            request_id: request_id.clone(),
+            questions,
+            agent_id,
+            project_id,
+            agent_instance_id,
+            session_id,
+            started_at_ms: chrono::Utc::now().timestamp_millis(),
+        };
+        let (sender, receiver) = oneshot::channel();
+        self.pending_user_inputs.insert(
+            request_id,
+            Arc::new(PendingUserInput {
+                owner_id,
+                summary: summary.clone(),
+                resolution: Mutex::new(PendingUserInputResolution {
+                    sender: Some(sender),
+                    answers: None,
+                }),
+                created_at: Instant::now(),
+            }),
+        );
+        UserInputRegistration { summary, receiver }
+    }
+
+    /// Resolve an outstanding question by opaque request id. Answers are
+    /// validated against the original typed questions and duplicate retries
+    /// are idempotent when they carry the same payload.
+    pub fn respond_to_user_input(
+        &self,
+        owner_id: &str,
+        request_id: &str,
+        answers: UserInputAnswers,
+    ) -> Result<(), String> {
+        if let Some(receipt) = self.user_input_receipts.get(request_id) {
+            if receipt.owner_id != owner_id {
+                return Err("user input request is not owned by this account".to_string());
+            }
+            return if receipt.answers == answers {
+                Ok(())
+            } else {
+                Err("user input request was already answered differently".to_string())
+            };
+        }
+
+        let pending = self
+            .pending_user_inputs
+            .get(request_id)
+            .map(|entry| entry.value().clone())
+            .ok_or_else(|| "pending user input request not found".to_string())?;
+        if pending.owner_id != owner_id {
+            return Err("user input request is not owned by this account".to_string());
+        }
+        validate_user_input_answers(&pending.summary.questions, &answers)?;
+
+        let mut resolution = pending
+            .resolution
+            .lock()
+            .expect("pending user input resolution poisoned");
+        if let Some(existing) = resolution.answers.as_ref() {
+            return if existing == &answers {
+                Ok(())
+            } else {
+                Err("user input request was already answered differently".to_string())
+            };
+        }
+        let sender = resolution
+            .sender
+            .take()
+            .ok_or_else(|| "agent is no longer waiting for this answer".to_string())?;
+        sender
+            .send(answers.clone())
+            .map_err(|_| "agent is no longer waiting for this answer".to_string())?;
+        resolution.answers = Some(answers);
+        Ok(())
+    }
+
+    /// Move a delivered answer into the bounded idempotency receipt table.
+    pub fn finish_user_input(&self, request_id: &str) {
+        let Some((_, pending)) = self.pending_user_inputs.remove(request_id) else {
+            return;
+        };
+        let answers = pending
+            .resolution
+            .lock()
+            .expect("pending user input resolution poisoned")
+            .answers
+            .clone();
+        if let Some(answers) = answers {
+            self.user_input_receipts.insert(
+                request_id.to_string(),
+                UserInputReceipt {
+                    owner_id: pending.owner_id.clone(),
+                    answers,
+                    recorded_at: Instant::now(),
+                },
+            );
+        }
+    }
+
+    pub fn cancel_user_input(&self, request_id: &str) {
+        self.pending_user_inputs.remove(request_id);
+    }
+
+    pub fn list_pending_user_inputs(&self, owner_id: &str) -> Vec<PendingUserInputSummary> {
+        let mut prompts: Vec<_> = self
+            .pending_user_inputs
+            .iter()
+            .filter_map(|entry| {
+                let pending = entry.value();
+                if pending.owner_id != owner_id {
+                    return None;
+                }
+                let resolution = pending
+                    .resolution
+                    .lock()
+                    .expect("pending user input resolution poisoned");
+                (resolution.answers.is_none()
+                    && resolution
+                        .sender
+                        .as_ref()
+                        .map(|sender| !sender.is_closed())
+                        .unwrap_or(false))
+                .then(|| pending.summary.clone())
+            })
+            .collect();
+        prompts.sort_by(|left, right| right.started_at_ms.cmp(&left.started_at_ms));
+        prompts
+    }
+
     /// Find the most recently-registered, still-live subagent stream for
     /// a child run id. Used by the prompt-into-subagent endpoint to send
     /// a follow-up turn into a running child thread. Prefers a
@@ -718,9 +1048,61 @@ impl LiveStreamRegistry {
                 });
                 self.chat_command_locks
                     .retain(|_, lock| lock.strong_count() > 0);
+                self.user_input_receipts.retain(|_, receipt| {
+                    now.duration_since(receipt.recorded_at) < USER_INPUT_RECEIPT_TTL
+                });
+                self.pending_user_inputs.retain(|_, pending| {
+                    if now.duration_since(pending.created_at) >= USER_INPUT_PENDING_TTL {
+                        return false;
+                    }
+                    let resolution = pending
+                        .resolution
+                        .lock()
+                        .expect("pending user input resolution poisoned");
+                    resolution.answers.is_some()
+                        || resolution
+                            .sender
+                            .as_ref()
+                            .map(|sender| !sender.is_closed())
+                            .unwrap_or(false)
+                });
             }
         });
     }
+}
+
+fn validate_user_input_answers(
+    questions: &[UserInputQuestion],
+    answers: &UserInputAnswers,
+) -> Result<(), String> {
+    if answers.len() != questions.len() {
+        return Err("every user input question requires exactly one answer".to_string());
+    }
+    for question in questions {
+        let answer = answers
+            .get(&question.id)
+            .ok_or_else(|| format!("missing answer for question `{}`", question.id))?;
+        match (question.multi_select, answer) {
+            (false, UserInputAnswer::Single(value)) if !value.trim().is_empty() => {}
+            (true, UserInputAnswer::Multiple(values))
+                if !values.is_empty()
+                    && values.len() <= 10
+                    && values.iter().all(|value| !value.trim().is_empty()) => {}
+            (false, _) => {
+                return Err(format!(
+                    "question `{}` requires one non-empty string answer",
+                    question.id
+                ));
+            }
+            (true, _) => {
+                return Err(format!(
+                    "question `{}` requires a non-empty string array answer",
+                    question.id
+                ));
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Shared forwarder body for [`LiveStreamRegistry::register`] and
@@ -826,9 +1208,140 @@ mod tests {
             inner: DashMap::new(),
             chat_command_receipts: DashMap::new(),
             chat_command_locks: DashMap::new(),
+            pending_user_inputs: DashMap::new(),
+            user_input_receipts: DashMap::new(),
             stream_capacity: 64,
             ttl: Duration::from_secs(300),
         })
+    }
+
+    fn sample_questions() -> Vec<UserInputQuestion> {
+        vec![
+            UserInputQuestion {
+                id: "environment".to_string(),
+                header: "Environment".to_string(),
+                question: "Where should I run this?".to_string(),
+                options: vec![
+                    UserInputQuestionOption {
+                        label: "Hosted".to_string(),
+                        description: "Run on Aura's hosted environment.".to_string(),
+                    },
+                    UserInputQuestionOption {
+                        label: "Desktop".to_string(),
+                        description: "Run on the connected desktop.".to_string(),
+                    },
+                ],
+                multi_select: false,
+            },
+            UserInputQuestion {
+                id: "checks".to_string(),
+                header: "Checks".to_string(),
+                question: "Which checks should I run?".to_string(),
+                options: vec![
+                    UserInputQuestionOption {
+                        label: "Tests".to_string(),
+                        description: "Run the focused test suite.".to_string(),
+                    },
+                    UserInputQuestionOption {
+                        label: "Lint".to_string(),
+                        description: "Run the relevant lint checks.".to_string(),
+                    },
+                ],
+                multi_select: true,
+            },
+        ]
+    }
+
+    #[tokio::test]
+    async fn structured_user_input_is_owner_scoped_and_idempotent() {
+        let registry = test_registry();
+        let registration = registry.register_user_input(
+            "owner".to_string(),
+            "agent-1".to_string(),
+            Some("project-1".to_string()),
+            Some("instance-1".to_string()),
+            Some("session-1".to_string()),
+            sample_questions(),
+        );
+        let request_id = registration.summary.request_id.clone();
+        assert!(registry.list_pending_user_inputs("someone-else").is_empty());
+        assert_eq!(registry.list_pending_user_inputs("owner").len(), 1);
+
+        let answers = HashMap::from([
+            (
+                "environment".to_string(),
+                UserInputAnswer::Single("Hosted".to_string()),
+            ),
+            (
+                "checks".to_string(),
+                UserInputAnswer::Multiple(vec!["Tests".to_string(), "Lint".to_string()]),
+            ),
+        ]);
+        assert!(registry
+            .respond_to_user_input("someone-else", &request_id, answers.clone())
+            .is_err());
+        registry
+            .respond_to_user_input("owner", &request_id, answers.clone())
+            .expect("owner should resolve the question");
+        assert!(registry.list_pending_user_inputs("owner").is_empty());
+        assert_eq!(registration.receiver.await.unwrap(), answers);
+
+        registry.finish_user_input(&request_id);
+        registry
+            .respond_to_user_input("owner", &request_id, answers.clone())
+            .expect("same retry should use the receipt");
+        let changed = HashMap::from([
+            (
+                "environment".to_string(),
+                UserInputAnswer::Single("Desktop".to_string()),
+            ),
+            (
+                "checks".to_string(),
+                UserInputAnswer::Multiple(vec!["Tests".to_string()]),
+            ),
+        ]);
+        assert!(registry
+            .respond_to_user_input("owner", &request_id, changed)
+            .unwrap_err()
+            .contains("differently"));
+    }
+
+    #[test]
+    fn structured_user_input_rejects_partial_or_wrong_answer_shapes() {
+        let registry = test_registry();
+        let registration = registry.register_user_input(
+            "owner".to_string(),
+            "agent-1".to_string(),
+            None,
+            None,
+            Some("session-1".to_string()),
+            sample_questions(),
+        );
+        let request_id = registration.summary.request_id;
+
+        let partial = HashMap::from([(
+            "environment".to_string(),
+            UserInputAnswer::Single("Hosted".to_string()),
+        )]);
+        assert!(registry
+            .respond_to_user_input("owner", &request_id, partial)
+            .unwrap_err()
+            .contains("every user input question"));
+
+        let wrong_shape = HashMap::from([
+            (
+                "environment".to_string(),
+                UserInputAnswer::Multiple(vec!["Hosted".to_string()]),
+            ),
+            (
+                "checks".to_string(),
+                UserInputAnswer::Single("Tests".to_string()),
+            ),
+        ]);
+        assert!(registry
+            .respond_to_user_input("owner", &request_id, wrong_shape)
+            .unwrap_err()
+            .contains("requires one"));
     }
 
     #[tokio::test]
@@ -972,6 +1485,92 @@ mod tests {
 
         let mine_p1 = registry.list_for_scope("u1", Some("p1"), None);
         assert_eq!(mine_p1.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn active_summary_reports_only_redacted_activity() {
+        let registry = test_registry();
+        let stream = registry.register(
+            StreamKind::ChatTurn,
+            StreamScope {
+                user_id: Some("u1".to_string()),
+                session_id: Some("sess-1".to_string()),
+                ..Default::default()
+            },
+            fake_session(),
+        );
+        stream.events.append(serde_json::json!({
+            "type": "tool_call_snapshot",
+            "id": "tool-1",
+            "name": "read_file",
+            "input": { "path": "/private/workspace/secrets.rs" },
+        }));
+
+        let summary = stream.summary();
+        assert_eq!(summary.activity.as_deref(), Some("Inspecting code"));
+        let serialized = serde_json::to_string(&summary).expect("summary serializes");
+        assert!(!serialized.contains("secrets.rs"));
+        assert!(!serialized.contains("/private/workspace"));
+    }
+
+    #[tokio::test]
+    async fn active_summary_counts_only_live_subagents_without_exposing_identity() {
+        let registry = test_registry();
+        let stream = registry.register(
+            StreamKind::ChatTurn,
+            StreamScope {
+                user_id: Some("u1".to_string()),
+                session_id: Some("sess-1".to_string()),
+                ..Default::default()
+            },
+            fake_session(),
+        );
+        stream.events.append(serde_json::json!({
+            "type": "subagent_spawned",
+            "child_run_id": "private-child-1",
+            "prompt": "inspect /private/customer/secret.rs",
+            "model": "private-provider/model",
+        }));
+        stream.events.append(serde_json::json!({
+            "type": "subagent_spawned",
+            "child_run_id": "private-child-2",
+            "prompt": "read customer credentials",
+        }));
+        stream.events.append(serde_json::json!({
+            "type": "subagent_status",
+            "child_run_id": "private-child-1",
+            "state": "completed",
+            "reason": "finished secret.rs",
+        }));
+
+        let summary = stream.summary();
+        assert_eq!(summary.active_subagent_count, 1);
+        let serialized = serde_json::to_string(&summary).expect("summary serializes");
+        assert!(!serialized.contains("private-child"));
+        assert!(!serialized.contains("secret.rs"));
+        assert!(!serialized.contains("private-provider"));
+    }
+
+    #[test]
+    fn redacted_activity_uses_generic_labels_for_unknown_tools() {
+        assert_eq!(
+            redacted_stream_activity(&serde_json::json!({
+                "type": "tool_use_start",
+                "name": "private_customer_plugin",
+            }))
+            .as_deref(),
+            Some("Using a tool"),
+        );
+        assert_eq!(
+            redacted_stream_activity(&serde_json::json!({
+                "type": "progress",
+                "stage": "tool_running",
+                "tool_name": "run_command",
+                "message": "running: printenv SECRET_TOKEN",
+            }))
+            .as_deref(),
+            Some("Running a command"),
+        );
     }
 
     #[tokio::test]

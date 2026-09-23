@@ -85,6 +85,14 @@ pub(super) fn agent_routes() -> Router<AppState> {
             post(remote_files::read_remote_file),
         )
         .route(
+            "/api/agents/:agent_id/remote_agent/git/status",
+            post(remote_files::remote_git_status),
+        )
+        .route(
+            "/api/agents/:agent_id/remote_agent/git/diff",
+            post(remote_files::remote_git_diff),
+        )
+        .route(
             "/api/agents/:agent_id/remote_agent/write-file",
             put(remote_files::write_remote_file)
                 .layer(DefaultBodyLimit::max(WORKSPACE_WRITE_REQUEST_MAX_BYTES)),
@@ -108,6 +116,10 @@ pub(super) fn agent_routes() -> Router<AppState> {
         .route(
             "/api/agents/:agent_id/sessions/:session_id/events",
             get(agents::list_agent_session_events),
+        )
+        .route(
+            "/api/agents/:agent_id/sessions/:session_id/commands/:command_id/status",
+            get(agents::get_agent_command_status),
         )
         .route(
             "/api/agents/:agent_id/sessions/:session_id/aside",
@@ -245,6 +257,10 @@ pub(super) fn agent_routes() -> Router<AppState> {
         .route(
             "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/events",
             get(agents::list_session_events),
+        )
+        .route(
+            "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/commands/:command_id/status",
+            get(agents::get_instance_command_status),
         )
         .route(
             "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/aside",

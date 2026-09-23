@@ -47,6 +47,9 @@ pub(super) fn is_terminal_turn_event(evt: &HarnessOutbound) -> bool {
 /// `spawn_session_title_task`'s opt-in plumbing.
 #[derive(Clone)]
 pub(crate) struct ChatPersistTaskExtras {
+    /// Stable client id for a durable turn-outcome marker. A missing marker
+    /// after a process restart means execution is unconfirmed, not complete.
+    pub client_command_id: Option<String>,
     pub http_client: reqwest::Client,
     pub router_url: String,
     pub auto_fork_threshold: f64,

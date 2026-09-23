@@ -454,6 +454,8 @@ describe("MessageBubble", () => {
   it.each([
     ["sending", "Sending…"],
     ["retrying", "Waiting to resend"],
+    ["unconfirmed", "Saved, agent run unconfirmed"],
+    ["executionFailed", "Saved, agent run failed"],
     ["failed", "Not sent"],
     ["cancelled", "Canceled"],
   ] as const)("shows %s delivery state for an optimistic prompt", (status, label) => {

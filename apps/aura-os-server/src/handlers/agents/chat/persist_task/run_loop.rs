@@ -58,6 +58,7 @@ pub(super) async fn run_persist_loop(
     // `chat_turns_completed_ok` counter advances exactly once per
     // genuinely-clean turn.
     let mut saw_error = false;
+    let mut saw_assistant_end = false;
     loop {
         match rx.recv().await {
             Ok(evt) => {
@@ -88,6 +89,10 @@ pub(super) async fn run_persist_loop(
                 // user-visible turn completes on this session, only the
                 // NEXT user send rolls over.
                 if let HarnessOutbound::AssistantMessageEnd(end) = &evt {
+                    saw_assistant_end = !matches!(
+                        end.stop_reason.as_str(),
+                        "error" | "aborted" | "cancelled" | "canceled"
+                    );
                     maybe_spawn_auto_fork_marker(&ctx, end, &extras);
                     // Phase 5: clean terminal — only counts if no
                     // `Error` was observed earlier in the same turn.
@@ -168,6 +173,30 @@ pub(super) async fn run_persist_loop(
         }
     }
     finalize_if_needed(&mut state, &ctx, &event_bus, model.as_deref()).await;
+    if let Some(command_id) = extras.client_command_id.as_deref() {
+        // The marker is written only after the persistence drain finishes.
+        // "completed" requires a saved assistant end; a crash or storage
+        // failure before this marker deliberately leaves replay unconfirmed.
+        let status = command_terminal_status(state.end_persisted, saw_assistant_end, saw_error);
+        persist_event(
+            &ctx,
+            "chat_command_terminal",
+            json!({ "client_command_id": command_id, "status": status }),
+        )
+        .await;
+    }
+}
+
+fn command_terminal_status(
+    end_persisted: bool,
+    saw_clean_assistant_end: bool,
+    saw_error: bool,
+) -> &'static str {
+    if end_persisted && saw_clean_assistant_end && !saw_error {
+        "completed"
+    } else {
+        "failed"
+    }
 }
 
 fn maybe_publish_progress(
@@ -391,6 +420,14 @@ fn harness_outbound_kind(evt: &HarnessOutbound) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn command_terminal_status_requires_a_clean_persisted_assistant_end() {
+        assert_eq!(command_terminal_status(true, true, false), "completed");
+        assert_eq!(command_terminal_status(false, true, false), "failed");
+        assert_eq!(command_terminal_status(true, false, false), "failed");
+        assert_eq!(command_terminal_status(true, true, true), "failed");
+    }
     use std::sync::{Arc, Mutex};
 
     use aura_os_harness::{AssistantMessageEnd, FilesChanged, HarnessOutbound, SessionUsage};
@@ -603,6 +640,7 @@ mod tests {
             event_bus,
             Some("claude-test".to_string()),
             ChatPersistTaskExtras {
+                client_command_id: Some("mobile-command-1".to_string()),
                 http_client: reqwest::Client::new(),
                 router_url: "http://localhost:9999".to_string(),
                 auto_fork_threshold: 0.8,
@@ -618,11 +656,18 @@ mod tests {
         let event_types: Vec<&str> = seen.iter().map(|req| req.event_type.as_str()).collect();
         assert_eq!(
             event_types,
-            vec!["assistant_message_end", "turn_usage_signal"]
+            vec![
+                "assistant_message_end",
+                "turn_usage_signal",
+                "chat_command_terminal",
+            ]
         );
         let signal_payload = seen[1].content.as_ref().expect("signal payload");
         assert_eq!(signal_payload["risk_bucket"], "high");
         assert_eq!(signal_payload["usage_shape"], "generic_agent_chat");
+        let terminal_payload = seen[2].content.as_ref().expect("terminal payload");
+        assert_eq!(terminal_payload["client_command_id"], "mobile-command-1");
+        assert_eq!(terminal_payload["status"], "completed");
         assert_eq!(signal_payload["quota_review_candidate"], true);
         assert_eq!(signal_payload["route_kind"], "bare_agent");
         assert_eq!(signal_payload["binding_source"], "auto_home");

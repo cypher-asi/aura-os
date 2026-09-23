@@ -99,6 +99,7 @@ export function useTaskNotifications(enabled = true): void {
       subscribe(EventType.LoopEnded, handler),
       subscribe(EventType.ProjectPushStuck, handler),
       subscribe(EventType.ToolApprovalPrompt, handler),
+      subscribe(EventType.AgentUserInputRequested, handler),
     );
     return () => {
       unsubscribe();

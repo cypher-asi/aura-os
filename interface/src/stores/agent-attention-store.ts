@@ -1,6 +1,12 @@
 import { create } from "zustand";
 
-import { streamsApi, type PendingToolApprovalSummary } from "../shared/api/streams";
+import {
+  streamsApi,
+  type ActiveStreamSummary,
+  type PendingToolApprovalSummary,
+  type PendingUserInputSummary,
+  type UserInputQuestion,
+} from "../shared/api/streams";
 import { buildAgentSessionRoute } from "../shared/lib/agent-session-route";
 import { EventType, type AuraEvent } from "../shared/types/aura-events";
 
@@ -23,39 +29,64 @@ export interface AgentActiveRunItem {
   sessionId?: string;
   route?: string;
   startedAt: number;
+  /** Content-free environment status, e.g. "Inspecting code". */
+  activity?: string;
+  /** Content-free count of child agents currently running under this turn. */
+  activeSubagentCount?: number;
+}
+
+export interface AgentUserInputItem {
+  kind: "input";
+  requestId: string;
+  questions: UserInputQuestion[];
+  agentId: string;
+  projectId?: string;
+  agentInstanceId?: string;
+  sessionId?: string;
+  route?: string;
+  startedAt: number;
 }
 
 interface AgentAttentionState {
   pendingApprovals: Record<string, AgentAttentionItem | undefined>;
+  pendingInputs: Record<string, AgentUserInputItem | undefined>;
   activeRuns: Record<string, AgentActiveRunItem | undefined>;
   hydrated: boolean;
   replace: (
     approvals: AgentAttentionItem[],
+    inputs: AgentUserInputItem[],
     activeRuns: AgentActiveRunItem[],
   ) => void;
   upsert: (item: AgentAttentionItem) => void;
   resolve: (requestId: string) => void;
+  upsertInput: (item: AgentUserInputItem) => void;
+  resolveInput: (requestId: string) => void;
   startRun: (key: string, item: AgentActiveRunItem) => void;
   finishRun: (key: string) => void;
   clear: () => void;
 }
 
 let hydratePromise: Promise<void> | null = null;
+let runRefreshPromise: Promise<void> | null = null;
 let liveMutationVersion = 0;
 let resetEpoch = 0;
 const resolvedRequestIds = new Set<string>();
+const resolvedInputRequestIds = new Set<string>();
 const finishedRunVersions = new Map<string, number>();
 
 export const useAgentAttentionStore = create<AgentAttentionState>()((set) => ({
   pendingApprovals: {},
+  pendingInputs: {},
   activeRuns: {},
   hydrated: false,
-  replace: (items, runs) => {
+  replace: (items, inputs, runs) => {
     const pendingApprovals: Record<string, AgentAttentionItem> = {};
     for (const item of items) pendingApprovals[item.requestId] = item;
+    const pendingInputs: Record<string, AgentUserInputItem> = {};
+    for (const item of inputs) pendingInputs[item.requestId] = item;
     const activeRuns: Record<string, AgentActiveRunItem> = {};
     for (const item of runs) activeRuns[runKey(item)] = item;
-    set({ pendingApprovals, activeRuns, hydrated: true });
+    set({ pendingApprovals, pendingInputs, activeRuns, hydrated: true });
   },
   upsert: (item) => {
     liveMutationVersion += 1;
@@ -72,6 +103,23 @@ export const useAgentAttentionStore = create<AgentAttentionState>()((set) => ({
       const pendingApprovals = { ...state.pendingApprovals };
       delete pendingApprovals[requestId];
       return { pendingApprovals };
+    });
+  },
+  upsertInput: (item) => {
+    liveMutationVersion += 1;
+    resolvedInputRequestIds.delete(item.requestId);
+    set((state) => ({
+      pendingInputs: { ...state.pendingInputs, [item.requestId]: item },
+    }));
+  },
+  resolveInput: (requestId) => {
+    liveMutationVersion += 1;
+    resolvedInputRequestIds.add(requestId);
+    set((state) => {
+      if (!(requestId in state.pendingInputs)) return state;
+      const pendingInputs = { ...state.pendingInputs };
+      delete pendingInputs[requestId];
+      return { pendingInputs };
     });
   },
   startRun: (key, item) => {
@@ -93,15 +141,23 @@ export const useAgentAttentionStore = create<AgentAttentionState>()((set) => ({
     liveMutationVersion += 1;
     resetEpoch += 1;
     hydratePromise = null;
+    runRefreshPromise = null;
     resolvedRequestIds.clear();
+    resolvedInputRequestIds.clear();
     finishedRunVersions.clear();
-    set({ pendingApprovals: {}, activeRuns: {}, hydrated: false });
+    set({ pendingApprovals: {}, pendingInputs: {}, activeRuns: {}, hydrated: false });
   },
 }));
 
 function clean(value: string | null | undefined): string | undefined {
   const result = value?.trim();
   return result || undefined;
+}
+
+function positiveInteger(value: number | null | undefined): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? Math.floor(value)
+    : undefined;
 }
 
 function fromSummary(summary: PendingToolApprovalSummary): AgentAttentionItem | null {
@@ -125,6 +181,26 @@ function fromSummary(summary: PendingToolApprovalSummary): AgentAttentionItem | 
   };
 }
 
+function inputFromSummary(summary: PendingUserInputSummary): AgentUserInputItem | null {
+  const requestId = clean(summary.request_id);
+  const agentId = clean(summary.agent_id);
+  if (!requestId || !agentId || summary.questions.length === 0) return null;
+  const projectId = clean(summary.project_id);
+  const agentInstanceId = clean(summary.agent_instance_id);
+  const sessionId = clean(summary.session_id);
+  return {
+    kind: "input",
+    requestId,
+    questions: summary.questions,
+    agentId,
+    projectId,
+    agentInstanceId,
+    sessionId,
+    route: buildAgentSessionRoute({ projectId, agentInstanceId, agentId, sessionId }),
+    startedAt: summary.started_at_ms,
+  };
+}
+
 function runKey(
   item: Pick<
     AgentActiveRunItem,
@@ -134,6 +210,81 @@ function runKey(
   return [item.agentId, item.projectId ?? "", item.agentInstanceId ?? "", item.sessionId ?? ""]
     .map(encodeURIComponent)
     .join(":");
+}
+
+/**
+ * Remove a run after the environment accepted an explicit cross-client Stop.
+ * Recording the finish version also prevents a slower attention hydration
+ * that began before the Stop from resurrecting the stale activity row.
+ */
+export function markAgentRunStopped(item: AgentActiveRunItem): void {
+  useAgentAttentionStore.getState().finishRun(runKey(item));
+}
+
+function activeRunsFromStreams(
+  streams: ActiveStreamSummary[],
+  startedAtVersion: number,
+): AgentActiveRunItem[] {
+  return streams.flatMap((stream) => {
+    // The resumable-stream registry retains terminal streams for a short
+    // replay TTL. They are useful for reconnect/history convergence but are
+    // not active work and must never resurrect a mobile `Working` badge.
+    if (stream.kind !== "chat_turn" || stream.terminated) return [];
+    const agentId = clean(stream.scope.agent_id);
+    if (!agentId) return [];
+    const projectId = clean(stream.scope.project_id);
+    const agentInstanceId = clean(stream.scope.agent_instance_id);
+    const sessionId = clean(stream.scope.session_id);
+    const item: AgentActiveRunItem = {
+      agentId,
+      projectId,
+      agentInstanceId,
+      sessionId,
+      route: buildAgentSessionRoute({
+        projectId,
+        agentInstanceId,
+        agentId,
+        sessionId,
+      }),
+      startedAt: stream.started_at_ms,
+      activity: clean(stream.activity),
+      activeSubagentCount: positiveInteger(stream.active_subagent_count),
+    };
+    const finishVersion = finishedRunVersions.get(runKey(item)) ?? 0;
+    return finishVersion > startedAtVersion ? [] : [item];
+  });
+}
+
+/** Refresh only the active-run projection while mobile remains foregrounded. */
+export function refreshAgentRunActivity(): Promise<void> {
+  if (runRefreshPromise) return runRefreshPromise;
+  const startedAtVersion = liveMutationVersion;
+  const startedAtResetEpoch = resetEpoch;
+  const refresh = streamsApi.listActiveStreams()
+    .then(({ streams }) => {
+      if (startedAtResetEpoch !== resetEpoch) return;
+      const fetchedRuns = activeRunsFromStreams(streams, startedAtVersion);
+      const mergedRuns = new Map<string, AgentActiveRunItem>();
+      for (const item of fetchedRuns) mergedRuns.set(runKey(item), item);
+
+      if (startedAtVersion !== liveMutationVersion) {
+        for (const item of Object.values(useAgentAttentionStore.getState().activeRuns)) {
+          const finishVersion = item ? finishedRunVersions.get(runKey(item)) ?? 0 : 0;
+          if (item && finishVersion <= startedAtVersion) {
+            mergedRuns.set(runKey(item), item);
+          }
+        }
+      }
+
+      useAgentAttentionStore.setState({
+        activeRuns: Object.fromEntries(mergedRuns),
+      });
+    });
+  const trackedRefresh = refresh.finally(() => {
+    if (runRefreshPromise === trackedRefresh) runRefreshPromise = null;
+  });
+  runRefreshPromise = trackedRefresh;
+  return trackedRefresh;
 }
 
 function activeRunFromEvent(event: AuraEvent): AgentActiveRunItem | null {
@@ -163,41 +314,37 @@ export function hydrateAgentAttention(): Promise<void> {
   if (hydratePromise) return hydratePromise;
   const startedAtVersion = liveMutationVersion;
   const startedAtResetEpoch = resetEpoch;
-  const hydration = Promise.all([
+  const hydration = Promise.allSettled([
     streamsApi.listPendingToolApprovals(),
+    streamsApi.listPendingUserInputs(),
     streamsApi.listActiveStreams(),
   ])
-    .then(([{ approvals }, { streams }]) => {
+    .then(([approvalsResult, inputsResult, streamsResult]) => {
       if (startedAtResetEpoch !== resetEpoch) return;
-      const fetched = approvals
-        .map(fromSummary)
-        .filter((item): item is AgentAttentionItem => item !== null)
-        .filter((item) => !resolvedRequestIds.has(item.requestId));
-      const fetchedRuns = streams.flatMap((stream) => {
-        if (stream.kind !== "chat_turn") return [];
-        const agentId = clean(stream.scope.agent_id);
-        if (!agentId) return [];
-        const projectId = clean(stream.scope.project_id);
-        const agentInstanceId = clean(stream.scope.agent_instance_id);
-        const sessionId = clean(stream.scope.session_id);
-        const item: AgentActiveRunItem = {
-          agentId,
-          projectId,
-          agentInstanceId,
-          sessionId,
-          route: buildAgentSessionRoute({
-            projectId,
-            agentInstanceId,
-            agentId,
-            sessionId,
-          }),
-          startedAt: stream.started_at_ms,
-        };
-        const finishVersion = finishedRunVersions.get(runKey(item)) ?? 0;
-        return finishVersion > startedAtVersion ? [] : [item];
-      });
+      const state = useAgentAttentionStore.getState();
+      // A mobile refresh can cross a tunnel handoff or a brief radio outage.
+      // Preserve the last known value for each failed endpoint independently;
+      // only a successful empty snapshot is evidence that the slice cleared.
+      const fetched = approvalsResult.status === "fulfilled"
+        ? approvalsResult.value.approvals
+          .map(fromSummary)
+          .filter((item): item is AgentAttentionItem => item !== null)
+          .filter((item) => !resolvedRequestIds.has(item.requestId))
+        : Object.values(state.pendingApprovals)
+          .filter((item): item is AgentAttentionItem => item !== undefined);
+      const fetchedInputs = inputsResult.status === "fulfilled"
+        ? inputsResult.value.requests
+          .map(inputFromSummary)
+          .filter((item): item is AgentUserInputItem => item !== null)
+          .filter((item) => !resolvedInputRequestIds.has(item.requestId))
+        : Object.values(state.pendingInputs)
+          .filter((item): item is AgentUserInputItem => item !== undefined);
+      const fetchedRuns = streamsResult.status === "fulfilled"
+        ? activeRunsFromStreams(streamsResult.value.streams, startedAtVersion)
+        : Object.values(state.activeRuns)
+          .filter((item): item is AgentActiveRunItem => item !== undefined);
       if (startedAtVersion === liveMutationVersion) {
-        useAgentAttentionStore.getState().replace(fetched, fetchedRuns);
+        useAgentAttentionStore.getState().replace(fetched, fetchedInputs, fetchedRuns);
         return;
       }
       const current = useAgentAttentionStore.getState().pendingApprovals;
@@ -207,6 +354,14 @@ export function hydrateAgentAttention(): Promise<void> {
         if (item && !resolvedRequestIds.has(item.requestId)) merged.set(item.requestId, item);
       }
       const currentRuns = useAgentAttentionStore.getState().activeRuns;
+      const currentInputs = useAgentAttentionStore.getState().pendingInputs;
+      const mergedInputs = new Map<string, AgentUserInputItem>();
+      for (const item of fetchedInputs) mergedInputs.set(item.requestId, item);
+      for (const item of Object.values(currentInputs)) {
+        if (item && !resolvedInputRequestIds.has(item.requestId)) {
+          mergedInputs.set(item.requestId, item);
+        }
+      }
       const mergedRuns = new Map<string, AgentActiveRunItem>();
       for (const item of fetchedRuns) mergedRuns.set(runKey(item), item);
       for (const item of Object.values(currentRuns)) {
@@ -215,9 +370,8 @@ export function hydrateAgentAttention(): Promise<void> {
       }
       useAgentAttentionStore
         .getState()
-        .replace([...merged.values()], [...mergedRuns.values()]);
-    })
-    .catch(() => {});
+        .replace([...merged.values()], [...mergedInputs.values()], [...mergedRuns.values()]);
+    });
   const trackedHydration = hydration.finally(() => {
     if (hydratePromise === trackedHydration) hydratePromise = null;
   });
@@ -239,6 +393,32 @@ export function applyAgentAttentionEvent(event: AuraEvent): void {
   }
   if (event.type === EventType.ToolApprovalResolved) {
     useAgentAttentionStore.getState().resolve(event.content.request_id);
+    return;
+  }
+  if (event.type === EventType.AgentUserInputResolved) {
+    useAgentAttentionStore.getState().resolveInput(event.content.request_id);
+    return;
+  }
+  if (event.type === EventType.AgentUserInputRequested) {
+    const requestId = clean(event.content.request_id);
+    const agentId = clean(event.agent_id || event.content.agent_id);
+    if (!requestId || !agentId || event.content.questions.length === 0) return;
+    const projectId = clean(event.project_id || event.content.project_id);
+    const agentInstanceId = clean(
+      event.project_agent_id || event.content.agent_instance_id,
+    );
+    const sessionId = clean(event.session_id || event.content.session_id);
+    useAgentAttentionStore.getState().upsertInput({
+      kind: "input",
+      requestId,
+      questions: event.content.questions,
+      agentId,
+      projectId,
+      agentInstanceId,
+      sessionId,
+      route: buildAgentSessionRoute({ projectId, agentInstanceId, agentId, sessionId }),
+      startedAt: Date.parse(event.created_at) || Date.now(),
+    });
     return;
   }
   if (event.type !== EventType.ToolApprovalPrompt) return;

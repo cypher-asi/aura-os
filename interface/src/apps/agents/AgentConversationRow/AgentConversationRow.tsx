@@ -1,5 +1,5 @@
 import { memo, useEffect } from "react";
-import { Activity, Pin, ShieldAlert } from "lucide-react";
+import { Activity, CircleHelp, Pin, ShieldAlert } from "lucide-react";
 import { formatChatTime } from "../../../shared/utils/format";
 import { stripEmojis } from "../../../shared/utils/text-normalize";
 import type { Agent } from "../../../shared/types";
@@ -29,7 +29,6 @@ function stripMarkdown(text: string): string {
 interface AgentConversationRowProps {
   agent: Agent;
   lastMessage: DisplaySessionEvent | undefined;
-  showMetadataOnly?: boolean;
   isSelected: boolean;
   /** Pre-resolved presentation state from the list-level batched model. */
   status?: string;
@@ -38,13 +37,15 @@ interface AgentConversationRowProps {
   loopActivity?: LoopActivityPayload | null;
   isPinned?: boolean;
   attention?: {
-    kind: "approval";
+    kind: "approval" | "input";
     count: number;
-    toolName: string;
+    label: string;
     route?: string;
   };
   activeRun?: {
     route?: string;
+    activity?: string;
+    activeSubagentCount?: number;
   };
   onClick: () => void;
   onContextMenu: (e: React.MouseEvent) => void;
@@ -54,7 +55,6 @@ interface AgentConversationRowProps {
 function AgentConversationRowBase({
   agent,
   lastMessage,
-  showMetadataOnly = false,
   isSelected,
   status,
   isLocal = false,
@@ -75,12 +75,12 @@ function AgentConversationRowBase({
     : "";
   const fallback = agentRole || "Open this agent";
   const preview = attention
-    ? `${attention.count > 1 ? `${attention.count} approvals` : "Approval needed"} · ${attention.toolName.replaceAll("_", " ")}`
+    ? `${attention.count > 1 ? `${attention.count} requests` : attention.kind === "input" ? "Answer needed" : "Approval needed"} · ${attention.label}`
     : activeRun
-      ? "Agent is working · Tap to follow"
-      : showMetadataOnly
-        ? agentDescription || fallback
-        : messagePreview || agentDescription || fallback;
+      ? activeRun.activeSubagentCount
+        ? `${activeRun.activeSubagentCount} child ${activeRun.activeSubagentCount === 1 ? "agent" : "agents"} active · Tap to follow`
+        : `${activeRun.activity ?? "Agent is working"} · Tap to follow`
+      : messagePreview || agentDescription || fallback;
   const isCeo = isSuperAgent(agent);
 
   // Defer the avatar image to the frame after the row paints so the heavy
@@ -130,13 +130,19 @@ function AgentConversationRowBase({
             )}
             {attention ? (
               <span className={styles.attentionBadge}>
-                <ShieldAlert size={11} aria-hidden="true" />
+                {attention.kind === "input" ? (
+                  <CircleHelp size={11} aria-hidden="true" />
+                ) : (
+                  <ShieldAlert size={11} aria-hidden="true" />
+                )}
                 Needs you
               </span>
             ) : activeRun ? (
               <span className={styles.activityBadge}>
                 <Activity size={11} aria-hidden="true" />
-                Working
+                {activeRun.activeSubagentCount
+                  ? `${activeRun.activeSubagentCount + 1} agents working`
+                  : "Working"}
               </span>
             ) : null}
           </span>

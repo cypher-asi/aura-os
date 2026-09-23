@@ -5,6 +5,7 @@ export const NotificationKind = {
   LoopEnded: "loop_ended",
   ProjectPushStuck: "project_push_stuck",
   ApprovalRequired: "approval_required",
+  UserInputRequired: "user_input_required",
 } as const;
 
 export type NotificationKind =
@@ -48,6 +49,7 @@ export const NOTIFICATION_KIND_LABELS: Record<NotificationKind, string> = {
   [NotificationKind.LoopEnded]: "Loop endings",
   [NotificationKind.ProjectPushStuck]: "Push needs attention",
   [NotificationKind.ApprovalRequired]: "Agent approvals",
+  [NotificationKind.UserInputRequired]: "Agent questions",
 };
 
 export function defaultNotificationPreferences(): NotificationPreferences {
@@ -65,6 +67,7 @@ export function defaultNotificationPreferences(): NotificationPreferences {
       [NotificationKind.LoopEnded]: true,
       [NotificationKind.ProjectPushStuck]: true,
       [NotificationKind.ApprovalRequired]: true,
+      [NotificationKind.UserInputRequired]: true,
     },
   };
 }

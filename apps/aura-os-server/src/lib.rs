@@ -5,6 +5,7 @@ mod billing_bridge;
 pub(crate) mod billing_rollup;
 pub(crate) mod bug_report_store;
 mod capture_auth;
+pub mod desktop_relay;
 pub(crate) mod channel_ext;
 pub mod channels;
 pub(crate) mod dto;
@@ -39,6 +40,7 @@ pub(crate) mod usage_signals;
 pub(crate) mod workspace_index;
 
 pub use app_builder::build_app_state;
+pub use desktop_relay::spawn_desktop_relay;
 pub use handlers::public::RateLimiter as PublicRateLimiter;
 pub use harness_client::{
     bearer_headers, GetHeadResponse, HarnessClient, HarnessClientError, HarnessProbeResult,

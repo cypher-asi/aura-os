@@ -11,7 +11,7 @@
 //!
 //! All three are backed by [`crate::live_streams::LiveStreamRegistry`].
 
-use std::collections::VecDeque;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::convert::Infallible;
 use std::time::Duration;
 
@@ -25,7 +25,9 @@ use tokio::sync::broadcast;
 
 use crate::error::{ApiError, ApiResult};
 use crate::event_log::{ReplayResult, SeqEvent};
-use crate::live_streams::{ActiveStreamSummary, LiveStream};
+use crate::live_streams::{
+    ActiveStreamSummary, LiveStream, UserInputAnswer, UserInputAnswers, UserInputQuestion,
+};
 use crate::state::{AppState, AuthSession};
 use std::sync::Arc;
 
@@ -37,6 +39,7 @@ const SSE_NO_BUFFERING_HEADERS: [(&str, HeaderValue); 1] =
 /// client distinguish "connection alive, run still working" from a true
 /// stall surfaced by its SSE idle timeout.
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(30);
+const USER_INPUT_WAIT_TIMEOUT: Duration = Duration::from_secs(29 * 60);
 
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct ActiveStreamsQuery {
@@ -166,6 +169,241 @@ pub(crate) async fn list_pending_tool_approvals(
             .live_streams
             .list_pending_tool_approvals(&session.user_id),
     }))
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct UserInputToolQuery {
+    agent_id: String,
+    #[serde(default)]
+    project_id: Option<String>,
+    #[serde(default)]
+    agent_instance_id: Option<String>,
+    #[serde(default)]
+    session_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct UserInputToolBody {
+    questions: Vec<UserInputQuestion>,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct UserInputResponseBody {
+    answers: HashMap<String, UserInputAnswer>,
+}
+
+fn clean_optional(value: Option<String>) -> Option<String> {
+    value
+        .map(|entry| entry.trim().to_string())
+        .filter(|entry| !entry.is_empty())
+}
+
+fn validate_user_input_questions(questions: &[UserInputQuestion]) -> Result<(), String> {
+    if questions.is_empty() || questions.len() > 3 {
+        return Err("request_user_input requires between one and three questions".to_string());
+    }
+    let mut ids = HashSet::new();
+    for question in questions {
+        let id = question.id.trim();
+        if id.is_empty()
+            || id.len() > 64
+            || !id.chars().all(|character| {
+                character.is_ascii_alphanumeric() || matches!(character, '_' | '-')
+            })
+        {
+            return Err(
+                "question ids must be 1-64 ASCII letters, numbers, `_`, or `-`".to_string(),
+            );
+        }
+        if !ids.insert(id) {
+            return Err(format!("duplicate user input question id `{id}`"));
+        }
+        let header = question.header.trim();
+        if header.is_empty() || header.len() > 40 {
+            return Err(format!("question `{id}` header must be 1-40 characters"));
+        }
+        let prompt = question.question.trim();
+        if prompt.is_empty() || prompt.len() > 500 {
+            return Err(format!("question `{id}` prompt must be 1-500 characters"));
+        }
+        if !(2..=3).contains(&question.options.len()) {
+            return Err(format!("question `{id}` must offer two or three options"));
+        }
+        let mut labels = HashSet::new();
+        for option in &question.options {
+            let label = option.label.trim();
+            if label.is_empty() || label.len() > 80 {
+                return Err(format!(
+                    "question `{id}` option labels must be 1-80 characters"
+                ));
+            }
+            if !labels.insert(label) {
+                return Err(format!("question `{id}` has duplicate option `{label}`"));
+            }
+            let description = option.description.trim();
+            if description.is_empty() || description.len() > 240 {
+                return Err(format!(
+                    "question `{id}` option descriptions must be 1-240 characters"
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Installed-tool endpoint. The environment-owned agent blocks on this local
+/// HTTP request while any authenticated client can discover and answer the
+/// question by opaque request id.
+pub(crate) async fn request_user_input(
+    State(state): State<AppState>,
+    AuthSession(session): AuthSession,
+    Query(query): Query<UserInputToolQuery>,
+    Json(body): Json<UserInputToolBody>,
+) -> ApiResult<Json<serde_json::Value>> {
+    let agent_id = query.agent_id.trim().to_string();
+    if agent_id.is_empty() {
+        return Err(ApiError::bad_request("agent_id is required"));
+    }
+    validate_user_input_questions(&body.questions).map_err(ApiError::bad_request)?;
+
+    let registration = state.live_streams.register_user_input(
+        session.user_id.clone(),
+        agent_id.clone(),
+        clean_optional(query.project_id),
+        clean_optional(query.agent_instance_id),
+        clean_optional(query.session_id),
+        body.questions,
+    );
+    let summary = registration.summary;
+    let request_id = summary.request_id.clone();
+    let _ = state.event_broadcast.send(serde_json::json!({
+        "type": "agent_user_input_requested",
+        "user_id": session.user_id,
+        "request_id": request_id,
+        "agent_id": agent_id,
+        "project_id": summary.project_id,
+        "project_agent_id": summary.agent_instance_id,
+        "session_id": summary.session_id,
+        "questions": summary.questions,
+        "started_at_ms": summary.started_at_ms,
+    }));
+
+    let answers = match tokio::time::timeout(USER_INPUT_WAIT_TIMEOUT, registration.receiver).await {
+        Ok(Ok(answers)) => answers,
+        Ok(Err(_)) => {
+            state.live_streams.cancel_user_input(&request_id);
+            let _ = state.event_broadcast.send(serde_json::json!({
+                "type": "agent_user_input_resolved",
+                "user_id": session.user_id,
+                "request_id": request_id,
+                "outcome": "abandoned",
+            }));
+            return Err(ApiError::service_unavailable(
+                "The agent stopped waiting for user input before an answer arrived.",
+            ));
+        }
+        Err(_) => {
+            state.live_streams.cancel_user_input(&request_id);
+            let _ = state.event_broadcast.send(serde_json::json!({
+                "type": "agent_user_input_resolved",
+                "user_id": session.user_id,
+                "request_id": request_id,
+                "outcome": "expired",
+            }));
+            return Err(ApiError::service_unavailable(
+                "The user input request expired before an answer arrived.",
+            ));
+        }
+    };
+    state.live_streams.finish_user_input(&request_id);
+    let _ = state.event_broadcast.send(serde_json::json!({
+        "type": "agent_user_input_resolved",
+        "user_id": session.user_id,
+        "request_id": request_id,
+        "outcome": "answered",
+    }));
+    Ok(Json(serde_json::json!({
+        "request_id": request_id,
+        "answers": answers,
+    })))
+}
+
+#[cfg(test)]
+mod user_input_validation_tests {
+    use super::validate_user_input_questions;
+    use crate::live_streams::{UserInputQuestion, UserInputQuestionOption};
+
+    fn question(id: &str) -> UserInputQuestion {
+        UserInputQuestion {
+            id: id.to_string(),
+            header: "Scope".to_string(),
+            question: "Which scope should I use?".to_string(),
+            options: vec![
+                UserInputQuestionOption {
+                    label: "Focused".to_string(),
+                    description: "Change only the requested surface.".to_string(),
+                },
+                UserInputQuestionOption {
+                    label: "Broad".to_string(),
+                    description: "Update related surfaces too.".to_string(),
+                },
+            ],
+            multi_select: false,
+        }
+    }
+
+    #[test]
+    fn accepts_one_to_three_typed_questions() {
+        assert!(validate_user_input_questions(&[question("scope")]).is_ok());
+        assert!(validate_user_input_questions(&[
+            question("scope"),
+            question("tests"),
+            question("release"),
+        ])
+        .is_ok());
+    }
+
+    #[test]
+    fn rejects_duplicate_ids_and_invalid_option_counts() {
+        assert!(
+            validate_user_input_questions(&[question("scope"), question("scope")])
+                .unwrap_err()
+                .contains("duplicate")
+        );
+
+        let mut invalid = question("scope");
+        invalid.options.truncate(1);
+        assert!(validate_user_input_questions(&[invalid])
+            .unwrap_err()
+            .contains("two or three options"));
+    }
+}
+
+/// Authoritative cold-start snapshot for mobile/web clients that were not
+/// connected when the environment-owned agent raised its hand.
+pub(crate) async fn list_pending_user_inputs(
+    State(state): State<AppState>,
+    AuthSession(session): AuthSession,
+) -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "requests": state.live_streams.list_pending_user_inputs(&session.user_id),
+    }))
+}
+
+/// Answer a structured question without attaching to the original SSE. The
+/// registry enforces account ownership and idempotent retries.
+pub(crate) async fn respond_to_user_input(
+    State(state): State<AppState>,
+    AuthSession(session): AuthSession,
+    Path(request_id): Path<String>,
+    Json(body): Json<UserInputResponseBody>,
+) -> ApiResult<Json<serde_json::Value>> {
+    let answers: UserInputAnswers = body.answers;
+    state
+        .live_streams
+        .respond_to_user_input(&session.user_id, &request_id, answers)
+        .map_err(ApiError::bad_request)?;
+    Ok(Json(serde_json::json!({ "accepted": true })))
 }
 
 /// Build the SSE [`Event`] for a sequenced harness frame, using its

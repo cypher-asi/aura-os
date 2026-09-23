@@ -140,6 +140,22 @@ describe("useAgentChatStream", () => {
     expect(typeof result.current.resetEvents).toBe("function");
   });
 
+  it("scopes Stop to the canonical standalone session opened on this client", () => {
+    const { result } = renderHook(() =>
+      useAgentChatStream({
+        agentId: "agent-1",
+        sessionId: "session-from-desktop",
+      }),
+    );
+
+    act(() => result.current.stopStreaming());
+
+    expect(api.agents.cancelTurn).toHaveBeenCalledWith(
+      "agent-1",
+      "session-from-desktop",
+    );
+  });
+
   it("surfaces approval prompts replayed into a standalone agent session", async () => {
     let approvalHandler: import("../api/streams").StreamEventHandler | undefined;
     let finishStream!: () => void;
@@ -244,12 +260,7 @@ describe("useAgentChatStream", () => {
     expect(event.deliveryStatus).toBeUndefined();
   });
 
-  it("keeps a command retryable when the stream ends before acceptance", async () => {
-    vi.mocked(api.agents.sendEventStream).mockImplementation(
-      async (_id, _content, _action, _model, _attachments, handler) => {
-        handler?.onDone?.();
-      },
-    );
+  it("marks a command not sent when no acceptance receipt arrives", async () => {
     const { result } = renderHook(() => useAgentChatStream({ agentId: "agent-1" }));
 
     await act(async () => {
@@ -257,7 +268,7 @@ describe("useAgentChatStream", () => {
     });
 
     const event = useStreamStore.getState().entries[result.current.streamKey].events[0];
-    expect(event.deliveryStatus).toBe("retrying");
+    expect(event.deliveryStatus).toBe("failed");
   });
 
   it("preserves the retrying state after a transient transport rejection", async () => {
@@ -915,6 +926,36 @@ describe("useAgentChatStream", () => {
     expect(queue).toHaveLength(1);
     expect(queue[0].content).toBe("queue me");
     expect(queue[0].pendingDueToStuckStream).toBe(false);
+  });
+
+  it("removes a queued copy only after handing the same id to the command send path", async () => {
+    const { result } = renderHook(() =>
+      useAgentChatStream({ agentId: "agent-1" }),
+    );
+    const key = result.current.streamKey;
+    useMessageQueueStore.getState().enqueue(key, {
+      content: "resume me",
+      action: null,
+    });
+    const queued = useMessageQueueStore.getState().queues[key][0];
+
+    await act(async () => {
+      await result.current.sendMessage(
+        queued.content,
+        queued.action,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        queued.id,
+      );
+    });
+
+    expect(api.agents.sendEventStream).toHaveBeenCalledTimes(1);
+    expect(useMessageQueueStore.getState().queues[key]).toEqual([]);
   });
 
   it("clears the in-flight latch in sync with setIsStreaming(false) from AssistantMessageEnd so a queued dequeue can re-enter immediately", async () => {

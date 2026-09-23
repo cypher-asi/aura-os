@@ -1,10 +1,11 @@
 import { useEffect, useState, useMemo, useCallback, useRef, createElement } from "react";
-import { api, type DirEntry } from "../../api/client";
+import { api, ApiClientError, type DirEntry } from "../../api/client";
 import { filterExplorerNodes } from "../../shared/utils/filterExplorerNodes";
 import type { ListTreeNode } from "../../components/ListTree";
 import { Folder, File, FolderOpen, FolderOutput } from "lucide-react";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useEventStore } from "../../stores/event-store/index";
+import { useAuthStore } from "../../stores/auth-store";
 import { EventType } from "../../shared/types/aura-events";
 import styles from "./FileExplorer.module.css";
 import type { HostedWorkspaceTarget } from "../../shared/api/hosted-workspace";
@@ -55,12 +56,15 @@ export function useFileExplorerState({
     key: string | null;
     entries: DirEntry[];
     error: string | null;
+    errorStatus: number | null;
   }>({
     key: null,
     entries: [],
     error: null,
+    errorStatus: null,
   });
   const [refreshKey, setRefreshKey] = useState(0);
+  const ownerId = useAuthStore((state) => state.user?.user_id ?? null);
   const { features, isMobileLayout } = useAuraCapabilities();
   const hostedProjectId = hostedWorkspace?.projectId;
   const hostedAgentInstanceId = hostedWorkspace?.agentInstanceId;
@@ -72,11 +76,15 @@ export function useFileExplorerState({
     [hostedAgentInstanceId, hostedProjectId],
   );
   const canBrowseWorkspace = Boolean(rootPath || hostedTarget);
-  const isRemote = Boolean(remoteAgentId);
   const isHosted = Boolean(hostedTarget);
+  const isRemote = Boolean(remoteAgentId) && !isHosted;
   const workspaceKey = hostedTarget
-    ? `hosted:${hostedTarget.projectId}:${hostedTarget.agentInstanceId}`
-    : rootPath ?? null;
+    ? `${ownerId ?? "anonymous"}:hosted:${hostedTarget.projectId}:${hostedTarget.agentInstanceId}`
+    : rootPath
+      ? remoteAgentId
+        ? `${ownerId ?? "anonymous"}:remote:${remoteAgentId}:${rootPath}`
+        : `${ownerId ?? "anonymous"}:local:${rootPath}`
+      : null;
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const triggerRefresh = useCallback(() => {
@@ -113,15 +121,18 @@ export function useFileExplorerState({
 
   // Keep the files list feeling live without a dedicated backend watcher:
   // while the tab/window is visible and a workspace is wired up, re-fetch
-  // local/remote listings every 3s. Hosted trees traverse a network boundary
-  // and can be recursive, so they use a 10s cadence. debounceRef coalesces
+  // local listings every 3s. Hosted trees use a 10s cadence; remote pod
+  // listings can be recursive and cross two network hops, so use 30s there.
+  // Foreground and file-operation events still refresh immediately. This
+  // avoids repeatedly fetching a full remote tree on a metered phone.
+  // debounceRef coalesces
   // overlapping event/manual/interval triggers in both cases.
   useEffect(() => {
     if (!workspaceKey) return;
     let intervalId: ReturnType<typeof setInterval> | null = null;
     const start = () => {
       if (intervalId != null) return;
-      intervalId = setInterval(triggerRefresh, isHosted ? 10_000 : 3000);
+      intervalId = setInterval(triggerRefresh, isHosted ? 10_000 : isRemote ? 30_000 : 3000);
     };
     const stop = () => {
       if (intervalId != null) {
@@ -139,7 +150,7 @@ export function useFileExplorerState({
       document.removeEventListener("visibilitychange", onVisibility);
       stop();
     };
-  }, [isHosted, triggerRefresh, workspaceKey]);
+  }, [isHosted, isRemote, triggerRefresh, workspaceKey]);
 
   useEffect(() => {
     if (!workspaceKey) return;
@@ -162,24 +173,36 @@ export function useFileExplorerState({
       .then((res) => {
         if (cancelled) return;
         if (res.ok && res.entries) {
-          setDirectoryState({ key: workspaceKey, entries: res.entries, error: null });
+          setDirectoryState({ key: workspaceKey, entries: res.entries, error: null, errorStatus: null });
           return;
         }
         setDirectoryState({
           key: workspaceKey,
           entries: [],
           error: res.error ?? "Failed to list directory",
+          errorStatus: null,
         });
       })
       .catch((e) => {
         if (cancelled) return;
-        setDirectoryState({ key: workspaceKey, entries: [], error: e.message });
+        const accessLost = e instanceof ApiClientError && [401, 403, 404].includes(e.status);
+        setDirectoryState((current) => ({
+          key: workspaceKey,
+          // A transient remote refresh must not erase the only code index
+          // mobile has. Never carry it across agent identities or after an
+          // access-denied/missing-workspace response.
+          entries: isRemote && !accessLost && current.key === workspaceKey
+            ? current.entries
+            : [],
+          error: e instanceof Error ? e.message : "Failed to list directory",
+          errorStatus: e instanceof ApiClientError ? e.status : null,
+        }));
       });
 
     return () => {
       cancelled = true;
     };
-  }, [features.linkedWorkspace, hostedTarget, remoteAgentId, refreshKey, rootPath, workspaceKey]);
+  }, [features.linkedWorkspace, hostedTarget, isRemote, remoteAgentId, refreshKey, rootPath, workspaceKey]);
 
   const loading = Boolean(workspaceKey) && directoryState.key !== workspaceKey;
   const entries = useMemo(
@@ -196,6 +219,9 @@ export function useFileExplorerState({
         : null,
     [directoryState.error, directoryState.key, workspaceKey],
   );
+  const errorStatus = workspaceKey && directoryState.key === workspaceKey
+    ? directoryState.errorStatus
+    : null;
 
   const showOpenFolder = features.linkedWorkspace && !isRemote && !isHosted;
 
@@ -267,6 +293,7 @@ export function useFileExplorerState({
     loading,
     entries,
     error,
+    errorStatus,
     features,
     isMobileLayout,
     filteredData,

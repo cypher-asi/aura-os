@@ -60,6 +60,7 @@ import {
 import { promptLengthError } from "../../../features/chat-ui/ChatInputBar/composer-length";
 import { refreshRemoteAgentStatus } from "../../../stores/profile-status-store";
 import { useUIModalStore } from "../../../stores/ui-modal-store";
+import { DesktopRelayStatus } from "../../components/DesktopRelayStatus";
 import styles from "./MobileChatInputBar.module.css";
 
 const CHAT_COMPOSER_MODE_LABELS: Partial<Record<AgentMode, string>> = {
@@ -129,13 +130,14 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       sendDisabled = false,
       sendDisabledReason,
       sendDisabledAction,
+      externalValidationMessage,
       composerTone = "build",
     },
     ref,
   ) {
     const isChatStreaming = useIsStreaming(streamKey);
     const isStreaming = isChatStreaming || isExternallyBusy;
-    const { remoteOnly, supportsHostRetargeting } = useAuraCapabilities();
+    const { remoteOnly, supportsHostRetargeting, isMobileClient } = useAuraCapabilities();
     const openHostSettings = useUIModalStore((state) => state.openHostSettings);
     const chatUI = useChatUI(streamKey);
     const selectedModel = chatUI.selectedModel;
@@ -261,6 +263,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       }
     }, [canRefreshRuntime, machineType, runtimeAgentId, runtimeRefreshPending]);
     const lengthValidationMessage = promptLengthError(input);
+    const visibleValidationMessage = externalValidationMessage ?? lengthValidationMessage;
     const isPromptTooLong = lengthValidationMessage != null;
     const isThreeDMode = generationMode === "3d";
     const pinnedSourceImage = chatUI.pinnedSourceImage;
@@ -279,7 +282,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
     );
     const canSend =
       !runtimeUnavailable &&
-      !isStreaming &&
+      (!isExternallyBusy || isChatStreaming) &&
       !isPromptTooLong &&
       (asideSelected
         ? onAside != null && input.trim().length > 0
@@ -941,6 +944,14 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
             </div>
           ) : null}
           <CommandChips commands={selectedCommands} onRemove={handleCommandRemove} />
+          {isMobileClient && machineType === "local" ? (
+            <DesktopRelayStatus
+              className={styles.desktopRelayStatus}
+              dotClassName={styles.desktopRelayStatusDot}
+              copyClassName={styles.desktopRelayStatusCopy}
+              iconClassName={styles.desktopRelayStatusIcon}
+            />
+          ) : null}
           {runtimeUnavailable ? (
             <div
               className={styles.disabledNotice}
@@ -988,17 +999,17 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
               ) : null}
             </div>
           ) : null}
-          {lengthValidationMessage ? (
+          {visibleValidationMessage ? (
             <div
               className={styles.lengthValidationHint}
               role="alert"
               data-agent-surface="mobile-chat-input-validation-hint"
             >
-              {lengthValidationMessage}
+              {visibleValidationMessage}
             </div>
           ) : null}
           <div
-            className={`${styles.inputRow}${voiceSupported ? ` ${styles.inputRowVoice}` : ""}`}
+            className={`${styles.inputRow}${voiceSupported ? ` ${styles.inputRowVoice}` : ""}${isChatStreaming ? ` ${styles.inputRowQueue}` : ""}${isChatStreaming && voiceSupported ? ` ${styles.inputRowQueueVoice}` : ""}`}
           >
             {isThreeDMode ? (
               has3DSource && pinnedSourceImage ? (
@@ -1085,15 +1096,31 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
               }}
             />
             {isStreaming ? (
-              <button
-                type="button"
-                className={`${styles.sendButton} ${styles.stopButton}`}
-                onClick={onStop}
-                aria-label={isExternallyBusy && !isChatStreaming ? "Stop automation" : "Stop"}
-                title={isExternallyBusy && !isChatStreaming ? externalBusyMessage ?? "Stop the running automation" : undefined}
-              >
-                <span className={styles.stopIcon} />
-              </button>
+              <>
+                {isChatStreaming ? (
+                  <button
+                    type="button"
+                    className={`${styles.sendButton} ${styles.queueButton}`}
+                    onPointerDown={handleSendPointerDown}
+                    onClick={handleSendClick}
+                    disabled={!canSend}
+                    aria-label="Queue follow-up"
+                    title="Save this follow-up for after the current turn"
+                  >
+                    <ArrowUp size={16} strokeWidth={2.5} aria-hidden="true" />
+                    <span>Queue</span>
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className={`${styles.sendButton} ${styles.stopButton}`}
+                  onClick={onStop}
+                  aria-label={isExternallyBusy && !isChatStreaming ? "Stop automation" : "Stop"}
+                  title={isExternallyBusy && !isChatStreaming ? externalBusyMessage ?? "Stop the running automation" : undefined}
+                >
+                  <span className={styles.stopIcon} />
+                </button>
+              </>
             ) : (
               <button
                 type="button"

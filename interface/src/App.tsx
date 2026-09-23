@@ -29,7 +29,12 @@ import { apps } from "./apps/registry";
 import { getPlatformEntryShellPath } from "./utils/last-app-path";
 import { useEffectiveMode } from "./stores/use-effective-mode";
 import { bootstrapNativeTestAuth } from "./lib/native-test-auth";
-import { hydrateStoredAuth, isLoggedInSync } from "./shared/lib/auth-token";
+import { getStoredSession, hydrateStoredAuth, isLoggedInSync } from "./shared/lib/auth-token";
+import { isNativeRuntime } from "./shared/lib/native-runtime";
+import {
+  resolveNativeInitialRoute,
+  writeNativeRouteMemory,
+} from "./shared/lib/native-route-memory";
 import { preloadInitialShellApp } from "./lib/boot-shell";
 import { reportBootError } from "./lib/boot-diagnostics";
 import { useNativePushNotifications } from "./hooks/use-native-push-notifications";
@@ -100,6 +105,15 @@ const ChatAppRoute = lazy(() =>
 );
 
 const initiallyLoggedIn = isLoggedInSync();
+
+const initialStoredSession = initiallyLoggedIn ? getStoredSession() : null;
+if (initialStoredSession && isNativeRuntime()) {
+  const currentRoute = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  const restoredRoute = resolveNativeInitialRoute(initialStoredSession.user_id, currentRoute);
+  if (restoredRoute) {
+    window.history.replaceState(window.history.state, "", restoredRoute);
+  }
+}
 
 if (initiallyLoggedIn) {
   void preloadInitialShellApp();
@@ -263,7 +277,16 @@ function AppRoutes(): React.ReactElement {
   const location = useLocation();
   useNativePushNotifications();
   const { isNativeApp } = useAuraCapabilities();
-  const isAuthenticated = useAuthStore((s) => s.user !== null);
+  const userId = useAuthStore((s) => s.user?.user_id ?? null);
+  const isAuthenticated = userId !== null;
+
+  useEffect(() => {
+    if (!isNativeApp || !userId) return;
+    writeNativeRouteMemory(
+      userId,
+      `${location.pathname}${location.search}${location.hash}`,
+    );
+  }, [isNativeApp, location.hash, location.pathname, location.search, userId]);
 
   // "Background location" pattern: when a public-mode visitor opens
   // the login modal from a public page,

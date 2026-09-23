@@ -1,5 +1,5 @@
-import { memo, useState } from "react";
-import { ChevronDown, Pencil, ArrowUp, Trash2 } from "lucide-react";
+import { memo, useEffect, useState } from "react";
+import { ChevronDown, Pencil, ArrowUp, Play, Trash2 } from "lucide-react";
 import { useIsStreaming } from "../../../hooks/stream/hooks";
 import { useMessageQueue } from "../../../stores/message-queue-store";
 import type { QueuedMessage } from "../../../stores/message-queue-store";
@@ -16,6 +16,8 @@ interface Props {
    * dequeue-on-completion path picks the head item up on its own.
    */
   onSendNow?: (item: QueuedMessage) => void;
+  /** Explicitly releases follow-ups restored in a held state after restart. */
+  onResume?: () => void;
 }
 
 export const MessageQueue = memo(function MessageQueue({
@@ -23,36 +25,58 @@ export const MessageQueue = memo(function MessageQueue({
   onEdit,
   onRemove,
   onSendNow,
+  onResume,
 }: Props) {
   const queue = useMessageQueue(streamKey);
   const isStreaming = useIsStreaming(streamKey);
+  const hasHeldMessages = queue.some((item) => item.heldAfterRestart);
   // Queued prompts now remain visible in the main transcript. Keep this
   // management panel collapsed by default so it does not duplicate the
   // prompt text; users can still expand it to edit/remove/send-now.
   const [collapsed, setCollapsed] = useState(true);
 
+  useEffect(() => {
+    if (hasHeldMessages) setCollapsed(false);
+  }, [hasHeldMessages]);
+
   if (queue.length === 0) return null;
 
   return (
     <div className={styles.queueContainer}>
-      <div
-        className={styles.queueHeader}
-        onClick={() => setCollapsed((v) => !v)}
-      >
+      <div className={styles.queueHeader}>
+        <button
+          type="button"
+          className={styles.queueToggle}
+          onClick={() => setCollapsed((v) => !v)}
+          aria-expanded={!collapsed}
+        >
         <span className={styles.queueCount}>
-          {queue.length} Queued
+          {hasHeldMessages
+            ? `${queue.length} held after restart`
+            : `${queue.length} Queued`}
         </span>
         <ChevronDown
           size={14}
           className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ""}`}
         />
+        </button>
+        {hasHeldMessages && onResume ? (
+          <button
+            type="button"
+            className={styles.resumeButton}
+            onClick={onResume}
+          >
+            <Play size={14} aria-hidden="true" />
+            Resume queue
+          </button>
+        ) : null}
       </div>
 
       {!collapsed && (
         <div className={styles.queueList}>
           {queue.map((item) => (
             <div key={item.id} className={styles.queueItem}>
-              <span className={styles.queueIndicator} />
+              <span className={`${styles.queueIndicator} ${item.heldAfterRestart ? styles.queueIndicatorHeld : ""}`} />
               <span className={styles.queueItemText}>{item.content}</span>
               <div className={styles.queueActions}>
                 <button

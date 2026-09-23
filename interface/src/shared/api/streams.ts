@@ -30,6 +30,10 @@ export interface ActiveStreamSummary {
   latest_seq: number;
   terminated: boolean;
   started_at_ms: number;
+  /** Content-free environment status suitable for shell/mobile surfaces. */
+  activity?: string | null;
+  /** Content-free count of child agents still running under this turn. */
+  active_subagent_count?: number;
 }
 
 export interface ActiveStreamsResponse {
@@ -39,6 +43,32 @@ export interface ActiveStreamsResponse {
 export interface PendingToolApprovalSummary {
   request_id: string;
   tool_name: string;
+  agent_id: string;
+  project_id?: string | null;
+  agent_instance_id?: string | null;
+  session_id?: string | null;
+  started_at_ms: number;
+}
+
+export interface UserInputQuestionOption {
+  label: string;
+  description: string;
+}
+
+export interface UserInputQuestion {
+  id: string;
+  header: string;
+  question: string;
+  options: UserInputQuestionOption[];
+  multi_select: boolean;
+}
+
+export type UserInputAnswer = string | string[];
+export type UserInputAnswers = Record<string, UserInputAnswer>;
+
+export interface PendingUserInputSummary {
+  request_id: string;
+  questions: UserInputQuestion[];
   agent_id: string;
   project_id?: string | null;
   agent_instance_id?: string | null;
@@ -72,6 +102,21 @@ export const streamsApi = {
   listPendingToolApprovals: () =>
     apiFetch<{ approvals: PendingToolApprovalSummary[] }>(
       "/api/streams/tool-approvals",
+    ),
+
+  /** Questions raised by environment-owned agents that still need this user. */
+  listPendingUserInputs: () =>
+    apiFetch<{ requests: PendingUserInputSummary[] }>("/api/streams/user-input"),
+
+  /** Resume an environment-owned agent with typed answers from any client. */
+  respondToUserInput: (requestId: string, answers: UserInputAnswers) =>
+    apiFetch<{ accepted: boolean }>(
+      `/api/streams/user-input/${encodeURIComponent(requestId)}/respond`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers }),
+      },
     ),
 
   /** Request cancellation of a running stream's underlying harness run. */

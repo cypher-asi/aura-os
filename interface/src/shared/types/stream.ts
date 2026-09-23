@@ -82,7 +82,8 @@ export interface DisplaySessionEvent {
    * Client-only delivery state for an optimistic user bubble. This keeps
    * in-turn queueing distinct from durable transport retries and cancellation.
    */
-  deliveryStatus?: "queued" | "sending" | "retrying" | "failed" | "cancelled";
+  deliveryStatus?: "queued" | "sending" | "retrying" | "unconfirmed" |
+    "executionFailed" | "failed" | "cancelled";
   role: "user" | "assistant" | "system";
   content: string;
   displayVariant?:

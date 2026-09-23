@@ -1,6 +1,6 @@
 const DB_NAME = "aura-browser-store";
 // Bump this when adding new object stores so `onupgradeneeded` creates them.
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 const LOCAL_FALLBACK_PREFIX = "aura-idb";
 
 export const BROWSER_DB_STORES = {
@@ -29,6 +29,9 @@ export const BROWSER_DB_STORES = {
   // exact request in IDB lets the authenticated shell replay it with the same
   // idempotency key after foregrounding or reconnecting.
   chatCommandOutbox: "chatCommandOutbox",
+  // Client-owned follow-ups waiting behind an active turn. Restored entries
+  // are held for explicit resumption rather than auto-executed.
+  chatFollowUpQueue: "chatFollowUpQueue",
 } as const;
 
 export type BrowserDbStoreName =
@@ -228,6 +231,58 @@ export async function browserDbSet<T>(
     } catch {
       writeLocalFallback(store, key, value);
       settle();
+    }
+  });
+}
+
+/**
+ * Persist a value only when IndexedDB confirms the transaction committed.
+ *
+ * Most browser projections are disposable caches, so `browserDbSet` remains
+ * deliberately best-effort. An outbound command is different: opening its
+ * network request before the local intent is durable can lose the prompt when
+ * a mobile WebView is suspended. This strict variant has no localStorage
+ * fallback (which also keeps prompt contents out of the small shared quota)
+ * and rejects when IndexedDB is unavailable, aborts, or reports an error.
+ */
+export async function browserDbSetDurable<T>(
+  store: BrowserDbStoreName,
+  key: string,
+  value: T,
+): Promise<void> {
+  const db = await openDatabase();
+  if (!db) {
+    throw new Error("Durable browser storage is unavailable");
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    let settled = false;
+    const fail = (message: string, cause?: unknown) => {
+      if (settled) return;
+      settled = true;
+      const detail = cause instanceof Error && cause.message
+        ? `: ${cause.message}`
+        : "";
+      reject(new Error(`${message}${detail}`));
+    };
+
+    try {
+      const transaction = db.transaction(store, "readwrite");
+      const objectStore = transaction.objectStore(store);
+      const request = objectStore.put(value, key);
+      transaction.oncomplete = () => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      };
+      request.onerror = () =>
+        fail("Durable browser storage write failed", request.error);
+      transaction.onerror = () =>
+        fail("Durable browser storage transaction failed", transaction.error);
+      transaction.onabort = () =>
+        fail("Durable browser storage transaction was aborted", transaction.error);
+    } catch (error) {
+      fail("Durable browser storage write could not start", error);
     }
   });
 }

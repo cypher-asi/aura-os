@@ -7,16 +7,12 @@ import {
   Cloud,
   KeyRound,
   Zap,
-  Server,
-  Clock3,
-  Activity,
-  AlertTriangle,
   Wallet,
 } from "lucide-react";
 import { Avatar } from "../../../components/Avatar";
 import { FollowEditButton } from "../../../components/FollowEditButton";
 import { api } from "../../../api/client";
-import { useRemoteAgentState } from "../../../hooks/use-remote-agent-state";
+import { MobileRemoteRuntimeSection } from "../../../mobile/agents/MobileRemoteRuntimeSection";
 import { useCardTilt } from "./use-card-tilt";
 import { ProfileCard3D, type ProfileSectionLink } from "./ProfileCard3D";
 import { ProfileSpecCard } from "./ProfileSpecCard";
@@ -56,79 +52,6 @@ function truncateAddress(address: string): string {
   return address.length > 12 ? `${address.slice(0, 6)}…${address.slice(-4)}` : address;
 }
 
-function formatUptime(seconds: number): string {
-  if (seconds < 60) return `${Math.floor(seconds)}s`;
-  const minutes = Math.floor(seconds / 60) % 60;
-  const hours = Math.floor(seconds / 3600);
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
-}
-
-function MobileRemoteRuntimeSection({ agent }: { agent: Agent }) {
-  const { data, loading, error } = useRemoteAgentState(agent.machine_type === "remote" ? agent.agent_id : undefined);
-
-  if (agent.machine_type !== "remote") {
-    return null;
-  }
-
-  return (
-    <div className={styles.section}>
-      <Text size="xs" variant="muted" weight="medium">Remote Runtime</Text>
-      {loading ? (
-        <Text size="sm" variant="muted">Checking remote agent status…</Text>
-      ) : error ? (
-        <div className={`${styles.mobileStatusCard} ${styles.mobileStatusWarning}`}>
-          <div className={styles.mobileStatusHeader}>
-            <Server size={14} className={styles.mobileStatusIcon} />
-            <Text size="sm" weight="medium">Remote agent unavailable</Text>
-          </div>
-          <Text size="sm" variant="muted">{error}</Text>
-        </div>
-      ) : data ? (
-        <div className={styles.mobileStatusCard}>
-          <div className={styles.mobileStatusHeader}>
-            <Server size={14} className={styles.mobileStatusIcon} />
-            <Text size="sm" weight="medium">Remote agent is {data.state}</Text>
-          </div>
-          <div className={styles.mobileStatusGrid}>
-            <div className={styles.mobileStatusRow}>
-              <Clock3 size={12} className={styles.mobileStatusRowIcon} />
-              <span className={styles.mobileStatusLabel}>Uptime</span>
-              <span className={styles.mobileStatusValue}>{formatUptime(data.uptime_seconds)}</span>
-            </div>
-            <div className={styles.mobileStatusRow}>
-              <Activity size={12} className={styles.mobileStatusRowIcon} />
-              <span className={styles.mobileStatusLabel}>Sessions</span>
-              <span className={styles.mobileStatusValue}>{data.active_sessions}</span>
-            </div>
-            {data.endpoint ? (
-              <div className={styles.mobileStatusRow}>
-                <Server size={12} className={styles.mobileStatusRowIcon} />
-                <span className={styles.mobileStatusLabel}>Endpoint</span>
-                <span className={styles.mobileStatusValue}>{data.endpoint}</span>
-              </div>
-            ) : null}
-            {data.runtime_version ? (
-              <div className={styles.mobileStatusRow}>
-                <Bot size={12} className={styles.mobileStatusRowIcon} />
-                <span className={styles.mobileStatusLabel}>Runtime</span>
-                <span className={styles.mobileStatusValue}>{data.runtime_version}</span>
-              </div>
-            ) : null}
-          </div>
-          {data.error_message ? (
-            <div className={`${styles.mobileStatusMessage} ${styles.mobileStatusWarning}`}>
-              <AlertTriangle size={12} className={styles.mobileStatusRowIcon} />
-              <Text size="xs" variant="muted">{data.error_message}</Text>
-            </div>
-          ) : null}
-        </div>
-      ) : (
-        <Text size="sm" variant="muted">No remote runtime details available yet.</Text>
-      )}
-    </div>
-  );
-}
 
 function MobileSkillsSection({
   installations,
@@ -376,7 +299,13 @@ export function ProfileTab(props: ProfileTabProps) {
         <ProfileCard agent={agent} isOwnAgent={props.isOwnAgent} />
       )}
       <TelegramConnect agent={agent} compact />
-      {props.isMobileStandalone && <MobileRemoteRuntimeSection agent={agent} />}
+      {props.isMobileStandalone && (
+        <MobileRemoteRuntimeSection
+          agentId={agent.agent_id}
+          isRemote={agent.machine_type === "remote"}
+          isOwnAgent={props.isOwnAgent}
+        />
+      )}
       {props.isMobileStandalone && (
         <MobileSkillsSection
           installations={installations}

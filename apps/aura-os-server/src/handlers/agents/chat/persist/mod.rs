@@ -16,7 +16,7 @@ pub(crate) use context::{ChatPersistCtx, ChatPersistRequest, ChatSessionResolveD
 pub(crate) use fork::ForkInfo;
 pub(crate) use pin::{try_pin_session, PinnedSessionOutcome};
 pub(crate) use resolve::resolve_chat_session_with_pin;
-pub(crate) use user_message::persist_user_message;
+pub(crate) use user_message::{attachments_from_persisted_user_event, persist_user_message};
 
 /// Build the harness partition string for a chat route, folding in
 /// `persist.session_id` as the third segment so the registry, turn

@@ -8,6 +8,7 @@ pub(crate) mod bug_reports;
 pub(crate) mod channels;
 pub(crate) mod debug_runs;
 pub(crate) mod dev_loop;
+pub(crate) mod desktop_relay;
 pub(crate) mod feed;
 pub(crate) mod feedback;
 pub(crate) mod files;

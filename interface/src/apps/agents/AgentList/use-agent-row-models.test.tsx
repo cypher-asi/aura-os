@@ -34,6 +34,7 @@ function reset() {
   useAgentStore.setState({ pinnedAgentIds: new Set<string>() });
   useAgentAttentionStore.setState({
     pendingApprovals: {},
+    pendingInputs: {},
     activeRuns: {},
     hydrated: false,
   });
@@ -169,9 +170,49 @@ describe("useAgentRowModels", () => {
     expect(modelFor()?.attention).toEqual({
       kind: "approval",
       count: 2,
-      toolName: "run_command",
+      label: "run command",
       route: "/agents/agent-1?session=session-2",
       startedAt: 20,
+    });
+  });
+
+  it("prioritizes a typed question over approvals for the same agent", () => {
+    reset();
+    useAgentAttentionStore.setState({
+      hydrated: true,
+      pendingApprovals: {
+        approval: {
+          kind: "approval",
+          requestId: "approval",
+          toolName: "write_file",
+          agentId: "agent-1",
+          route: "/agents/agent-1?session=session-1",
+          startedAt: 20,
+        },
+      },
+      pendingInputs: {
+        input: {
+          kind: "input",
+          requestId: "input",
+          questions: [{
+            id: "scope",
+            header: "Choose scope",
+            question: "How broad?",
+            options: [],
+            multi_select: false,
+          }],
+          agentId: "agent-1",
+          route: "/agents/agent-1?session=session-2",
+          startedAt: 10,
+        },
+      },
+    });
+
+    expect(modelFor()?.attention).toMatchObject({
+      kind: "input",
+      count: 2,
+      label: "Choose scope",
+      route: "/agents/agent-1?session=session-2",
     });
   });
 
@@ -187,6 +228,8 @@ describe("useAgentRowModels", () => {
           sessionId: "session-1",
           route: "/projects/project-1/agents/instance-1?session=session-1",
           startedAt: 10,
+          activity: "Coordinating agents",
+          activeSubagentCount: 2,
         },
       },
     });
@@ -195,6 +238,8 @@ describe("useAgentRowModels", () => {
       busy: true,
       activeRun: {
         route: "/projects/project-1/agents/instance-1?session=session-1",
+        activity: "Coordinating agents",
+        activeSubagentCount: 2,
       },
     });
   });

@@ -304,7 +304,7 @@ vi.mock("./use-agent-row-models", () => ({
           ? {
               kind: "approval",
               count: 1,
-              toolName: "write_file",
+              label: "write file",
               route: mocks.attentionRoutes[a.agent_id] ?? mocks.attentionRoute ?? undefined,
             }
           : undefined,
@@ -716,6 +716,46 @@ describe("AgentList", () => {
       "data-last-message-content",
       "Desktop work is ready",
     );
+  });
+
+  it("searches cross-device conversation previews in the mobile library", () => {
+    mocks.useParams.mockReturnValue({ agentId: undefined });
+    mocks.useAgents.mockReturnValue({
+      agents: [agent, secondAgent],
+      status: "ready",
+      fetchAgents: mocks.fetchAgentsMock,
+    });
+    mocks.useSortedAgents.mockReturnValue([agent, secondAgent]);
+    mocks.previewLastMessages = {
+      "agent:agent-2": {
+        id: "evt-search",
+        role: "assistant",
+        content: "The desktop migration is ready for review",
+      },
+    };
+    mocks.useSidebarSearch.mockReturnValue({
+      query: "migration ready",
+      setAction: vi.fn(),
+    });
+
+    render(<AgentList mode="mobile-library" />);
+
+    expect(screen.getByRole("button", { name: "Reviewer Bot" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Builder Bot" })).not.toBeInTheDocument();
+  });
+
+  it("explains when mobile agent search has no matches", () => {
+    mocks.useParams.mockReturnValue({ agentId: undefined });
+    mocks.useSidebarSearch.mockReturnValue({
+      query: "missing conversation",
+      setAction: vi.fn(),
+    });
+
+    render(<AgentList mode="mobile-library" />);
+
+    expect(
+      screen.getByText("No agents or recent conversations match “missing conversation”."),
+    ).toBeInTheDocument();
   });
 
   it("opens the shared editor from the mobile create query", () => {

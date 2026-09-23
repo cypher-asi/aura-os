@@ -1,6 +1,7 @@
 //! `POST /v1/agents/:agent_id/chat/stream` route. Resolves the target agent, prepares the harness `SessionConfig`, kicks off persistence, and hands off to the SSE driver.
 
 use aura_os_core::ProjectId;
+use aura_os_core::HarnessMode;
 use aura_os_harness::SessionConfig;
 use axum::extract::{Path, State};
 use axum::Json;
@@ -44,7 +45,8 @@ use persistence::{
     LoadAgentHistoryCtx,
 };
 use prompt::{build_agent_session_fields, load_project_state_for_agent, normalize_agent_perms};
-use resolve::{resolve_agent_for_chat, resolve_pinned_session_for_agent};
+pub(in crate::handlers::agents::chat) use resolve::resolve_agent_for_chat;
+use resolve::resolve_pinned_session_for_agent;
 
 pub(crate) use resolve::parse_wire_session_id;
 
@@ -56,6 +58,31 @@ pub(crate) async fn send_agent_event_stream(
     headers: axum::http::HeaderMap,
     Json(body): Json<SendChatRequest>,
 ) -> ApiResult<SseResponse> {
+    // A mobile client may target an explicitly paired desktop-local runtime.
+    // The cloud API remains the auth/persistence boundary, while the desktop
+    // owns the actual filesystem and harness execution.
+    if let Some(environment_id) = headers
+        .get(crate::desktop_relay::DESKTOP_ENVIRONMENT_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        let agent = resolve_agent_for_chat(&state, &agent_id, &jwt, &auth_session).await?;
+        if agent.harness_mode() == HarnessMode::Local {
+            let body = serde_json::to_vec(&body).map_err(|error| {
+                ApiError::internal(format!("serializing desktop relay request: {error}"))
+            })?;
+            return crate::desktop_relay::forward_chat_stream(
+                &state,
+                &auth_session.user_id,
+                environment_id,
+                &format!("/api/agents/{agent_id}/events/stream"),
+                &headers,
+                body,
+            )
+            .await;
+        }
+    }
     // Phase 5 observability (5.3): the chat client sets
     // `X-Aura-Client-Retry: <n>` on every Phase 2 auto-retry POST.
     // Mirror the instance route's header parser so the same metric
@@ -66,6 +93,8 @@ pub(crate) async fn send_agent_event_stream(
             .inc_client_auto_retry_streamdropped();
     }
     let is_command_replay = super::request::header_indicates_command_replay(&headers);
+    let is_command_resume = super::request::header_indicates_command_resume(&headers);
+    let was_previously_accepted = super::request::header_indicates_previously_accepted(&headers);
 
     let agent = resolve_agent_for_chat(&state, &agent_id, &jwt, &auth_session).await?;
     ensure_chat_runtime_allowed(&state, agent.harness_mode())?;
@@ -444,6 +473,8 @@ pub(crate) async fn send_agent_event_stream(
             user_content: body.content,
             client_command_id: body.client_command_id,
             is_command_replay,
+            is_command_resume,
+            was_previously_accepted,
             replay_auth_source: is_command_replay.then(|| agent.auth_source.clone()),
             requested_model: body.model,
             persist_ctx,
