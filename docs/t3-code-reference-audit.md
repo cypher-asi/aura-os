@@ -1,6 +1,6 @@
 # T3 Code reference audit
 
-Last reviewed: 2026-09-22
+Last reviewed: 2026-09-23
 
 Upstream: <https://github.com/pingdotgg/t3code>
 
