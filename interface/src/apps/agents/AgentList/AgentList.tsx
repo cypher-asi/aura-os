@@ -633,8 +633,6 @@ export function AgentList({ mode = "default" }: AgentListProps) {
         onSaved={handleAgentSaved}
         closeOnSave={false}
         isTransitioning={!!pendingCreatedAgentId}
-        titleOverride={isMobileLibrary ? "Create Remote Agent" : undefined}
-        submitLabelOverride={isMobileLibrary ? "Create Remote Agent" : undefined}
       />
 
       <AgentEditorModal
