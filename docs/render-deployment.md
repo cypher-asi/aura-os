@@ -255,6 +255,33 @@ logs for a successful Brave response and confirm the browser network request is
 to `https://api.aura.ai/api/orgs/.../tool-actions/brave_search_*`, never to
 Brave directly.
 
+For shared local agents, verify the hosted Harness capability before testing
+mobile creation or chat. This path does not use Swarm:
+
+```bash
+curl -fsS https://api.aura.ai/api/system/runtime-capabilities
+# Expect: remoteOnly:false, localAgentRuntimeAvailable:true,
+# hostedLocalHarness:true, hostedSafeWorkspace:true
+
+curl -i -X OPTIONS \
+  https://api.aura.ai/api/agents/<agent-id>/sessions/<session-id>/commands/<command-id>/status \
+  -H 'Origin: capacitor://localhost' \
+  -H 'Access-Control-Request-Method: GET' \
+  -H 'Access-Control-Request-Headers: authorization'
+# Expect 200 with Access-Control-Allow-Origin: capacitor://localhost
+
+curl -i -X OPTIONS https://api.aura.ai/api/agents/<agent-id>/events/stream \
+  -H 'Origin: capacitor://localhost' \
+  -H 'Access-Control-Request-Method: POST' \
+  -H 'Access-Control-Request-Headers: authorization,content-type,x-aura-command-resume'
+# Expect 200 with x-aura-command-resume in Access-Control-Allow-Headers
+```
+
+Then create a local agent from web, confirm it appears in the mobile library,
+open the same canonical agent/session, and send a prompt. If the capability
+probe is `remoteOnly:true`, the API is missing the hosted Harness URL/token
+pair; do not diagnose that as a Swarm failure.
+
 ## Notes
 
 - Port 10000 is Render's default. The server reads `AURA_SERVER_PORT`.
