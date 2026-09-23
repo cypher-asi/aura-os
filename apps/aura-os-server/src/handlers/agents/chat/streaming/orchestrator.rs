@@ -9,7 +9,7 @@ use aura_os_core::HarnessMode;
 use aura_os_harness::{
     CouncilPresentation, ErrorMsg, HarnessOutbound, SessionBridgeTurn, SessionConfig,
 };
-use axum::response::sse::{KeepAlive, Sse};
+use axum::response::sse::{Event, KeepAlive, Sse};
 use tokio::sync::broadcast;
 use tracing::{debug, error, warn};
 
