@@ -581,35 +581,6 @@ struct ChatCommandReceipt {
     recorded_at: Instant,
 }
 
-/// User-facing identity for an unresolved protected-tool request.
-#[derive(Clone, Debug, Serialize)]
-pub struct PendingToolApprovalSummary {
-    pub request_id: String,
-    pub tool_name: String,
-    pub agent_id: String,
-    pub project_id: Option<String>,
-    pub agent_instance_id: Option<String>,
-    pub session_id: Option<String>,
-    pub started_at_ms: i64,
-}
-
-#[derive(Clone)]
-pub struct ChatCommandMatch {
-    pub session_id: String,
-    pub project_id: String,
-    pub content: String,
-    pub stream: Option<Arc<LiveStream>>,
-}
-
-#[derive(Clone, Debug)]
-struct ChatCommandReceipt {
-    session_id: String,
-    project_id: String,
-    content: String,
-    attach_id: Option<AttachId>,
-    recorded_at: Instant,
-}
-
 /// Registry of all live/recently-terminated harness streams.
 pub struct LiveStreamRegistry {
     inner: DashMap<AttachId, Arc<LiveStream>>,
