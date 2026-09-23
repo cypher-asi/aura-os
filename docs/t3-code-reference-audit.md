@@ -44,11 +44,14 @@ available at `interface/android/app/build/outputs/apk/debug/app-debug.apk` with 
 `3355512cb8d7fd0cbfd9c5f8f1a2d82eefaf315a4731e2800c219109bf22a58d` and embeds
 `https://api.aura.ai` as the native default host.
 
-The live `api.aura.ai` probe is intentionally not counted as feature verification yet: its
+The live `api.aura.ai` capability probe now confirms the shared local-agent path is configured:
+`remoteOnly:false`, `localAgentRuntimeAvailable:true`, `hostedLocalHarness:true`, and
+`hostedSafeWorkspace:true`. That means a local agent created from web or mobile is backed by the
+same hosted Harness identity and does not depend on Swarm. The production skew is narrower: the
 execution-status CORS exposure still matches the older deployment and does not expose
-`x-aura-chat-execution-status`. The status-only route, Resume POST path, and the corresponding
-Harness/Swarm versions therefore still require deployment followed by real Android/WebView and
-remote-runtime verification.
+`x-aura-chat-execution-status`. The status-only route, Resume POST path, and their Android/WebView
+verification still require the newer Aura API deployment; remote Swarm remains a separate,
+optional runtime and is not part of local-agent sharing.
 
 ## What T3 currently provides
 
