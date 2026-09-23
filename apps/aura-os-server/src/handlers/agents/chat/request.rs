@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use super::constants::{
     HEADER_CHAT_COMMAND_PREVIOUSLY_ACCEPTED, HEADER_CHAT_COMMAND_REPLAY,
-    MAX_AGENT_HISTORY_WINDOW_LIMIT,
+    HEADER_CHAT_COMMAND_RESUME, MAX_AGENT_HISTORY_WINDOW_LIMIT,
 };
 
 pub(super) fn header_indicates_command_replay(headers: &axum::http::HeaderMap) -> bool {
@@ -20,6 +20,14 @@ pub(super) fn header_indicates_command_replay(headers: &axum::http::HeaderMap) -
 pub(super) fn header_indicates_previously_accepted(headers: &axum::http::HeaderMap) -> bool {
     headers
         .get(HEADER_CHAT_COMMAND_PREVIOUSLY_ACCEPTED)
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        == Some("1")
+}
+
+pub(super) fn header_indicates_command_resume(headers: &axum::http::HeaderMap) -> bool {
+    headers
+        .get(HEADER_CHAT_COMMAND_RESUME)
         .and_then(|value| value.to_str().ok())
         .map(str::trim)
         == Some("1")
@@ -112,7 +120,10 @@ pub(super) fn apply_cursor_filter(
 
 #[cfg(test)]
 mod command_replay_header_tests {
-    use super::{header_indicates_command_replay, header_indicates_previously_accepted};
+    use super::{
+        header_indicates_command_replay, header_indicates_command_resume,
+        header_indicates_previously_accepted,
+    };
     use axum::http::HeaderMap;
 
     #[test]
@@ -136,5 +147,15 @@ mod command_replay_header_tests {
             "true".parse().unwrap(),
         );
         assert!(!header_indicates_previously_accepted(&headers));
+    }
+
+    #[test]
+    fn command_resume_requires_explicit_one() {
+        let mut headers = HeaderMap::new();
+        assert!(!header_indicates_command_resume(&headers));
+        headers.insert("x-aura-command-resume", "1".parse().unwrap());
+        assert!(header_indicates_command_resume(&headers));
+        headers.insert("x-aura-command-resume", "true".parse().unwrap());
+        assert!(!header_indicates_command_resume(&headers));
     }
 }

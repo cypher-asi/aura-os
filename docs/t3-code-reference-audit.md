@@ -369,21 +369,27 @@ The first Aura slice now implements that boundary:
   another project's URL, and the shared instance resolver now enforces that relationship for all
   project-scoped consumers. The status-only route/outbox path has unit and route integration tests,
   but has not yet been exercised in Android/WebView or against a deployed backend.
+- An unconfirmed accepted command now has an explicit, user-initiated Resume action. Resume requires
+  the same authenticated command id, session pin, replay/prior-acceptance assertions, and a durable
+  saved `user_message`; it recovers persisted image blocks without re-uploading them and refuses to
+  run if a terminal marker already exists. Ordinary reconnect polling remains GET-only and cannot
+  execute work. This closes the safe client/server restart handoff, but a background worker that
+  automatically reconciles commands after a process restart is still intentionally absent.
 
 Next: formalize `runtimeId`/environment ownership in session metadata and move accepted command
-execution behind a durable status/worker boundary. Verify configured FCM delivery on production
+execution behind a durable status/worker boundary so the explicit Resume path can be reconciled
+without a foreground client. Verify configured FCM delivery on production
 Android devices, including warm/cold notification activation. Persist accepted commands and pending
 question waits so a server restart can reconstruct status or explicitly fail the original
 environment-owned turn instead of relying on an in-memory channel. Do not make the cloud relay an
 execution proxy or present an unacknowledged prompt as accepted work.
 
 The remaining command-recovery gap is concrete: Aura persists a user-message event before opening
-the harness turn, and replay can find that event after a restart, but the executor is in memory.
-The new durable terminal marker makes an interrupted run visibly unconfirmed, not resumable. If the
-server exits between the user-message write and the turn's terminal event, no worker reconstructs
-the original command payload or execution. The next slice needs a durable accepted/running command
-record with an environment-owned startup/on-demand reconciler or worker; `unconfirmed` is truthful
-recovery UX, not proof the agent completed the requested work.
+the harness turn, and the explicit Resume path can reconstruct a saved turn only when a foreground
+client invokes it. If the server exits between the user-message write and the turn's terminal event,
+no worker automatically reconciles the original command payload or execution. The next slice needs
+a durable accepted/running command record with an environment-owned startup/on-demand reconciler or
+worker; `unconfirmed` is truthful recovery UX, not proof the agent completed the requested work.
 
 Remote source-control inspection now has that real cross-service addition in branches: the Harness
 pod exposes bounded, sandbox-scoped, read-only Git status/diff; Swarm verifies agent ownership and

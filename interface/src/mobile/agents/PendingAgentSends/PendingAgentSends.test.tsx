@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   commands: [] as Array<Record<string, unknown>>,
   retry: vi.fn().mockResolvedValue(true),
+  resume: vi.fn().mockResolvedValue(true),
   cancel: vi.fn().mockResolvedValue(true),
 }));
 
@@ -13,6 +14,7 @@ vi.mock("../../../stores/chat-command-outbox", () => ({
     selector: (state: { commands: Array<Record<string, unknown>> }) => unknown,
   ) => selector({ commands: mocks.commands }),
   retryChatCommandNow: mocks.retry,
+  resumeChatCommandNow: mocks.resume,
   cancelChatCommandReplay: mocks.cancel,
 }));
 
@@ -33,6 +35,7 @@ describe("PendingAgentSends", () => {
   beforeEach(() => {
     mocks.commands = [];
     mocks.retry.mockClear();
+    mocks.resume.mockClear();
     mocks.cancel.mockClear();
   });
 
@@ -136,6 +139,8 @@ describe("PendingAgentSends", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Agent run unconfirmed");
     fireEvent.click(screen.getByRole("button", { name: "Check run: Inspect the failure" }));
     await waitFor(() => expect(mocks.retry).toHaveBeenCalledWith("command-unconfirmed"));
+    fireEvent.click(screen.getByRole("button", { name: "Resume agent run: Inspect the failure" }));
+    await waitFor(() => expect(mocks.resume).toHaveBeenCalledWith("command-unconfirmed"));
     fireEvent.click(screen.getByRole("button", { name: "Dismiss run status: Inspect the failure" }));
     await waitFor(() => expect(mocks.cancel).toHaveBeenCalledWith("command-unconfirmed"));
   });

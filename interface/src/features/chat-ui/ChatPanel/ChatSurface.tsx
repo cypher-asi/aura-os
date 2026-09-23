@@ -29,6 +29,7 @@ import { useChatUIStore } from "../../../stores/chat-ui-store";
 import { clearQueuedMessages } from "../../../stores/message-queue-store";
 import {
   cancelChatCommandReplay,
+  resumeChatCommandNow,
   retryChatCommandNow,
   useChatCommandOutboxStore,
 } from "../../../stores/chat-command-outbox";
@@ -911,7 +912,7 @@ export function ChatSurface({
             <span>
               {unconfirmedCommands.length === 1 ? "A prompt was" : `${unconfirmedCommands.length} prompts were`}
               {" "}saved, but the agent run could not be confirmed after reconnecting.
-              Check this agent before sending the prompt again.
+              Check the receipt or explicitly resume the saved run.
             </span>
             <button
               type="button"
@@ -922,6 +923,16 @@ export function ChatSurface({
               }}
             >
               Check again
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                for (const command of unconfirmedCommands) {
+                  void resumeChatCommandNow(command.commandId);
+                }
+              }}
+            >
+              Resume run
             </button>
           </div>
         )}

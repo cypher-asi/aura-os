@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { buildAgentSessionRoute } from "../../../shared/lib/agent-session-route";
 import {
   cancelChatCommandReplay,
+  resumeChatCommandNow,
   retryChatCommandNow,
   useChatCommandOutboxStore,
   type PendingChatCommand,
@@ -59,7 +60,7 @@ export function PendingAgentSends() {
           <div className={styles.title}>
             {commands.length} {commands.length === 1 ? "message" : "messages"} to check
           </div>
-          <div className={styles.subtitle}>Saved on this device until Aura confirms the agent run.</div>
+          <div className={styles.subtitle}>Saved on this device until Aura confirms or you resume the agent run.</div>
         </div>
       </div>
       <div className={styles.list}>
@@ -94,6 +95,20 @@ export function PendingAgentSends() {
                   <RefreshCw size={14} aria-hidden="true" />
                   {command.accepted ? "Check" : "Retry"}
                 </button>}
+                {command.accepted && command.executionStatus === "unconfirmed" && (
+                  <button
+                    type="button"
+                    className={styles.action}
+                    disabled={isBusy}
+                    onClick={() => run(
+                      command.commandId,
+                      () => resumeChatCommandNow(command.commandId),
+                    )}
+                    aria-label={`Resume agent run: ${preview}`}
+                  >
+                    Resume
+                  </button>
+                )}
                 <button
                   type="button"
                   className={styles.action}

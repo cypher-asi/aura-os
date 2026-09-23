@@ -69,6 +69,7 @@ pub(crate) async fn send_event_stream(
             .inc_client_auto_retry_streamdropped();
     }
     let is_command_replay = super::super::request::header_indicates_command_replay(&headers);
+    let is_command_resume = super::super::request::header_indicates_command_resume(&headers);
     let was_previously_accepted =
         super::super::request::header_indicates_previously_accepted(&headers);
 
@@ -503,6 +504,7 @@ pub(crate) async fn send_event_stream(
             user_content: body.content,
             client_command_id: body.client_command_id,
             is_command_replay,
+            is_command_resume,
             was_previously_accepted,
             replay_auth_source: is_command_replay.then(|| instance.auth_source.clone()),
             requested_model: body.model,

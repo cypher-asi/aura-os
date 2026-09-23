@@ -54,6 +54,36 @@ pub(crate) async fn persist_user_message(
     }
 }
 
+/// Recover image attachments from a persisted `user_message` when an
+/// explicitly resumed command does not re-upload them from the client.
+/// The original event is already authenticated and session-scoped, so this
+/// is only a shape conversion; malformed blocks are ignored and the caller
+/// can safely resume the text-only portion.
+pub(crate) fn attachments_from_persisted_user_event(
+    event: &aura_os_storage::StorageSessionEvent,
+) -> Option<Vec<ChatAttachmentDto>> {
+    let blocks = event.content.as_ref()?.get("content_blocks")?.as_array()?;
+    let attachments: Vec<_> = blocks
+        .iter()
+        .filter_map(|block| {
+            if block.get("type")?.as_str()? != "image" {
+                return None;
+            }
+            Some(ChatAttachmentDto {
+                type_: "image".to_string(),
+                media_type: block.get("media_type")?.as_str()?.to_string(),
+                data: block.get("data")?.as_str()?.to_string(),
+                name: None,
+                source_url: block
+                    .get("source_url")
+                    .and_then(|value| value.as_str())
+                    .map(ToString::to_string),
+            })
+        })
+        .collect();
+    (!attachments.is_empty()).then_some(attachments)
+}
+
 fn build_user_message_payload(
     content: &str,
     attachments: &Option<Vec<ChatAttachmentDto>>,
@@ -139,6 +169,7 @@ mod build_user_message_payload_tests {
     //! key on the exact JSON key name, so any rename breaks the
     //! "↩ from <agent>" badge silently — assert the on-disk
     //! shape rather than the in-memory `ChatPersistCtx` field.
+    use super::attachments_from_persisted_user_event;
     use super::build_user_message_payload;
 
     #[test]
@@ -181,6 +212,37 @@ mod build_user_message_payload_tests {
         assert_eq!(
             payload.get("client_command_id").and_then(|v| v.as_str()),
             Some("mobile-123")
+        );
+    }
+
+    #[test]
+    fn resume_recovers_only_valid_persisted_image_blocks() {
+        let event = aura_os_storage::StorageSessionEvent {
+            id: "event-1".into(),
+            session_id: None,
+            user_id: None,
+            agent_id: None,
+            sender: None,
+            project_id: None,
+            org_id: None,
+            event_type: Some("user_message".into()),
+            content: Some(serde_json::json!({
+                "text": "inspect",
+                "content_blocks": [
+                    {"type":"text","text":"inspect"},
+                    {"type":"image","media_type":"image/png","data":"pixels","source_url":"https://cdn/image.png"},
+                    {"type":"image","media_type":"image/jpeg"}
+                ]
+            })),
+            created_at: None,
+        };
+        let attachments = attachments_from_persisted_user_event(&event).unwrap();
+        assert_eq!(attachments.len(), 1);
+        assert_eq!(attachments[0].media_type, "image/png");
+        assert_eq!(attachments[0].data, "pixels");
+        assert_eq!(
+            attachments[0].source_url.as_deref(),
+            Some("https://cdn/image.png")
         );
     }
 }

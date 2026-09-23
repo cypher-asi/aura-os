@@ -46,6 +46,7 @@ import {
   enqueueChatCommand,
   markChatCommandAccepted,
   recordChatCommandFailure,
+  resumeChatCommandNow,
   retryChatCommandNow,
   shouldReplayChatCommandError,
   useChatCommandOutboxStore,
@@ -196,6 +197,40 @@ describe("chat command outbox", () => {
     );
     expect(mocks.sendProject).not.toHaveBeenCalled();
     expect(mocks.stored).toEqual([]);
+  });
+
+  it("explicitly resumes an unconfirmed command without re-uploading its attachment", async () => {
+    mocks.sendProject.mockImplementation(async (...args: unknown[]) => {
+      const handler = args[6] as { onAccepted: (receipt: unknown) => void };
+      expect(args[5]).toBeUndefined();
+      expect(args[19]).toBe(true);
+      handler.onAccepted({
+        commandId: "cmd-resume",
+        sessionId: "session-resume",
+        projectId: "project-1",
+        attachId: "attach-resumed",
+        replayed: false,
+        executionStatus: "attached",
+      });
+    });
+    await enqueueChatCommand({
+      surface: "project",
+      commandId: "cmd-resume",
+      projectId: "project-1",
+      agentInstanceId: "instance-1",
+      content: "continue the saved run",
+      action: null,
+      attachments: [{ type: "image", media_type: "image/png", data: "pixels" }],
+      sessionId: "session-resume",
+      originallyStartedNewSession: false,
+    });
+    await markChatCommandAccepted("cmd-resume", "unconfirmed", "session-resume");
+
+    await expect(resumeChatCommandNow("cmd-resume")).resolves.toBe(true);
+    expect(mocks.sendProject).toHaveBeenCalledTimes(1);
+    expect(mocks.stored).toEqual([
+      expect.objectContaining({ accepted: true, executionStatus: "attached" }),
+    ]);
   });
 
   it("keeps a saved but failed run visible without scheduling a duplicate send", async () => {

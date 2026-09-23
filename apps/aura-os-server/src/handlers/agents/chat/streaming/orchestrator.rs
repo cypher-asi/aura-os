@@ -27,7 +27,9 @@ use super::super::command_status::find_command_terminal;
 use super::super::constants::HEADER_CHAT_EXECUTION_STATUS;
 use super::super::event_bus::publish_user_message_event;
 use super::super::maybe_spawn_subagent_capture;
-use super::super::persist::{persist_user_message, ChatPersistCtx, ForkInfo};
+use super::super::persist::{
+    attachments_from_persisted_user_event, persist_user_message, ChatPersistCtx, ForkInfo,
+};
 use super::super::persist_task::{spawn_chat_persist_task, ChatPersistTaskExtras};
 use super::super::turn_slot::{spawn_turn_slot_release, spawn_turn_watchdog};
 use super::super::types::{SseResponse, SseStream};
@@ -49,6 +51,7 @@ pub(in super::super) struct OpenChatStreamArgs {
     pub(in super::super) user_content: String,
     pub(in super::super) client_command_id: Option<String>,
     pub(in super::super) is_command_replay: bool,
+    pub(in super::super) is_command_resume: bool,
     pub(in super::super) was_previously_accepted: bool,
     /// Billing is deferred only for explicit replays so an already-persisted
     /// command can recover its receipt after a balance change. If no receipt
@@ -94,14 +97,15 @@ pub(in super::super) async fn open_harness_chat_stream(
         session_key,
         harness_mode,
         mut session_config,
-        user_content,
+        mut user_content,
         client_command_id,
         is_command_replay,
+        is_command_resume,
         was_previously_accepted,
         replay_auth_source,
         requested_model,
         persist_ctx,
-        attachments,
+        mut attachments,
         commands,
         fork_info,
         is_plan_mode,
@@ -127,9 +131,17 @@ pub(in super::super) async fn open_harness_chat_stream(
     let ctx = require_persist_ctx(&session_key, persist_ctx)?;
     let err_ctx = persist_error_ctx(&ctx);
     let client_command_id = normalize_client_command_id(client_command_id)?;
-    if was_previously_accepted && (!is_command_replay || client_command_id.is_none()) {
+    validate_command_resume(
+        is_command_resume,
+        is_command_replay,
+        was_previously_accepted,
+        client_command_id.is_some(),
+    )?;
+    if was_previously_accepted
+        && ((!is_command_replay && !is_command_resume) || client_command_id.is_none())
+    {
         return Err(ApiError::bad_request(
-            "Previously accepted command checks require replay and client_command_id",
+            "Previously accepted command checks require replay/resume and client_command_id",
         ));
     }
 
@@ -137,12 +149,78 @@ pub(in super::super) async fn open_harness_chat_stream(
     // the prompt twice. Serialize identical ids within this server process,
     // then consult the in-memory receipt cache. Explicit outbox replays also
     // consult durable session history so the invariant survives a restart.
+    let mut resumed_user_event = None;
     let _command_guard = if let Some(command_id) = client_command_id.as_deref() {
         let lock = state
             .live_streams
             .chat_command_lock(ctx.user_id.as_deref(), command_id);
         let guard = lock.lock_owned().await;
-        if let Some((command, execution_status)) = find_replayed_chat_command(
+        if is_command_resume {
+            // Resume is an explicit user action, distinct from the normal
+            // read-only receipt check. An active stream is still authoritative
+            // and must be attached; a saved command without a terminal marker
+            // is the only state that may start again after a server restart.
+            if let Some(command) = state
+                .live_streams
+                .find_chat_command(ctx.user_id.as_deref(), command_id)
+            {
+                ensure_command_content_matches(&command, &user_content)?;
+                if command
+                    .stream
+                    .as_ref()
+                    .is_some_and(|stream| !stream.is_terminated())
+                {
+                    return Ok(replayed_chat_command_response(
+                        command, command_id, "attached",
+                    ));
+                }
+            }
+
+            let events = ctx
+                .storage
+                .list_events(&ctx.session_id.to_string(), &ctx.jwt, None, None)
+                .await
+                .map_err(|error| {
+                    crate::error::map_chat_persist_storage_error(error, err_ctx.clone())
+                })?;
+            let persisted =
+                find_persisted_command(events.clone(), command_id).ok_or_else(|| {
+                    ApiError::conflict(
+                        "Saved chat command could not be found; execution remains unconfirmed",
+                    )
+                })?;
+            let persisted_content = persisted
+                .content
+                .as_ref()
+                .and_then(|value| value.get("text"))
+                .and_then(|value| value.as_str())
+                .unwrap_or_default();
+            if !user_content.trim().is_empty() && user_content != persisted_content {
+                return Err(ApiError::bad_request(
+                    "client_command_id was already used for a different message",
+                ));
+            }
+            user_content = persisted_content.to_string();
+            if let Some(execution_status) = find_command_terminal(&events, command_id) {
+                state.live_streams.record_chat_command(
+                    ctx.user_id.as_deref(),
+                    command_id,
+                    &ctx.session_id.to_string(),
+                    &ctx.project_id,
+                    &user_content,
+                );
+                let command = state
+                    .live_streams
+                    .find_chat_command(ctx.user_id.as_deref(), command_id)
+                    .expect("recorded chat command receipt must be readable");
+                return Ok(replayed_chat_command_response(
+                    command,
+                    command_id,
+                    execution_status,
+                ));
+            }
+            resumed_user_event = Some(persisted);
+        } else if let Some((command, execution_status)) = find_replayed_chat_command(
             state,
             &ctx,
             command_id,
@@ -158,7 +236,7 @@ pub(in super::super) async fn open_harness_chat_stream(
                 execution_status,
             ));
         }
-        if was_previously_accepted {
+        if was_previously_accepted && !is_command_resume {
             // A status check after a confirmed save must not fall through
             // into a new harness turn just because storage cannot currently
             // locate the original command (e.g. lag or stale session list).
@@ -201,14 +279,21 @@ pub(in super::super) async fn open_harness_chat_stream(
     // storage rejects the write we must not charge the caller credits
     // for a turn that would never make it into the target agent's chat
     // history, and we must not leave an orphaned harness turn mid-flight.
-    let persisted_user_evt = persist_user_message(
-        &ctx,
-        &user_content,
-        &attachments,
-        client_command_id.as_deref(),
-    )
-    .await
-    .map_err(|e| crate::error::map_chat_persist_storage_error(e, err_ctx.clone()))?;
+    let persisted_user_evt = if let Some(event) = resumed_user_event {
+        if attachments.is_none() {
+            attachments = attachments_from_persisted_user_event(&event);
+        }
+        event
+    } else {
+        persist_user_message(
+            &ctx,
+            &user_content,
+            &attachments,
+            client_command_id.as_deref(),
+        )
+        .await
+        .map_err(|e| crate::error::map_chat_persist_storage_error(e, err_ctx.clone()))?
+    };
 
     if let Some(command_id) = client_command_id.as_deref() {
         state.live_streams.record_chat_command(
@@ -605,6 +690,20 @@ fn find_persisted_command(
     })
 }
 
+fn validate_command_resume(
+    is_command_resume: bool,
+    is_command_replay: bool,
+    was_previously_accepted: bool,
+    has_command_id: bool,
+) -> ApiResult<()> {
+    if is_command_resume && (!is_command_replay || !was_previously_accepted || !has_command_id) {
+        return Err(ApiError::bad_request(
+            "Command resume requires replay, prior acceptance, and client_command_id",
+        ));
+    }
+    Ok(())
+}
+
 fn ensure_command_content_matches(command: &ChatCommandMatch, content: &str) -> ApiResult<()> {
     if command.content == content {
         return Ok(());
@@ -664,7 +763,7 @@ fn normalize_client_command_id(value: Option<String>) -> ApiResult<Option<String
 mod command_id_tests {
     use super::{
         ensure_command_content_matches, find_command_terminal, find_persisted_command,
-        normalize_client_command_id, replayed_chat_command_response,
+        normalize_client_command_id, replayed_chat_command_response, validate_command_resume,
     };
     use crate::live_streams::ChatCommandMatch;
 
@@ -676,6 +775,15 @@ mod command_id_tests {
         );
         assert!(normalize_client_command_id(Some("x".repeat(129))).is_err());
         assert!(normalize_client_command_id(Some("bad\nvalue".to_string())).is_err());
+    }
+
+    #[test]
+    fn resume_requires_an_accepted_replay_identity() {
+        assert!(validate_command_resume(false, false, false, false).is_ok());
+        assert!(validate_command_resume(true, true, true, true).is_ok());
+        assert!(validate_command_resume(true, false, true, true).is_err());
+        assert!(validate_command_resume(true, true, false, true).is_err());
+        assert!(validate_command_resume(true, true, true, false).is_err());
     }
 
     #[test]

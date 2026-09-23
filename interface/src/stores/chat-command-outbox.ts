@@ -304,6 +304,36 @@ export async function retryChatCommandNow(commandId: string): Promise<boolean> {
   return true;
 }
 
+/** Explicitly resume an accepted command whose execution became unconfirmed
+ * after a server/runtime restart. The server receives the same command id and
+ * session pin, recovers the saved user event, and only starts work after this
+ * user-initiated action. Attachments are recovered from the persisted event,
+ * so the phone does not upload them again. */
+export async function resumeChatCommandNow(commandId: string): Promise<boolean> {
+  const ownerId = currentOwnerId();
+  if (!ownerId) return false;
+  const hostOrigin = getResolvedHostOrigin();
+  const commands =
+    (await browserDbGet<PendingChatCommand[]>(
+      BROWSER_DB_STORES.chatCommandOutbox,
+      OUTBOX_KEY,
+    )) ?? [];
+  const command = commands.find((item) =>
+    item.ownerId === ownerId && item.hostOrigin === hostOrigin &&
+    item.commandId === commandId && item.accepted &&
+    item.executionStatus === "unconfirmed" && Boolean(item.sessionId),
+  );
+  if (!command) return false;
+  await mutateOutbox((items) => items.map((item) =>
+    item.ownerId === ownerId && item.hostOrigin === hostOrigin &&
+    item.commandId === commandId
+      ? { ...item, nextAttemptAt: Number.MAX_SAFE_INTEGER }
+      : item,
+  ));
+  await sendCommandToServer(command, true);
+  return true;
+}
+
 export function shouldReplayChatCommandError(error: unknown): boolean {
   if (error instanceof ChatCommandOutboxUnavailableError) return false;
   if (!(error instanceof ApiClientError)) return true;
@@ -395,37 +425,10 @@ function setOptimisticDeliveryStatus(
   });
 }
 
-async function replayCommand(command: PendingChatCommand): Promise<void> {
-  if (command.accepted) {
-    // Once the server has acknowledged persistence, polling is a read-only
-    // status check. Never re-upload large attachments or open another turn.
-    if (!command.sessionId) {
-      await markChatCommandAccepted(command.commandId, "unconfirmed");
-      return;
-    }
-    try {
-      const target = command.surface === "project"
-        ? { surface: "project" as const, projectId: command.projectId,
-            agentInstanceId: command.agentInstanceId, sessionId: command.sessionId }
-        : { surface: "agent" as const, agentId: command.agentId,
-            sessionId: command.sessionId };
-      const status = await getChatCommandStatus(target, command.commandId);
-      if (status.executionStatus === "completed") {
-        await removeChatCommand(command.commandId);
-      } else if (status.executionStatus === "failed") {
-        await markChatCommandExecutionFailed(command.commandId, status.sessionId);
-      } else {
-        await markChatCommandAccepted(
-          command.commandId,
-          status.executionStatus,
-          status.sessionId,
-        );
-      }
-    } catch (error) {
-      await recordChatCommandFailure(command.commandId, error);
-    }
-    return;
-  }
+async function sendCommandToServer(
+  command: PendingChatCommand,
+  isResume = false,
+): Promise<void> {
   setOptimisticDeliveryStatus(command.commandId, "sending");
   await new Promise<void>((resolve) => {
     let settled = false;
@@ -468,6 +471,7 @@ async function replayCommand(command: PendingChatCommand): Promise<void> {
       },
     };
 
+    const attachments = isResume ? undefined : command.attachments;
     const request = command.surface === "project"
       ? sendEventStream(
           command.projectId,
@@ -475,7 +479,7 @@ async function replayCommand(command: PendingChatCommand): Promise<void> {
           command.content,
           command.action,
           command.model,
-          command.attachments,
+          attachments,
           handler,
           controller.signal,
           command.commands,
@@ -489,13 +493,14 @@ async function replayCommand(command: PendingChatCommand): Promise<void> {
           command.commandId,
           true,
           command.accepted === true,
+          isResume,
         )
       : sendAgentEventStream(
           command.agentId,
           command.content,
           command.action,
           command.model,
-          command.attachments,
+          attachments,
           handler,
           controller.signal,
           command.commands,
@@ -508,11 +513,46 @@ async function replayCommand(command: PendingChatCommand): Promise<void> {
           command.commandId,
           true,
           command.accepted === true,
+          isResume,
         );
     void request.catch((error) => {
       settle(recordChatCommandFailure(command.commandId, error));
     });
   });
+}
+
+async function replayCommand(command: PendingChatCommand): Promise<void> {
+  if (command.accepted) {
+    // Once the server has acknowledged persistence, polling is a read-only
+    // status check. Never re-upload large attachments or open another turn.
+    if (!command.sessionId) {
+      await markChatCommandAccepted(command.commandId, "unconfirmed");
+      return;
+    }
+    try {
+      const target = command.surface === "project"
+        ? { surface: "project" as const, projectId: command.projectId,
+            agentInstanceId: command.agentInstanceId, sessionId: command.sessionId }
+        : { surface: "agent" as const, agentId: command.agentId,
+            sessionId: command.sessionId };
+      const status = await getChatCommandStatus(target, command.commandId);
+      if (status.executionStatus === "completed") {
+        await removeChatCommand(command.commandId);
+      } else if (status.executionStatus === "failed") {
+        await markChatCommandExecutionFailed(command.commandId, status.sessionId);
+      } else {
+        await markChatCommandAccepted(
+          command.commandId,
+          status.executionStatus,
+          status.sessionId,
+        );
+      }
+    } catch (error) {
+      await recordChatCommandFailure(command.commandId, error);
+    }
+    return;
+  }
+  await sendCommandToServer(command);
 }
 
 export function drainChatCommandOutbox(): Promise<void> {

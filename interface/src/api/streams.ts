@@ -389,6 +389,7 @@ export function sendAgentEventStream(
   clientCommandId?: string,
   isCommandReplay?: boolean,
   wasPreviouslyAccepted?: boolean,
+  isCommandResume?: boolean,
 ) {
   const body: Record<string, unknown> = { content, action };
   if (clientCommandId) body.client_command_id = clientCommandId;
@@ -424,6 +425,7 @@ export function sendAgentEventStream(
   }
   if (isCommandReplay) headers["X-Aura-Command-Replay"] = "1";
   if (wasPreviouslyAccepted) headers["X-Aura-Command-Previously-Accepted"] = "1";
+  if (isCommandResume) headers["X-Aura-Command-Resume"] = "1";
   return streamSSE<string>(
     `${BASE_URL}/api/agents/${agentId}/events/stream`,
     {
@@ -672,6 +674,7 @@ export function sendEventStream(
   clientCommandId?: string,
   isCommandReplay?: boolean,
   wasPreviouslyAccepted?: boolean,
+  isCommandResume?: boolean,
 ) {
   const body: Record<string, unknown> = { content, action };
   if (clientCommandId) body.client_command_id = clientCommandId;
@@ -705,6 +708,7 @@ export function sendEventStream(
   }
   if (isCommandReplay) headers["X-Aura-Command-Replay"] = "1";
   if (wasPreviouslyAccepted) headers["X-Aura-Command-Previously-Accepted"] = "1";
+  if (isCommandResume) headers["X-Aura-Command-Resume"] = "1";
   return streamSSE<string>(
     `${BASE_URL}/api/projects/${projectId}/agents/${agentInstanceId}/events/stream`,
     {
