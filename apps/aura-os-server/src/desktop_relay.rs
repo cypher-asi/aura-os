@@ -360,18 +360,29 @@ async fn handle_relay_socket(mut socket: WebSocket, state: AppState, user_id: St
         ))
         .await;
     info!(environment = %connection.environment_id, "desktop relay connected");
+    let mut heartbeat = tokio::time::interval(Duration::from_secs(25));
+    heartbeat.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    heartbeat.tick().await;
 
     loop {
         tokio::select! {
+            _ = heartbeat.tick() => {
+                let ping = serde_json::to_string(&RelayFrame::Ping).unwrap();
+                if socket.send(Message::Text(ping.into())).await.is_err() { break; }
+            }
             incoming = socket.recv() => {
                 match incoming {
                     Some(Ok(Message::Text(text))) => {
                         if let Ok(frame) = serde_json::from_str::<RelayFrame>(&text) {
                             connection.touch();
-                            if matches!(frame, RelayFrame::Pong) {
-                                continue;
+                            match frame {
+                                RelayFrame::Ping => {
+                                    let pong = serde_json::to_string(&RelayFrame::Pong).unwrap();
+                                    if socket.send(Message::Text(pong.into())).await.is_err() { break; }
+                                }
+                                RelayFrame::Pong => {}
+                                frame => state.desktop_relays.dispatch(frame),
                             }
-                            state.desktop_relays.dispatch(frame);
                         }
                     }
                     Some(Ok(Message::Close(_))) | None => break,
@@ -617,14 +628,29 @@ async fn desktop_relay_loop(
                     let Ok(tungstenite::Message::Text(text)) = message else {
                         break;
                     };
-                    let Ok(RelayFrame::Request {
+                    let Ok(frame) = serde_json::from_str::<RelayFrame>(&text) else {
+                        continue;
+                    };
+                    let RelayFrame::Request {
                         request_id,
                         method,
                         path,
                         headers,
                         body_b64,
-                    }) = serde_json::from_str(&text)
+                    } = frame
                     else {
+                        if matches!(frame, RelayFrame::Ping) {
+                            let Ok(pong) = serde_json::to_string(&RelayFrame::Pong) else {
+                                continue;
+                            };
+                            if socket
+                                .send(tungstenite::Message::Text(pong.into()))
+                                .await
+                                .is_err()
+                            {
+                                break;
+                            }
+                        }
                         continue;
                     };
                     let request_id_for_error = request_id.clone();
