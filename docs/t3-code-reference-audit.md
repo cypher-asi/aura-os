@@ -35,6 +35,21 @@ is a fresh implementation built on Aura's existing app, project, agent, session,
 registries. T3 is MIT licensed, but any future direct source reuse must still preserve its license
 and attribution.
 
+## Latest verification snapshot
+
+The current mobile implementation is on commit `57228c101` (`codex/mobile-agent-resume`). The
+server library suite passes (`1,041 passed; 1 ignored`), the focused web/mobile suite passes
+(`54 passed`), and the production-host Android debug build passes unit tests and lint. The APK is
+available at `interface/android/app/build/outputs/apk/debug/app-debug.apk` with SHA-256
+`3355512cb8d7fd0cbfd9c5f8f1a2d82eefaf315a4731e2800c219109bf22a58d` and embeds
+`https://api.aura.ai` as the native default host.
+
+The live `api.aura.ai` probe is intentionally not counted as feature verification yet: its
+execution-status CORS exposure still matches the older deployment and does not expose
+`x-aura-chat-execution-status`. The status-only route, Resume POST path, and the corresponding
+Harness/Swarm versions therefore still require deployment followed by real Android/WebView and
+remote-runtime verification.
+
 ## What T3 currently provides
 
 | Area | T3 implementation | Relevance to Aura |
