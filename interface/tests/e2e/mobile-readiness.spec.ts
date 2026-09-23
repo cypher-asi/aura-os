@@ -307,7 +307,7 @@ test("native mobile creates a hosted web agent without provisioning a remote VM"
   // from the mobile agent library even though its optimistic bubble unmounted.
   await page.goto("/agents");
   const pendingSends = page.getByRole("region", { name: "Unconfirmed agent sends" });
-  await expect(pendingSends).toContainText("1 message waiting");
+  await expect(pendingSends).toContainText("1 message to check");
   const removePending = pendingSends.getByRole("button", {
     name: "Stop retrying: Reply with Android hosted runtime ready",
   });
