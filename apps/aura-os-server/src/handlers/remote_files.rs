@@ -120,7 +120,7 @@ fn map_git_gateway_status(status: u16) -> (axum::http::StatusCode, Json<ApiError
 ///
 /// Agent IDs come from the request path, so they must be appended as one
 /// percent-encoded URL segment instead of interpolated into a URL string.
-fn trusted_swarm_request(
+fn build_swarm_request(
     client: &reqwest::Client,
     configured_base: &str,
     method: Method,
@@ -169,7 +169,7 @@ pub(crate) async fn list_remote_directory(
 ) -> ApiResult<Json<serde_json::Value>> {
     let (base_url, jwt) = resolve_remote_context(&state, &agent_id, &jwt).await?;
     let network = state.require_network_client()?;
-    let resp = trusted_swarm_request(
+    let resp = build_swarm_request(
         network.http_client(),
         &base_url,
         Method::POST,
@@ -214,7 +214,7 @@ pub(crate) async fn read_remote_file(
 ) -> ApiResult<Json<serde_json::Value>> {
     let (base_url, jwt) = resolve_remote_context(&state, &agent_id, &jwt).await?;
     let network = state.require_network_client()?;
-    let resp = trusted_swarm_request(
+    let resp = build_swarm_request(
         network.http_client(),
         &base_url,
         Method::POST,
@@ -255,10 +255,7 @@ async fn proxy_remote_git(
 ) -> ApiResult<Json<serde_json::Value>> {
     let (base_url, jwt) = resolve_remote_context(state, agent_id, jwt).await?;
     let network = state.require_network_client()?;
-    // `trusted_swarm_request` returns a request builder; it does not log the
-    // bearer token or request metadata. Suppress CodeQL's propagation warning.
-    // codeql[rust/cleartext-logging]
-    let response = trusted_swarm_request(
+    let response = build_swarm_request(
         network.http_client(),
         &base_url,
         Method::POST,
@@ -266,8 +263,6 @@ async fn proxy_remote_git(
         &["git", action],
     )?
     .json(&body)
-    // `bearer_auth` sets a sensitive HTTP header; it does not write to logs.
-    // codeql[rust/cleartext-logging]
     .bearer_auth(&jwt)
     .timeout(Duration::from_secs(15))
     .send()
@@ -380,7 +375,7 @@ pub(crate) async fn write_remote_file(
 ) -> ApiResult<Json<serde_json::Value>> {
     let (base_url, jwt) = resolve_remote_context(&state, &agent_id, &jwt).await?;
     let network = state.require_network_client()?;
-    let resp = trusted_swarm_request(
+    let resp = build_swarm_request(
         network.http_client(),
         &base_url,
         Method::PUT,
@@ -442,7 +437,7 @@ mod tests {
 
     #[test]
     fn swarm_request_keeps_untrusted_agent_id_inside_the_path() {
-        let request = trusted_swarm_request(
+        let request = build_swarm_request(
             &reqwest::Client::new(),
             "https://swarm.example/gateway/",
             Method::PUT,
@@ -465,7 +460,7 @@ mod tests {
         let (status, Json(error)) = map_git_gateway_status(413);
         assert_eq!(status, axum::http::StatusCode::PAYLOAD_TOO_LARGE);
         assert!(error.error.contains("review limit"));
-        let request = trusted_swarm_request(
+        let request = build_swarm_request(
             &reqwest::Client::new(),
             "https://swarm.example/gateway/",
             Method::POST,
