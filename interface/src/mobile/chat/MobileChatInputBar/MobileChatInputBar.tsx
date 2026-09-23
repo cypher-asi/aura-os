@@ -60,6 +60,7 @@ import {
 import { promptLengthError } from "../../../features/chat-ui/ChatInputBar/composer-length";
 import { refreshRemoteAgentStatus } from "../../../stores/profile-status-store";
 import { useUIModalStore } from "../../../stores/ui-modal-store";
+import { DesktopRelayStatus } from "../../components/DesktopRelayStatus";
 import styles from "./MobileChatInputBar.module.css";
 
 const CHAT_COMPOSER_MODE_LABELS: Partial<Record<AgentMode, string>> = {
@@ -136,7 +137,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
   ) {
     const isChatStreaming = useIsStreaming(streamKey);
     const isStreaming = isChatStreaming || isExternallyBusy;
-    const { remoteOnly, supportsHostRetargeting } = useAuraCapabilities();
+    const { remoteOnly, supportsHostRetargeting, isMobileClient } = useAuraCapabilities();
     const openHostSettings = useUIModalStore((state) => state.openHostSettings);
     const chatUI = useChatUI(streamKey);
     const selectedModel = chatUI.selectedModel;
@@ -943,6 +944,14 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
             </div>
           ) : null}
           <CommandChips commands={selectedCommands} onRemove={handleCommandRemove} />
+          {isMobileClient && machineType === "local" ? (
+            <DesktopRelayStatus
+              className={styles.desktopRelayStatus}
+              dotClassName={styles.desktopRelayStatusDot}
+              copyClassName={styles.desktopRelayStatusCopy}
+              iconClassName={styles.desktopRelayStatusIcon}
+            />
+          ) : null}
           {runtimeUnavailable ? (
             <div
               className={styles.disabledNotice}

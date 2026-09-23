@@ -220,6 +220,78 @@
   opacity: 0.62;
 }
 
+.desktopRelayStatus {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  max-width: calc(100% - 20px);
+  margin: 6px 10px 8px;
+  padding: 6px 9px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 42%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-bg-secondary, #181818) 82%, white 4%);
+  color: var(--color-text-secondary);
+  font: inherit;
+  text-align: left;
+  touch-action: manipulation;
+}
+
+.desktopRelayStatus:disabled {
+  cursor: wait;
+  opacity: 0.78;
+}
+
+.desktopRelayStatusDot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+}
+
+.desktopRelayStatus[data-status="connected"] .desktopRelayStatusDot {
+  background: #35d399;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #35d399 16%, transparent);
+}
+
+.desktopRelayStatus[data-status="checking"] .desktopRelayStatusDot {
+  background: #f5b942;
+}
+
+.desktopRelayStatus[data-status="offline"] .desktopRelayStatusDot,
+.desktopRelayStatus[data-status="unknown"] .desktopRelayStatusDot {
+  background: #f07878;
+}
+
+.desktopRelayStatusCopy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 15px;
+}
+
+.desktopRelayStatusCopy strong {
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.desktopRelayStatusCopy span {
+  color: var(--color-text-muted);
+  font-size: 10.5px;
+}
+
+.desktopRelayStatusIcon {
+  margin-left: auto;
+  flex: 0 0 auto;
+  color: var(--color-text-muted);
+}
+
 .disabledNoticeAction:active:not(:disabled) {
   transform: scale(0.97);
 }
