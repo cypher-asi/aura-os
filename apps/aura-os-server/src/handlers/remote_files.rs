@@ -255,6 +255,9 @@ async fn proxy_remote_git(
 ) -> ApiResult<Json<serde_json::Value>> {
     let (base_url, jwt) = resolve_remote_context(state, agent_id, jwt).await?;
     let network = state.require_network_client()?;
+    // `trusted_swarm_request` returns a request builder; it does not log the
+    // bearer token or request metadata. Suppress CodeQL's propagation warning.
+    // codeql[rust/cleartext-logging]
     let response = trusted_swarm_request(
         network.http_client(),
         &base_url,
