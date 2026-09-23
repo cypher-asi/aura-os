@@ -263,6 +263,8 @@ async fn proxy_remote_git(
         &["git", action],
     )?
     .json(&body)
+    // `bearer_auth` sets a sensitive HTTP header; it does not write to logs.
+    // codeql[rust/cleartext-logging]
     .bearer_auth(&jwt)
     .timeout(Duration::from_secs(15))
     .send()
