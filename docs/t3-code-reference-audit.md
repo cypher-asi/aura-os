@@ -366,7 +366,8 @@ The first Aura slice now implements that boundary:
   accepted command visible as unconfirmed instead of clearing the outbox. The status route uses
   Aura's existing agent/session ownership checks and the durable terminal marker, with no billing
   or harness session setup. Both status and project chat send reject an instance ID supplied under
-  another project's URL. The status-only route/outbox path has unit and route integration tests,
+  another project's URL, and the shared instance resolver now enforces that relationship for all
+  project-scoped consumers. The status-only route/outbox path has unit and route integration tests,
   but has not yet been exercised in Android/WebView or against a deployed backend.
 
 Next: formalize `runtimeId`/environment ownership in session metadata and move accepted command

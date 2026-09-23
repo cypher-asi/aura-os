@@ -76,7 +76,10 @@ pub(crate) async fn send_event_stream(
         .agent_instance_service
         .get_instance(&project_id, &agent_instance_id)
         .await
-        .map_err(|e| ApiError::internal(format!("looking up agent instance: {e}")))?;
+        .map_err(|e| match e {
+            aura_os_agents::AgentError::NotFound => ApiError::not_found("agent instance not found"),
+            other => ApiError::internal(format!("looking up agent instance: {other}")),
+        })?;
     // The instance service resolves by instance ID; the URL's project ID is
     // not part of that storage lookup. Do not let a mismatched project path
     // start a turn against another project's agent instance.
