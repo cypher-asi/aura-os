@@ -106,6 +106,11 @@ export function MobileProjectFilesScreen() {
         desktopEnvironmentId: desktopEnvironmentId ?? undefined,
       }
     : undefined;
+  const workspaceSourceLabel = desktopEnvironmentId
+    ? "Desktop workspace"
+    : hostedWorkspace
+      ? "Hosted workspace"
+      : "Remote workspace";
 
   return (
     <MobileProjectFilesContent
@@ -114,7 +119,7 @@ export function MobileProjectFilesScreen() {
       remoteAgentId={remoteAgentId}
       hostedWorkspace={hostedWorkspace}
       status={status}
-      workspaceSourceLabel={hostedWorkspace ? "Project workspace" : "Remote workspace"}
+      workspaceSourceLabel={workspaceSourceLabel}
       workspaceDisplay={remoteWorkspacePath ?? workspacePath ?? null}
       projectName={project?.name ?? "Project"}
       sourceControlAgentInstanceId={sourceControlAgentInstanceId}
