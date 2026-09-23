@@ -34,6 +34,7 @@ mod tools;
 pub(crate) mod turn_slot;
 mod typed_session;
 mod types;
+pub(crate) use types::SseStream;
 
 #[cfg(test)]
 mod tests;

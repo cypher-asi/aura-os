@@ -362,6 +362,10 @@ pub struct AppState {
     /// cross-loop bleed that the legacy global `event_broadcast`
     /// allowed.
     pub event_hub: EventHub,
+    /// Authenticated desktop-local runtimes currently connected to the
+    /// control plane. The desktop owns execution; this registry only holds
+    /// short-lived connection leases and in-flight relay receipts.
+    pub desktop_relays: std::sync::Arc<crate::desktop_relay::DesktopRelayRegistry>,
     /// Registry of currently-active loops (chat, automation, task run,
     /// spec gen). Source of truth for the unified circular progress
     /// indicator surfaced via the `/api/loops` snapshot endpoint and

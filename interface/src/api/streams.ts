@@ -9,6 +9,7 @@ import { EventType, isValidEventType, parseAuraEvent } from "../shared/types/aur
 import { handleEngineEvent } from "../stores/event-store/engine-event-handlers";
 import type { SSECallbacks } from "../shared/api/sse";
 import { streamSSE } from "../shared/api/sse";
+import { activeDesktopEnvironmentId } from "../shared/api/desktop-relay";
 import type { ActiveStreamSummary } from "../shared/api/streams";
 
 export type { ChatAttachment } from "../shared/types/aura-events";
@@ -426,6 +427,8 @@ export function sendAgentEventStream(
   if (isCommandReplay) headers["X-Aura-Command-Replay"] = "1";
   if (wasPreviouslyAccepted) headers["X-Aura-Command-Previously-Accepted"] = "1";
   if (isCommandResume) headers["X-Aura-Command-Resume"] = "1";
+  const desktopEnvironmentId = activeDesktopEnvironmentId();
+  if (desktopEnvironmentId) headers["X-Aura-Desktop-Environment"] = desktopEnvironmentId;
   return streamSSE<string>(
     `${BASE_URL}/api/agents/${agentId}/events/stream`,
     {
@@ -709,6 +712,8 @@ export function sendEventStream(
   if (isCommandReplay) headers["X-Aura-Command-Replay"] = "1";
   if (wasPreviouslyAccepted) headers["X-Aura-Command-Previously-Accepted"] = "1";
   if (isCommandResume) headers["X-Aura-Command-Resume"] = "1";
+  const desktopEnvironmentId = activeDesktopEnvironmentId();
+  if (desktopEnvironmentId) headers["X-Aura-Desktop-Environment"] = desktopEnvironmentId;
   return streamSSE<string>(
     `${BASE_URL}/api/projects/${projectId}/agents/${agentInstanceId}/events/stream`,
     {

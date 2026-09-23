@@ -13,6 +13,7 @@ import { keyForProjectSession } from "../../../hooks/stream/store";
 import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../../hooks/use-terminal-target";
 import type { HostedWorkspaceTarget } from "../../../shared/api/hosted-workspace";
+import { activeDesktopEnvironmentId } from "../../../shared/api/desktop-relay";
 import { useChatUIStore } from "../../../stores/chat-ui-store";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
 import {
@@ -97,8 +98,13 @@ export function MobileProjectFilesScreen() {
 
   if (!projectId) return null;
 
-  const hostedWorkspace = hostedLocalHarness && localAgentInstanceId
-    ? { projectId, agentInstanceId: localAgentInstanceId }
+  const desktopEnvironmentId = activeDesktopEnvironmentId();
+  const hostedWorkspace = localAgentInstanceId && (hostedLocalHarness || desktopEnvironmentId)
+    ? {
+        projectId,
+        agentInstanceId: localAgentInstanceId,
+        desktopEnvironmentId: desktopEnvironmentId ?? undefined,
+      }
     : undefined;
 
   return (

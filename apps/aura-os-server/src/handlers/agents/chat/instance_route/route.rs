@@ -1,6 +1,6 @@
 //! Axum handler for `POST /v1/projects/:project_id/agents/:instance_id/chat/stream`.
 
-use aura_os_core::{AgentInstanceId, ProjectId, SessionId};
+use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, SessionId};
 use aura_os_harness::SessionConfig;
 use axum::extract::{Path, State};
 use axum::Json;
@@ -56,6 +56,32 @@ pub(crate) async fn send_event_stream(
     headers: axum::http::HeaderMap,
     Json(body): Json<SendChatRequest>,
 ) -> ApiResult<SseResponse> {
+    if let Some(environment_id) = headers
+        .get(crate::desktop_relay::DESKTOP_ENVIRONMENT_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        let instance = state
+            .agent_instance_service
+            .get_instance(&project_id, &agent_instance_id)
+            .await
+            .map_err(|error| ApiError::not_found(format!("agent instance not found: {error}")))?;
+        if instance.harness_mode() == HarnessMode::Local {
+            let body = serde_json::to_vec(&body).map_err(|error| {
+                ApiError::internal(format!("serializing desktop relay request: {error}"))
+            })?;
+            return crate::desktop_relay::forward_chat_stream(
+                &state,
+                &auth_session.user_id,
+                environment_id,
+                &format!("/api/projects/{project_id}/agents/{agent_instance_id}/events/stream"),
+                &headers,
+                body,
+            )
+            .await;
+        }
+    }
     // Phase 5 observability (5.3): the chat client sets
     // `X-Aura-Client-Retry: <n>` on every auto-retry POST so the
     // server-side counter reflects the same close-reason the client

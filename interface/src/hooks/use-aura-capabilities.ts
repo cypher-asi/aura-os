@@ -1,6 +1,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { resolveApiUrl, subscribeToHostChanges } from "../shared/lib/host-config";
 import { isNativeRuntime } from "../shared/lib/native-runtime";
+import { refreshDesktopRelayEnvironment } from "../shared/api/desktop-relay";
 
 export const AURA_BREAKPOINTS = {
   phoneMax: 680,
@@ -125,6 +126,16 @@ function requestRuntimeCapabilities(force = false): Promise<void> {
       }
       serverRuntimeCapabilities = data;
       runtimeCapabilitiesStatus = "loaded";
+      // Keep the mobile shell aware of a paired desktop-local runtime. This
+      // is deliberately best-effort: hosted local agents remain available
+      // when no desktop is connected, while local agents can opt into the
+      // stronger desktop execution path when one is present.
+      // The extra discovery request is only useful to phone/native clients;
+      // keeping it out of desktop/web capability probes also avoids making
+      // the core runtime gate depend on an optional rolling-deploy route.
+      if (readCapabilities().isMobileClient) {
+        void refreshDesktopRelayEnvironment();
+      }
       // Capability responses are infrequent and directly gate actions such as
       // starting a local agent. Publish them immediately: native WebViews can
       // defer requestAnimationFrame while restoring or changing activities,

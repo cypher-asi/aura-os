@@ -9,14 +9,14 @@ use std::path::{Component, Path as FsPath, PathBuf};
 
 use aura_os_core::{AgentId, AgentInstanceId, HarnessMode, ProjectId};
 use axum::extract::{Path, Query, State};
-use axum::http::{Method, StatusCode};
+use axum::http::{HeaderMap, Method, StatusCode};
 use axum::response::Response;
 use serde::Deserialize;
 use url::form_urlencoded;
 
-use crate::error::{map_network_error, map_storage_error, ApiError, ApiResult};
+use crate::error::{ApiError, ApiResult, map_network_error, map_storage_error};
 use crate::handlers::projects_helpers::resolve_hosted_local_workspace_path;
-use crate::state::{AppState, AuthJwt};
+use crate::state::{AppState, AuthJwt, AuthSession};
 
 const HOSTED_FILE_TREE_DEPTH: &str = "20";
 
@@ -176,8 +176,22 @@ fn map_proxy_error(status: StatusCode) -> (StatusCode, axum::Json<ApiError>) {
 pub(crate) async fn list_hosted_workspace_files(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
     Path((project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
+    headers: HeaderMap,
 ) -> ApiResult<Response> {
+    if let Some(environment_id) = desktop_environment_id(&headers) {
+        return crate::desktop_relay::forward_http_request(
+            &state,
+            &session.user_id,
+            environment_id,
+            "GET",
+            &format!("/api/projects/{project_id}/agents/{agent_instance_id}/workspace/files"),
+            &headers,
+            None,
+        )
+        .await;
+    }
     ensure_hosted_local_instance(&state, &jwt, &project_id, &agent_instance_id).await?;
     let root = hosted_workspace_root(&state, &project_id).await?;
     let query = encoded_query(&root, true);
@@ -191,9 +205,33 @@ pub(crate) async fn list_hosted_workspace_files(
 pub(crate) async fn read_hosted_workspace_file(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
     Path((project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
+    headers: HeaderMap,
     Query(query): Query<HostedReadFileQuery>,
 ) -> ApiResult<Response> {
+    if let Some(environment_id) = desktop_environment_id(&headers) {
+        let path = query.path.clone();
+        let query_string = {
+            let mut serializer = form_urlencoded::Serializer::new(String::new());
+            serializer.append_pair("path", &path);
+            serializer.finish()
+        };
+        let relay_path = format!(
+            "/api/projects/{project_id}/agents/{agent_instance_id}/workspace/read-file?{}",
+            query_string
+        );
+        return crate::desktop_relay::forward_http_request(
+            &state,
+            &session.user_id,
+            environment_id,
+            "GET",
+            &relay_path,
+            &headers,
+            None,
+        )
+        .await;
+    }
     ensure_hosted_local_instance(&state, &jwt, &project_id, &agent_instance_id).await?;
     let relative = validated_relative_path(&query.path, false).map_err(ApiError::bad_request)?;
     let root = hosted_workspace_root(&state, &project_id).await?;
@@ -209,9 +247,26 @@ pub(crate) async fn read_hosted_workspace_file(
 pub(crate) async fn write_hosted_workspace_file(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
     Path((project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
+    headers: HeaderMap,
     axum::Json(request): axum::Json<HostedWriteFileRequest>,
 ) -> ApiResult<Response> {
+    if let Some(environment_id) = desktop_environment_id(&headers) {
+        let body = serde_json::to_vec(&request).map_err(|error| {
+            ApiError::internal(format!("serializing desktop file request: {error}"))
+        })?;
+        return crate::desktop_relay::forward_http_request(
+            &state,
+            &session.user_id,
+            environment_id,
+            "PUT",
+            &format!("/api/projects/{project_id}/agents/{agent_instance_id}/workspace/write-file"),
+            &headers,
+            Some(body),
+        )
+        .await;
+    }
     ensure_hosted_local_instance(&state, &jwt, &project_id, &agent_instance_id).await?;
     let relative = validated_relative_path(&request.path, false).map_err(ApiError::bad_request)?;
     let root = hosted_workspace_root(&state, &project_id).await?;
@@ -227,6 +282,14 @@ pub(crate) async fn write_hosted_workspace_file(
         .proxy_json(Method::PUT, "api/write-file", None, Some(body))
         .await
         .map_err(map_proxy_error)
+}
+
+fn desktop_environment_id(headers: &HeaderMap) -> Option<&str> {
+    headers
+        .get(crate::desktop_relay::DESKTOP_ENVIRONMENT_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
 }
 
 #[cfg(test)]

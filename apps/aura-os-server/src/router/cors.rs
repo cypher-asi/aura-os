@@ -58,6 +58,7 @@ pub fn build_local_api_cors_layer() -> CorsLayer {
             HeaderName::from_static("x-aura-chat-command-replayed"),
             HeaderName::from_static("x-aura-chat-execution-status"),
             HeaderName::from_static("x-aura-attach-id"),
+            HeaderName::from_static("x-aura-desktop-relayed"),
         ]))
 }
 

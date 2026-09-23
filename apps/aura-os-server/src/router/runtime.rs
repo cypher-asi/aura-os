@@ -1,7 +1,7 @@
 use axum::routing::{delete, get, post};
 use axum::Router;
 
-use crate::handlers::{browser, dev_loop, log, remote_terminal, system, terminal, ws};
+use crate::handlers::{browser, dev_loop, desktop_relay, log, remote_terminal, system, terminal, ws};
 use crate::state::AppState;
 
 pub(super) fn system_routes() -> Router<AppState> {
@@ -52,6 +52,15 @@ pub(super) fn system_routes() -> Router<AppState> {
             get(remote_terminal::ws_remote_terminal),
         )
         .route("/ws/events", get(ws::ws_events))
+        .route("/ws/desktop-relay", get(desktop_relay::desktop_relay_ws))
+        .route(
+            "/api/desktop/environments",
+            get(desktop_relay::list_environments),
+        )
+        .route(
+            "/api/desktop/environments/:environment_id",
+            get(desktop_relay::relay_environment_status),
+        )
         .route("/api/system/info", get(system::get_environment_info))
         .route(
             "/api/system/workspace_defaults",

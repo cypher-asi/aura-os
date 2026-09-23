@@ -326,7 +326,7 @@ pub(crate) struct UpdateAgentInstanceRequest {
 
 // -- Chat DTOs --
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct ChatAttachmentDto {
     #[serde(rename = "type")]
     pub type_: String,
@@ -338,7 +338,7 @@ pub(crate) struct ChatAttachmentDto {
     pub source_url: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct SendChatRequest {
     pub content: String,
     /// Client-generated identity for this send attempt. The chat route
@@ -432,7 +432,7 @@ pub(crate) struct SendChatRequest {
     pub mixture: Option<MixtureRequestBody>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct AgentMentionDto {
     pub agent_id: String,
     pub agent_instance_id: String,
@@ -440,7 +440,7 @@ pub(crate) struct AgentMentionDto {
 
 /// AURA Council selection from the chat client. See
 /// [`SendChatRequest::council`].
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct CouncilRequestBody {
     pub models: Vec<CouncilModelRequestBody>,
     /// How `models[0]` combines the members' answers once every member
@@ -455,7 +455,7 @@ pub(crate) struct CouncilRequestBody {
 /// One council member from the chat client: a model id plus its
 /// optional reasoning-effort tier (same wire strings as
 /// [`SendChatRequest::reasoning_effort`]).
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct CouncilModelRequestBody {
     pub id: String,
     #[serde(default)]
@@ -464,7 +464,7 @@ pub(crate) struct CouncilModelRequestBody {
 
 /// Second Opinion / Mixture-of-Agents selection from the chat client.
 /// The aggregator is the final-answer model; references are advisory.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct MixtureRequestBody {
     pub references: Vec<CouncilModelRequestBody>,
     pub aggregator: CouncilModelRequestBody,

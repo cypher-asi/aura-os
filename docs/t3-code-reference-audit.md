@@ -139,8 +139,16 @@ The first Aura slice now implements that boundary:
   for bounded lexical search across completed chats. Results remain source-linked excerpts: mobile
   opens the exact original project, agent instance, session, and event, and does not silently inject
   recalled text into another turn. Partial-history searches disclose skipped sessions.
-- Desktop-local agents remain readable on mobile while their runtime is unreachable; sending stays
-  disabled until the owning host is available instead of bouncing the user out of the conversation.
+- Desktop-local agents now have the Codex-style ownership boundary: the desktop keeps the
+  filesystem and bundled Harness, creates a stable installation environment id, and maintains an
+  authenticated outbound `/ws/desktop-relay` lease to the control plane. Mobile discovers the
+  paired environment through `/api/desktop/environments`; local-agent chat POSTs carry only that
+  environment id and the control plane forwards the SSE stream to the desktop's loopback API.
+  Workspace data and long-lived credentials never move through the relay. When the desktop is
+  offline, the same agent/session remains readable; if the connected API advertises a hosted local
+  Harness, mobile can use that explicit fallback, otherwise the composer stays read-only. The relay
+  is intentionally in-memory per API instance today, so production must keep
+  `aura-api` on one instance until the lease/pending-request store moves to shared infrastructure.
 - A disabled mobile composer now distinguishes saved conversation availability from execution
   reachability. Local and remote runtime failures use truthful read-only copy, preserve the runtime
   identity in the footer, and offer an immediate status recheck; disconnected local clients also

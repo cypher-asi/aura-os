@@ -410,6 +410,7 @@ mod tests {
                 live_streams: crate::live_streams::LiveStreamRegistry::from_env(),
                 event_broadcast,
                 event_hub,
+                desktop_relays: Arc::new(crate::desktop_relay::DesktopRelayRegistry::new()),
                 loop_registry,
                 require_zero_pro: false,
                 remote_only: false,

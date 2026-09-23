@@ -282,6 +282,45 @@ open the same canonical agent/session, and send a prompt. If the capability
 probe is `remoteOnly:true`, the API is missing the hosted Harness URL/token
 pair; do not diagnose that as a Swarm failure.
 
+### Desktop-local mobile relay
+
+Desktop-local execution is a separate path from hosted local Harness. The
+desktop keeps the repository and bundled `aura-node` sidecar on the user's
+machine, then opens an outbound authenticated WebSocket to the Aura API. This
+works behind NAT without exposing the desktop listener or asking mobile to
+mount the filesystem. Set `AURA_DESKTOP_RELAY_URL=https://api.aura.ai` in the
+desktop build environment (the packaged default is already that value). The
+desktop stores its stable environment id beside its local settings and
+reconnects after login, sleep, or a transient API outage.
+
+Read-only control-plane checks:
+
+```bash
+curl -i -X OPTIONS https://api.aura.ai/api/desktop/environments \
+  -H 'Origin: capacitor://localhost' \
+  -H 'Access-Control-Request-Method: GET' \
+  -H 'Access-Control-Request-Headers: authorization'
+# Expect 200. An authenticated GET returns the user's connected desktops.
+
+curl -i -X OPTIONS https://api.aura.ai/ws/desktop-relay \
+  -H 'Origin: https://app.aura.ai' \
+  -H 'Access-Control-Request-Method: GET' \
+  -H 'Access-Control-Request-Headers: authorization'
+# Expect 200 before a desktop attempts its authenticated WebSocket upgrade.
+```
+
+After signing in on desktop, leave Aura running, open the same account on
+mobile, and verify `/api/desktop/environments` contains one connected
+environment. A local agent send should then carry
+`X-Aura-Desktop-Environment` and execute on the desktop filesystem. Stop the
+desktop and refresh the mobile screen: history must remain visible and the
+environment list must empty. If hosted local Harness is enabled, mobile may
+fall back to it; otherwise the composer must become read-only. Do not route
+this path through Swarm. The current relay registry and in-flight
+request channels are process-local, so keep `aura-api` at one Render instance
+until those leases are backed by shared storage and a connection-affine
+WebSocket gateway.
+
 ## Notes
 
 - Port 10000 is Render's default. The server reads `AURA_SERVER_PORT`.
