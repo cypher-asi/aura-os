@@ -22,6 +22,7 @@ use futures_util::{SinkExt, StreamExt, stream};
 use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::tungstenite;
+use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tracing::{debug, info, warn};
 use uuid::Uuid;
 
@@ -581,12 +582,22 @@ async fn desktop_relay_loop(
 ) {
     let mut backoff = Duration::from_secs(2);
     loop {
-        let Some(jwt) = state
-            .validation_cache
-            .iter()
-            .next()
-            .map(|entry| entry.key().clone())
-        else {
+        // The settings store is the authoritative desktop login.  The
+        // validation cache can contain several browser/mobile JWTs at once;
+        // picking an arbitrary cache entry can pair the relay with a stale
+        // user after a local account switch.
+        let jwt = state
+            .store
+            .get_cached_zero_auth_session()
+            .map(|session| session.access_token)
+            .or_else(|| {
+                state
+                    .validation_cache
+                    .iter()
+                    .next()
+                    .map(|entry| entry.key().clone())
+            });
+        let Some(jwt) = jwt else {
             tokio::time::sleep(Duration::from_secs(5)).await;
             continue;
         };
@@ -594,17 +605,21 @@ async fn desktop_relay_loop(
             warn!(control_plane = %control_plane, "invalid desktop relay URL");
             return;
         };
-        let request = match axum::http::Request::builder()
-            .uri(&url)
-            .header("authorization", format!("Bearer {jwt}"))
-            .body(())
-        {
+        let mut request = match url.clone().into_client_request() {
             Ok(request) => request,
             Err(error) => {
                 warn!(%error, "failed to build desktop relay request");
                 return;
             }
         };
+        let authorization = match format!("Bearer {jwt}").parse() {
+            Ok(value) => value,
+            Err(error) => {
+                warn!(%error, "failed to build desktop relay authorization header");
+                return;
+            }
+        };
+        request.headers_mut().insert("authorization", authorization);
         match tokio_tungstenite::connect_async(request).await {
             Ok((mut socket, _)) => {
                 backoff = Duration::from_secs(2);
