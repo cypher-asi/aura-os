@@ -18,13 +18,19 @@ describe("normalizePricingKey", () => {
       "claude-mythos-5-1",
     );
     expect(normalizePricingKey("aura-claude-opus-5")).toBe("claude-opus-5");
+    expect(normalizePricingKey("aura-claude-opus-5-5")).toBe(
+      "claude-opus-5-5",
+    );
     expect(normalizePricingKey("aura-claude-opus-4-8")).toBe("claude-opus-4-8");
     expect(normalizePricingKey("aura-claude-fable-5")).toBe("claude-fable-5");
     expect(normalizePricingKey("aura-gpt-5-5")).toBe("gpt-5.5");
+    expect(normalizePricingKey("aura-gpt-6-astra")).toBe("gpt-6-astra");
+    expect(normalizePricingKey("openai/gpt-6-sol")).toBe("gpt-6-sol");
     expect(normalizePricingKey("gpt-5.6")).toBe("gpt-5.6-sol");
     expect(normalizePricingKey("aura-gpt-5-6-terra")).toBe("gpt-5.6-terra");
     expect(normalizePricingKey("openai/gpt-5.6-luna")).toBe("gpt-5.6-luna");
     expect(normalizePricingKey("aura-gpt-5-4-mini")).toBe("gpt-5.4-mini");
+    expect(normalizePricingKey("aura-grok-4-7")).toBe("grok-4.7");
     expect(normalizePricingKey("aura-grok-4-6")).toBe("grok-4.6");
     expect(normalizePricingKey("xai/grok-4.6")).toBe("grok-4.6");
     expect(normalizePricingKey("aura-grok-4-5")).toBe("grok-4.5");
@@ -86,6 +92,13 @@ describe("resolvePricing for Kimi K3", () => {
 
 describe("resolvePricing for xAI Grok", () => {
   it("resolves aura aliases and raw names to the xAI table", () => {
+    expect(resolvePricing("aura-grok-4-7")).toMatchObject({
+      provider: "xai",
+      model: "grok-4.7",
+      input: 2,
+      output: 6,
+      cacheRead: 0.5,
+    });
     const current = resolvePricing("aura-grok-4-6");
     expect(current.provider).toBe("xai");
     expect(current.model).toBe("grok-4.6");
@@ -235,10 +248,10 @@ describe("getBilledPricing", () => {
   it("resolves the full GPT-5.6 family at published rates", () => {
     expect(resolvePricing("gpt-5.6")).toMatchObject({
       model: "gpt-5.6-sol",
-      input: 5,
-      output: 30,
-      cacheWrite: 6.25,
-      cacheRead: 0.5,
+      input: 4,
+      output: 20,
+      cacheWrite: 5,
+      cacheRead: 0.4,
     });
     expect(resolvePricing("aura-gpt-5-6-terra")).toMatchObject({
       input: 2,
@@ -251,6 +264,30 @@ describe("getBilledPricing", () => {
       output: 1.2,
       cacheWrite: 0.25,
       cacheRead: 0.02,
+    });
+  });
+
+  it("resolves the GPT-6 family at published rates", () => {
+    expect(resolvePricing("aura-gpt-6-astra")).toMatchObject({
+      model: "gpt-6-astra",
+      input: 10,
+      output: 50,
+      cacheWrite: 12.5,
+      cacheRead: 1,
+    });
+    expect(resolvePricing("openai/gpt-6-sol")).toMatchObject({
+      model: "gpt-6-sol",
+      input: 2,
+      output: 10,
+      cacheWrite: 2.5,
+      cacheRead: 0.2,
+    });
+    expect(resolvePricing("aura-gpt-6-luna")).toMatchObject({
+      model: "gpt-6-luna",
+      input: 0.1,
+      output: 0.5,
+      cacheWrite: 0.125,
+      cacheRead: 0.01,
     });
   });
 
@@ -284,6 +321,17 @@ describe("getBilledPricing", () => {
       output: 25,
       cacheWrite: 6.25,
       cacheRead: 0.5,
+    });
+  });
+
+  it("resolves Claude Opus 5.5 base and prompt-cache rates", () => {
+    expect(resolvePricing("aura-claude-opus-5-5")).toMatchObject({
+      provider: "anthropic",
+      model: "claude-opus-5-5",
+      input: 4,
+      output: 20,
+      cacheWrite: 5,
+      cacheRead: 0.2,
     });
   });
 
@@ -340,6 +388,13 @@ describe("computeSessionCost", () => {
         inputTokens: 300_000,
       }).totalCostUsd,
     ).toBeCloseTo(9, 6);
+    expect(
+      computeSessionCost({
+        ...usage,
+        model: "aura-gpt-6-sol",
+        inputTokens: 300_000,
+      }).totalCostUsd,
+    ).toBeCloseTo(3.24, 6);
     expect(
       computeSessionCost({
         ...usage,
