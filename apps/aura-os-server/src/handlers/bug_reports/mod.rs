@@ -14,7 +14,7 @@ use crate::error::{ApiError, ApiResult};
 use crate::handlers::permissions::require_sys_admin;
 use crate::state::{AppState, AuthJwt, AuthSession};
 
-const BUG_REPORT_MODEL: &str = "aura-claude-opus-5";
+const BUG_REPORT_MODEL: &str = "aura-claude-opus-5-5";
 const BUG_REPORT_MAX_TOKENS: u32 = 2048;
 
 /// Feedback-post shape used when a bug report is mirrored into the public

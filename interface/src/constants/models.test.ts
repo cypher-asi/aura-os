@@ -151,7 +151,21 @@ describe("model persistence", () => {
     );
   });
 
+  it("normalizes the GPT-6 family to Aura-managed chat models", () => {
+    expect(loadPersistedModel("default", "gpt-6-astra")).toBe(
+      "aura-gpt-6-astra",
+    );
+    expect(loadPersistedModel("default", "gpt-6-sol")).toBe("aura-gpt-6-sol");
+    expect(loadPersistedModel("default", "gpt-6-luna")).toBe(
+      "aura-gpt-6-luna",
+    );
+  });
+
   it("normalizes raw Grok model ids to Aura-managed chat models", () => {
+    expect(loadPersistedModel("default", "grok-4.7")).toBe("aura-grok-4-7");
+    expect(loadPersistedModel("default", "xai/grok-4.7")).toBe(
+      "aura-grok-4-7",
+    );
     expect(loadPersistedModel("default", "grok-4.5")).toBe("aura-grok-4-5");
     expect(loadPersistedModel("default", "grok-4.6")).toBe("aura-grok-4-6");
     expect(loadPersistedModel("default", "xai/grok-4.6")).toBe(
@@ -205,6 +219,23 @@ describe("model persistence", () => {
     expect(loadPersistedModel("default", "claude-opus-5")).toBe(
       "aura-claude-opus-5",
     );
+  });
+
+  it("includes Claude Opus 5.5 with its current adaptive-thinking ladder", () => {
+    expect(loadPersistedModel("default", "claude-opus-5-5")).toBe(
+      "aura-claude-opus-5-5",
+    );
+    const opus = AURA_MANAGED_CHAT_MODELS.find(
+      (model) => model.id === "aura-claude-opus-5-5",
+    );
+    expect(opus).toMatchObject({
+      label: "Opus 5.5",
+      vendor: "anthropic",
+      creditMultiplier: 4,
+      contextWindow: 1_000_000,
+      defaultEffort: "medium",
+    });
+    expect(opus?.efforts).toEqual(["low", "medium", "high", "xhigh", "max"]);
   });
 
   it("includes Claude Opus 5 with its full adaptive-thinking ladder", () => {
@@ -565,7 +596,7 @@ describe("reasoning-effort validity per model", () => {
 
   it("offers all six native GPT-5.6 reasoning efforts and correct multipliers", () => {
     for (const [id, multiplier] of [
-      ["aura-gpt-5-6-sol", 6],
+      ["aura-gpt-5-6-sol", 4.8],
       ["aura-gpt-5-6-terra", 2.4],
       ["aura-gpt-5-6-luna", 0.24],
     ] as const) {
@@ -587,6 +618,27 @@ describe("reasoning-effort validity per model", () => {
       ]);
       expect(effectiveCreditMultiplier(model!, model!.defaultEffort)).toBe(
         multiplier,
+      );
+    }
+  });
+
+  it("offers the GPT-6 family with Astra's restricted minimum effort", () => {
+    for (const [id, multiplier] of [
+      ["aura-gpt-6-astra", 12],
+      ["aura-gpt-6-sol", 2.4],
+      ["aura-gpt-6-luna", 0.12],
+    ] as const) {
+      const model = AURA_MANAGED_CHAT_MODELS.find((candidate) => candidate.id === id);
+      expect(model).toMatchObject({
+        vendor: "openai",
+        creditMultiplier: multiplier,
+        contextWindow: 1_050_000,
+        defaultEffort: "medium",
+      });
+      expect(model?.efforts).toEqual(
+        id === "aura-gpt-6-astra"
+          ? ["low", "medium", "high", "xhigh", "max"]
+          : ["minimal", "low", "medium", "high", "xhigh", "max"],
       );
     }
   });
@@ -668,6 +720,19 @@ describe("reasoning-effort validity per model", () => {
     expect(model?.defaultEffort).toBe("high");
     expect(model?.contextWindow).toBe(500_000);
     expect(model?.creditMultiplier).toBe(1.44);
+  });
+
+  it("maps Grok 4.7 onto xAI's full current reasoning effort ladder", () => {
+    const model = AURA_MANAGED_CHAT_MODELS.find(
+      (candidate) => candidate.id === "aura-grok-4-7",
+    );
+    expect(model).toMatchObject({
+      vendor: "xai",
+      contextWindow: 500_000,
+      creditMultiplier: 1.44,
+      defaultEffort: "high",
+    });
+    expect(model?.efforts).toEqual(["low", "medium", "high", "xhigh"]);
   });
 
   it("offers Grok Build as a cheaper xAI model without effort controls", () => {

@@ -6,9 +6,23 @@ import {
 
 describe("model effort wire helpers", () => {
   it("keeps supported efforts for reasoning-capable models", () => {
+    expect(supportedReasoningEffort("aura-gpt-6-astra", "max")).toBe("max");
+    expect(supportedReasoningEffort("aura-gpt-6-sol", "minimal")).toBe(
+      "minimal",
+    );
+    expect(supportedReasoningEffort("aura-claude-opus-5-5", "xhigh")).toBe(
+      "xhigh",
+    );
+    expect(supportedReasoningEffort("aura-grok-4-7", "xhigh")).toBe("xhigh");
     expect(supportedReasoningEffort("aura-grok-4-6", "xhigh")).toBe("xhigh");
     expect(supportedReasoningEffort("aura-grok-4-5", "high")).toBe("high");
     expect(supportedReasoningEffort("aura-grok-4-3", "high")).toBe("high");
+  });
+
+  it("omits unsupported GPT-6 Astra no-reasoning effort", () => {
+    expect(supportedReasoningEffort("aura-gpt-6-astra", "minimal")).toBe(
+      undefined,
+    );
   });
 
   it("omits unsupported Grok 4.5 reasoning efforts", () => {

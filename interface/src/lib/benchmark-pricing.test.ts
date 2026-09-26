@@ -178,10 +178,10 @@ describe("benchmark pricing", () => {
   it("resolves GPT-5.6 aliases and cache-write premiums", () => {
     expect(resolvePricing("gpt-5.6", "openai")).toMatchObject({
       model: "gpt-5.6-sol",
-      input: 5,
-      cacheWrite: 6.25,
-      cacheRead: 0.5,
-      output: 30,
+      input: 4,
+      cacheWrite: 5,
+      cacheRead: 0.4,
+      output: 20,
     });
     expect(resolvePricing("aura-gpt-5-6-terra")).toMatchObject({
       model: "gpt-5.6-terra",
@@ -194,6 +194,20 @@ describe("benchmark pricing", () => {
       input: 0.2,
       cacheWrite: 0.25,
       output: 1.2,
+    });
+  });
+
+  it.each([
+    ["aura-gpt-6-astra", "gpt-6-astra", 10, 1, 50],
+    ["openai/gpt-6-sol", "gpt-6-sol", 2, 0.2, 10],
+    ["aura-gpt-6-luna", "gpt-6-luna", 0.1, 0.01, 0.5],
+  ])("resolves GPT-6 pricing for %s", (modelId, model, input, cacheRead, output) => {
+    expect(resolvePricing(modelId)).toMatchObject({
+      provider: "openai",
+      model,
+      input,
+      cacheRead,
+      output,
     });
   });
 
@@ -224,6 +238,8 @@ describe("benchmark pricing", () => {
   });
 
   it.each([
+    ["aura-grok-4-7", "grok-4.7", 2, 0.5, 6],
+    ["xai/grok-4.7", "grok-4.7", 2, 0.5, 6],
     ["aura-grok-4-6", "grok-4.6", 2, 0.5, 6],
     ["xai/grok-4.6", "grok-4.6", 2, 0.5, 6],
     ["aura-grok-4-5", "grok-4.5", 2, 0.3, 6],

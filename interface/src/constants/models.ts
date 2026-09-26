@@ -150,8 +150,16 @@ const OPENAI_EFFORTS: ModelEffort[] = [
   "xhigh",
 ];
 
-/** GPT-5.6 adds a distinct native `max` tier above `xhigh`. */
+/** GPT-5.6 and GPT-6 Sol/Luna add a native `max` tier above `xhigh`. */
 const GPT_5_6_EFFORTS: ModelEffort[] = [...OPENAI_EFFORTS, "max"];
+/** GPT-6 Astra starts at `low`; unlike Sol and Luna it has no `none` tier. */
+const GPT_6_ASTRA_EFFORTS: ModelEffort[] = [
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+];
 
 /**
  * GPT-5.4 uses the same native `none`/`low`/`medium`/`high`/`xhigh`
@@ -183,7 +191,7 @@ const GEMINI_FLASH_EFFORTS: ModelEffort[] = ["low", "medium", "high"];
  * The router maps Aura's `minimal` UI tier to xAI's `none` value.
  */
 const XAI_EFFORTS: ModelEffort[] = ["minimal", "low", "medium", "high"];
-/** Grok 4.6 adds xAI's native `xhigh` tier above the default `high`. */
+/** Grok 4.7/4.6 add xAI's native `xhigh` tier above the default `high`. */
 const XAI_GROK_4_6_EFFORTS: ModelEffort[] = [
   "low",
   "medium",
@@ -236,6 +244,21 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     featured: true,
   },
   // ── Anthropic ───────────────────────────────────────────────
+  {
+    id: "aura-claude-opus-5-5",
+    label: "Opus 5.5",
+    tier: "opus",
+    mode: "chat",
+    vendor: "anthropic",
+    creditMultiplier: 4,
+    contextWindow: 1_000_000,
+    efforts: ANTHROPIC_XHIGH_EFFORTS,
+    defaultEffort: "medium",
+    provider: "Anthropic",
+    description:
+      "Anthropic's latest Opus, with adaptive thinking, five effort levels, and a 1M-token context window.",
+    featured: true,
+  },
   {
     id: "aura-claude-fable-5",
     label: "Fable 5",
@@ -357,12 +380,56 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
   },
   // ── OpenAI ──────────────────────────────────────────────────
   {
+    id: "aura-gpt-6-astra",
+    label: "GPT-6 Astra",
+    tier: "gpt",
+    mode: "chat",
+    vendor: "openai",
+    creditMultiplier: 12,
+    contextWindow: 1_050_000,
+    efforts: GPT_6_ASTRA_EFFORTS,
+    defaultEffort: "medium",
+    provider: "OpenAI",
+    description:
+      "OpenAI's highest-capability GPT-6 tier for the most demanding reasoning and agentic work.",
+    featured: true,
+  },
+  {
+    id: "aura-gpt-6-sol",
+    label: "GPT-6 Sol",
+    tier: "gpt",
+    mode: "chat",
+    vendor: "openai",
+    creditMultiplier: 2.4,
+    contextWindow: 1_050_000,
+    efforts: GPT_5_6_EFFORTS,
+    defaultEffort: "medium",
+    provider: "OpenAI",
+    description:
+      "OpenAI's balanced GPT-6 workhorse for coding and everyday professional work.",
+    featured: true,
+  },
+  {
+    id: "aura-gpt-6-luna",
+    label: "GPT-6 Luna",
+    tier: "gpt",
+    mode: "chat",
+    vendor: "openai",
+    creditMultiplier: 0.12,
+    contextWindow: 1_050_000,
+    efforts: GPT_5_6_EFFORTS,
+    defaultEffort: "medium",
+    provider: "OpenAI",
+    description:
+      "OpenAI's fastest, most affordable GPT-6 tier for easier and high-volume tasks.",
+  },
+  {
     id: "aura-gpt-5-6-sol",
     label: "GPT-5.6 Sol",
     tier: "gpt",
     mode: "chat",
     vendor: "openai",
-    creditMultiplier: 6,
+    creditMultiplier: 4.8,
     contextWindow: 1_050_000,
     efforts: GPT_5_6_EFFORTS,
     defaultEffort: "medium",
@@ -471,6 +538,21 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
       "Open-weight 120B reasoning model with selectable effort tiers and a 128K context window.",
   },
   // ── xAI ─────────────────────────────────────────────────────
+  {
+    id: "aura-grok-4-7",
+    label: "Grok 4.7",
+    tier: "opus",
+    mode: "chat",
+    vendor: "xai",
+    creditMultiplier: 1.44,
+    contextWindow: 500_000,
+    efforts: XAI_GROK_4_6_EFFORTS,
+    defaultEffort: "high",
+    provider: "xAI",
+    description:
+      "xAI's latest flagship for coding, agentic tasks, and knowledge work, with xHigh reasoning and a 500K context window.",
+    featured: true,
+  },
   {
     id: "aura-grok-4-6",
     label: "Grok 4.6",
@@ -1081,6 +1163,8 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "aura-claude-fable-5": "aura-claude-fable-5",
   "claude-mythos-5-1": "aura-claude-mythos-5-1",
   "aura-claude-mythos-5-1": "aura-claude-mythos-5-1",
+  "claude-opus-5-5": "aura-claude-opus-5-5",
+  "aura-claude-opus-5-5": "aura-claude-opus-5-5",
   "claude-opus-5": "aura-claude-opus-5",
   "aura-claude-opus-5": "aura-claude-opus-5",
   "aura-claude-opus-4-6": "aura-claude-opus-4-6",
@@ -1097,6 +1181,12 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "claude-haiku-4-5-20251001": "aura-claude-haiku-4-5",
   "aura-gpt-4.1": "aura-gpt-4.1",
   "gpt-4.1": "aura-gpt-4.1",
+  "gpt-6-astra": "aura-gpt-6-astra",
+  "aura-gpt-6-astra": "aura-gpt-6-astra",
+  "gpt-6-sol": "aura-gpt-6-sol",
+  "aura-gpt-6-sol": "aura-gpt-6-sol",
+  "gpt-6-luna": "aura-gpt-6-luna",
+  "aura-gpt-6-luna": "aura-gpt-6-luna",
   "gpt-5.6": "aura-gpt-5-6-sol",
   "gpt-5.6-sol": "aura-gpt-5-6-sol",
   "gpt-5.6-terra": "aura-gpt-5-6-terra",
@@ -1105,6 +1195,9 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "gpt-5.4": "aura-gpt-5-4",
   "gpt-5.4-mini": "aura-gpt-5-4-mini",
   "gpt-5.4-nano": "aura-gpt-5-4-nano",
+  "aura-grok-4-7": "aura-grok-4-7",
+  "grok-4.7": "aura-grok-4-7",
+  "xai/grok-4.7": "aura-grok-4-7",
   "aura-grok-4-6": "aura-grok-4-6",
   "grok-4.6": "aura-grok-4-6",
   "xai/grok-4.6": "aura-grok-4-6",

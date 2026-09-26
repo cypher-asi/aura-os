@@ -81,6 +81,7 @@ const ANTHROPIC_PRICING: Readonly<Record<string, ModelRates>> = {
     cacheRead: 0.25,
   },
   "claude-fable-5": { input: 10, output: 50, cacheWrite: 12.5, cacheRead: 1 },
+  "claude-opus-5-5": { input: 4, output: 20, cacheWrite: 5, cacheRead: 0.2 },
   "claude-opus-5": { input: 5, output: 25, cacheWrite: 6.25, cacheRead: 0.5 },
   "claude-opus-4-8": { input: 5, output: 25, cacheWrite: 6.25, cacheRead: 0.5 },
   "claude-opus-4-7": { input: 5, output: 25, cacheWrite: 6.25, cacheRead: 0.5 },
@@ -109,8 +110,11 @@ const ANTHROPIC_PRICING: Readonly<Record<string, ModelRates>> = {
 } as const;
 
 const OPENAI_PRICING: Readonly<Record<string, ModelRates>> = {
-  // GPT-5.6 cache writes cost 1.25x uncached input; cache reads cost 0.1x.
-  "gpt-5.6-sol": { input: 5, output: 30, cacheWrite: 6.25, cacheRead: 0.5 },
+  // GPT-5.6 and later: cache writes cost 1.25x input; reads cost 0.1x.
+  "gpt-6-astra": { input: 10, output: 50, cacheWrite: 12.5, cacheRead: 1 },
+  "gpt-6-sol": { input: 2, output: 10, cacheWrite: 2.5, cacheRead: 0.2 },
+  "gpt-6-luna": { input: 0.1, output: 0.5, cacheWrite: 0.125, cacheRead: 0.01 },
+  "gpt-5.6-sol": { input: 4, output: 20, cacheWrite: 5, cacheRead: 0.4 },
   "gpt-5.6-terra": { input: 2, output: 12, cacheWrite: 2.5, cacheRead: 0.2 },
   "gpt-5.6-luna": {
     input: 0.2,
@@ -138,6 +142,7 @@ const OPENAI_PRICING: Readonly<Record<string, ModelRates>> = {
 // publish a separate cache-write rate for these models, so cache writes use
 // the base input rate when a caller reports them.
 const XAI_PRICING: Readonly<Record<string, ModelRates>> = {
+  "grok-4.7": { input: 2, output: 6, cacheWrite: 2, cacheRead: 0.5 },
   "grok-4.6": { input: 2, output: 6, cacheWrite: 2, cacheRead: 0.5 },
   "grok-4.5": { input: 2, output: 6, cacheWrite: 2, cacheRead: 0.3 },
   "grok-4.3": { input: 1.25, output: 2.5, cacheWrite: 1.25, cacheRead: 0.2 },
@@ -279,6 +284,9 @@ export function normalizePricingKey(model: string): string {
   const fireworksModel = unprefixed.match(/^accounts\/fireworks\/(?:models|routers)\/(.+)$/);
   if (fireworksModel) return fireworksModel[1];
   const directAura: Readonly<Record<string, string>> = {
+    "aura-gpt-6-astra": "gpt-6-astra",
+    "aura-gpt-6-sol": "gpt-6-sol",
+    "aura-gpt-6-luna": "gpt-6-luna",
     "gpt-5.6": "gpt-5.6-sol",
     "aura-gpt-5-6-sol": "gpt-5.6-sol",
     "aura-gpt-5-6-terra": "gpt-5.6-terra",
@@ -290,6 +298,7 @@ export function normalizePricingKey(model: string): string {
     "aura-oss-120b": "gpt-oss-120b",
     "aura-deepseek-v4-pro": "deepseek-v4-pro",
     "aura-deepseek-v4-flash": "deepseek-v4-flash",
+    "aura-grok-4-7": "grok-4.7",
     "aura-grok-4-6": "grok-4.6",
     "aura-grok-4-5": "grok-4.5",
     "aura-grok-4-3": "grok-4.3",
@@ -420,7 +429,8 @@ function applyLongContextPricing(
     inputTokens > 272_000 &&
     (pricing.model === "gpt-5.4" ||
       pricing.model === "gpt-5.5" ||
-      pricing.model.startsWith("gpt-5.6"));
+      pricing.model.startsWith("gpt-5.6") ||
+      pricing.model.startsWith("gpt-6"));
   const xaiLongContext = pricing.provider === "xai" && inputTokens >= 200_000;
   const googleLongContext =
     pricing.provider === "google" &&
