@@ -61,6 +61,7 @@ import {
   keyForProjectSession,
   migrateStreamPartition,
 } from "../stream/store";
+import { migrateChatPartition } from "../stream/migration";
 import { useChatUIStore, migrateChatUiPartition } from "../../stores/chat-ui-store";
 import {
   getPartitionSendControl,
@@ -391,5 +392,51 @@ describe("Phase 4 — migrate helpers: idempotency and edge cases", () => {
 
     expect(useChatUIStore.getState().streams[toKey]?.selectedModel).toBe("dst-model");
     expect(useChatUIStore.getState().drafts[toKey]).toBe("destination draft");
+  });
+
+  it("moves an active source over a pre-existing idle destination without losing the optimistic prompt", () => {
+    const fromKey = "p-1:ai-X:fresh";
+    const toKey = "p-1:ai-X:assigned-session";
+
+    const src = seedLaneState(fromKey, {
+      streamingText: "live response",
+      events: 1,
+      draft: "source draft",
+      selectedModel: "source-model",
+    });
+
+    const idleDestinationMeta = ensureEntry(toKey);
+    const idleDestinationControl = getPartitionSendControl(toKey);
+    useChatUIStore.setState((state) => ({
+      streams: {
+        ...state.streams,
+        [toKey]: {
+          selectedMode: "code",
+          selectedModel: "stale-destination-model",
+          projectId: null,
+          pinnedSourceImage: null,
+        },
+      },
+      drafts: { ...state.drafts, [toKey]: "stale destination draft" },
+    }));
+
+    migrateChatPartition(fromKey, toKey);
+
+    expect(useStreamStore.getState().entries[fromKey]).toBeUndefined();
+    expect(streamMetaMap.get(fromKey)).toBeUndefined();
+    expect(_peekPartitionSendControl(fromKey)).toBeUndefined();
+
+    const destinationEntry = useStreamStore.getState().entries[toKey];
+    expect(destinationEntry.isStreaming).toBe(true);
+    expect(destinationEntry.streamingText).toBe("live response");
+    expect(destinationEntry.events).toHaveLength(1);
+    expect(streamMetaMap.get(toKey)?.refs).toBe(src.refsRef);
+    expect(streamMetaMap.get(toKey)?.refs).not.toBe(idleDestinationMeta.refs);
+    expect(_peekPartitionSendControl(toKey)).toBe(src.ctl);
+    expect(_peekPartitionSendControl(toKey)).not.toBe(idleDestinationControl);
+    expect(useChatUIStore.getState().streams[toKey]?.selectedModel).toBe(
+      "source-model",
+    );
+    expect(useChatUIStore.getState().drafts[toKey]).toBe("source draft");
   });
 });

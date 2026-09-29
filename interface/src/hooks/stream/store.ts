@@ -11,6 +11,7 @@ import type {
 import {
   clearAllPartitions,
   registerPartitionRegistry,
+  type PartitionMigrationOptions,
 } from "./partition-registry";
 
 /* ------------------------------------------------------------------ */
@@ -582,7 +583,8 @@ void resolveKey;
  * entry is dropped (the new key's entry is the authoritative one — the
  * fresh-canvas → real-id migration races with `useStreamCore`'s
  * `ensureEntry(newKey)` on re-render, but the in-flight data lives at
- * `oldKey` so this branch is rare).
+ * `oldKey` so this branch is rare). The orchestrator can override that
+ * policy when the source is actively streaming and the destination is idle.
  *
  * Migration covers:
  *   - the Zustand `useStreamStore.entries` slice (events, isStreaming,
@@ -599,7 +601,11 @@ void resolveKey;
  * kept for back-compat — vitest suites import it directly to pin the
  * per-map rekey semantics.
  */
-export function migrateStreamPartition(oldKey: string, newKey: string): void {
+export function migrateStreamPartition(
+  oldKey: string,
+  newKey: string,
+  options?: PartitionMigrationOptions,
+): void {
   if (oldKey === newKey) return;
 
   // Move the streamMeta (refs object reference + abort controller). We
@@ -609,7 +615,7 @@ export function migrateStreamPartition(oldKey: string, newKey: string): void {
   // meta would orphan those mutations.
   const oldMeta = streamMetaMap.get(oldKey);
   if (oldMeta) {
-    if (!streamMetaMap.has(newKey)) {
+    if (!streamMetaMap.has(newKey) || options?.replaceDestination) {
       const moved: StreamMeta = {
         key: newKey,
         refs: oldMeta.refs,
@@ -624,7 +630,7 @@ export function migrateStreamPartition(oldKey: string, newKey: string): void {
   useStreamStore.setState((s) => {
     const oldEntry = s.entries[oldKey];
     if (!oldEntry) return s;
-    if (s.entries[newKey]) {
+    if (s.entries[newKey] && !options?.replaceDestination) {
       const { [oldKey]: _drop, ...rest } = s.entries;
       void _drop;
       return { entries: rest };

@@ -26,13 +26,15 @@ export const useToolApprovalStore = create<ToolApprovalStore>()((set) => ({
 
 registerPartitionRegistry({
   name: "tool-approval-prompts",
-  migrate(oldKey, newKey) {
+  migrate(oldKey, newKey, options) {
     const state = useToolApprovalStore.getState();
     const prompt = state.prompts[oldKey];
     if (!prompt) return;
     useToolApprovalStore.setState((current) => {
       const prompts = { ...current.prompts };
-      if (!prompts[newKey]) prompts[newKey] = prompt;
+      if (!prompts[newKey] || options?.replaceDestination) {
+        prompts[newKey] = prompt;
+      }
       delete prompts[oldKey];
       return { prompts };
     });
