@@ -2,6 +2,7 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 import { useAgentChatStream, _resetAgentChatStreamReplayMap } from "./use-agent-chat-stream";
 import { _resetAllPartitionSendControl } from "./stream/partition-state";
 import {
+  ensureEntry,
   keyForAgentSession,
   useStreamStore,
   streamMetaMap,
@@ -223,6 +224,39 @@ describe("useAgentChatStream", () => {
     expect(entry.events.length).toBeGreaterThanOrEqual(1);
     expect(entry.events[0].role).toBe("user");
     expect(entry.events[0].content).toBe("hello");
+  });
+
+  it("keeps the optimistic user message when SessionReady finds a pre-existing idle destination lane", async () => {
+    const destinationKey = keyForAgentSession("agent-1", "assigned-session");
+    ensureEntry(destinationKey);
+
+    vi.mocked(api.agents.sendEventStream).mockImplementation(
+      async (_id, _content, _action, _model, _attachments, handler) => {
+        handler?.onEvent({
+          type: EventType.SessionReady,
+          content: { session_id: "assigned-session" },
+        } as AuraEvent);
+      },
+    );
+
+    const onSessionReady = vi.fn();
+    const { result } = renderHook(() =>
+      useAgentChatStream({ agentId: "agent-1", onSessionReady }),
+    );
+
+    await act(async () => {
+      await result.current.sendMessage("keep this prompt visible");
+    });
+
+    expect(onSessionReady).toHaveBeenCalledWith("assigned-session");
+    expect(useStreamStore.getState().entries[destinationKey].events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: "user",
+          content: "keep this prompt visible",
+        }),
+      ]),
+    );
   });
 
   it("clears sending state only after the server accepts the command", async () => {

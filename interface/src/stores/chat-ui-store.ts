@@ -25,7 +25,10 @@ import {
   persistAgentMode,
   type AgentMode,
 } from "../constants/modes";
-import { registerPartitionRegistry } from "../hooks/stream/partition-registry";
+import {
+  registerPartitionRegistry,
+  type PartitionMigrationOptions,
+} from "../hooks/stream/partition-registry";
 
 function modelForMode(
   mode: AgentMode,
@@ -194,7 +197,11 @@ function loadPersistedDraft(streamKey: string): string {
  * removed: leaving `...:fresh` behind causes the next new-chat canvas to
  * rehydrate the previous session's Council / second-opinion configuration.
  */
-function migratePersistedStreamState(oldKey: string, newKey: string): void {
+function migratePersistedStreamState(
+  oldKey: string,
+  newKey: string,
+  options?: PartitionMigrationOptions,
+): void {
   const storageKeys = [
     councilCountStorageKey,
     councilModelsStorageKey,
@@ -209,7 +216,10 @@ function migratePersistedStreamState(oldKey: string, newKey: string): void {
       const sourceKey = storageKey(oldKey);
       const destinationKey = storageKey(newKey);
       const sourceValue = localStorage.getItem(sourceKey);
-      if (sourceValue !== null && localStorage.getItem(destinationKey) === null) {
+      if (
+        sourceValue !== null &&
+        (options?.replaceDestination || localStorage.getItem(destinationKey) === null)
+      ) {
         localStorage.setItem(destinationKey, sourceValue);
       }
       localStorage.removeItem(sourceKey);
@@ -1150,7 +1160,9 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
  * render the input bar empty.
  *
  * If `newKey` already has an entry, it wins and the `oldKey` entry is
- * dropped (mirrors `migrateStreamPartition`).
+ * dropped (mirrors `migrateStreamPartition`). The session migration
+ * orchestrator may explicitly replace an idle destination with an active
+ * source so the live turn's UI preferences move with it.
  *
  * Bound to the `chat-ui-partition` `PartitionRegistry` (see
  * `../hooks/stream/partition-registry.ts`) so the
@@ -1159,22 +1171,26 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
  * kept for back-compat — vitest suites import it directly to pin the
  * per-map rekey semantics.
  */
-export function migrateChatUiPartition(oldKey: string, newKey: string): void {
+export function migrateChatUiPartition(
+  oldKey: string,
+  newKey: string,
+  options?: PartitionMigrationOptions,
+): void {
   if (oldKey === newKey) return;
-  migratePersistedStreamState(oldKey, newKey);
+  migratePersistedStreamState(oldKey, newKey, options);
   useChatUIStore.setState((s) => {
     const nextStreams = { ...s.streams };
     const nextDrafts = { ...s.drafts };
     let changed = false;
     if (nextStreams[oldKey]) {
-      if (!nextStreams[newKey]) {
+      if (!nextStreams[newKey] || options?.replaceDestination) {
         nextStreams[newKey] = nextStreams[oldKey];
       }
       delete nextStreams[oldKey];
       changed = true;
     }
     if (nextDrafts[oldKey] !== undefined) {
-      if (nextDrafts[newKey] === undefined) {
+      if (nextDrafts[newKey] === undefined || options?.replaceDestination) {
         nextDrafts[newKey] = nextDrafts[oldKey];
       }
       delete nextDrafts[oldKey];

@@ -26,11 +26,23 @@
  * `oldKey` to `newKey` (the implementation decides what to do if
  * `newKey` already exists — convention is "destination wins, source
  * drops"); `clear` drops the entry for `key`. Both are no-ops when
- * the underlying map has no entry at the supplied key.
+ * the underlying map has no entry at the supplied key. An orchestrator may
+ * explicitly request source-wins replacement when it has stronger lifecycle
+ * evidence (for example, an active source turn and an idle destination).
  */
+export interface PartitionMigrationOptions {
+  /** Replace a pre-existing destination instead of applying the normal
+   * destination-wins collision policy. */
+  replaceDestination?: boolean;
+}
+
 export interface PartitionRegistry {
   readonly name: string;
-  migrate(oldKey: string, newKey: string): void;
+  migrate(
+    oldKey: string,
+    newKey: string,
+    options?: PartitionMigrationOptions,
+  ): void;
   clear(key: string): void;
 }
 
@@ -62,8 +74,12 @@ export function registerPartitionRegistry(r: PartitionRegistry): void {
  * Errors propagate; a half-migrated partition would be worse than
  * surfacing the failure at the flip site.
  */
-export function migrateAllPartitions(oldKey: string, newKey: string): void {
-  for (const r of registries) r.migrate(oldKey, newKey);
+export function migrateAllPartitions(
+  oldKey: string,
+  newKey: string,
+  options?: PartitionMigrationOptions,
+): void {
+  for (const r of registries) r.migrate(oldKey, newKey, options);
 }
 
 /**

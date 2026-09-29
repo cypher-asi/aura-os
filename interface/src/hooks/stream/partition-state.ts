@@ -1,6 +1,9 @@
 import type { AgentMentionTarget, ChatAttachment } from "../../api/streams";
 import type { GenerationMode } from "../../constants/models";
-import { registerPartitionRegistry } from "./partition-registry";
+import {
+  registerPartitionRegistry,
+  type PartitionMigrationOptions,
+} from "./partition-registry";
 
 /* ------------------------------------------------------------------ */
 /*  Per-partition auto-retry / replay state.                           */
@@ -264,14 +267,22 @@ function clearPartitionSendControl(key: string): void {
  * dropped (with its retryTimer cleared); this matches the behaviour of
  * `migrateStreamPartition` in the same scenario.
  */
-function migratePartitionSendControlInternal(oldKey: string, newKey: string): void {
+function migratePartitionSendControlInternal(
+  oldKey: string,
+  newKey: string,
+  options?: PartitionMigrationOptions,
+): void {
   if (oldKey === newKey) return;
   const oldCtrl = partitionSendControlMap.get(oldKey);
   if (!oldCtrl) return;
-  if (partitionSendControlMap.has(newKey)) {
+  if (partitionSendControlMap.has(newKey) && !options?.replaceDestination) {
     if (oldCtrl.retryTimer != null) clearTimeout(oldCtrl.retryTimer);
     partitionSendControlMap.delete(oldKey);
     return;
+  }
+  if (options?.replaceDestination) {
+    const destination = partitionSendControlMap.get(newKey);
+    if (destination?.retryTimer != null) clearTimeout(destination.retryTimer);
   }
   partitionSendControlMap.set(newKey, oldCtrl);
   partitionSendControlMap.delete(oldKey);
@@ -315,11 +326,15 @@ function clearPartitionAgentReplay(key: string): void {
   partitionAgentReplayMap.delete(key);
 }
 
-function migratePartitionAgentReplayInternal(oldKey: string, newKey: string): void {
+function migratePartitionAgentReplayInternal(
+  oldKey: string,
+  newKey: string,
+  options?: PartitionMigrationOptions,
+): void {
   if (oldKey === newKey) return;
   const oldReplay = partitionAgentReplayMap.get(oldKey);
   if (!oldReplay) return;
-  if (partitionAgentReplayMap.has(newKey)) {
+  if (partitionAgentReplayMap.has(newKey) && !options?.replaceDestination) {
     partitionAgentReplayMap.delete(oldKey);
     return;
   }
