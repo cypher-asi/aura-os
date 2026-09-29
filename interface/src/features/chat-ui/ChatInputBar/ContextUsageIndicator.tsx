@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardE
 import { ChevronRight, X } from "lucide-react";
 import type { ContextBreakdown } from "../../../stores/context-usage-store";
 import { computeSessionCost } from "../../../constants/model-pricing";
-import { modelLabel } from "../../../constants/models";
+import { getModelById, modelLabel } from "../../../constants/models";
 import { SessionCostSection, type SessionCostView } from "../SessionCostSection";
 import { CacheInfoOverlay } from "./CacheInfoOverlay";
 import { CollapsibleSection } from "./CollapsibleSection";
@@ -251,18 +251,23 @@ export const ContextUsageIndicator = memo(function ContextUsageIndicator({
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [open]);
 
-  const percent = Math.round(utilization * 100);
-  const safeUtilization = Math.max(0, Math.min(1, utilization));
-  const ringDashOffset = RING_CIRCUMFERENCE * (1 - safeUtilization);
   const usedTokens = typeof estimatedTokens === "number" ? estimatedTokens : undefined;
+  const catalogContextWindow = getModelById(model)?.contextWindow;
+  const safeUtilization =
+    usedTokens != null && catalogContextWindow != null && catalogContextWindow > 0
+      ? Math.max(0, Math.min(1, usedTokens / catalogContextWindow))
+      : Math.max(0, Math.min(1, utilization));
+  const percent = Math.round(safeUtilization * 100);
+  const ringDashOffset = RING_CIRCUMFERENCE * (1 - safeUtilization);
   const totalTokens =
-    usedTokens != null && utilization > 0 ? usedTokens / utilization : undefined;
+    catalogContextWindow ??
+    (usedTokens != null && utilization > 0 ? usedTokens / utilization : undefined);
   const hasTokens = usedTokens != null && totalTokens != null;
 
   const toneClass =
-    utilization >= 0.9
+    safeUtilization >= 0.9
       ? styles.contextDanger
-      : utilization >= 0.7
+      : safeUtilization >= 0.7
         ? styles.contextWarning
         : "";
 

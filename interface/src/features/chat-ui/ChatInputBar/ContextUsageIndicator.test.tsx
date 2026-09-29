@@ -74,6 +74,24 @@ describe("ContextUsageIndicator", () => {
     expect(dialog).toHaveTextContent("200,000 tokens");
   });
 
+  it("uses the model catalog window when runtime utilization is stale", async () => {
+    const user = userEvent.setup();
+    render(
+      <ContextUsageIndicator
+        utilization={1}
+        estimatedTokens={296_000}
+        model="aura-grok-4-7"
+        breakdown={fixtureBreakdown({ conversationTokens: 286_000 })}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /59% context/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: /context breakdown/i });
+    expect(dialog).toHaveTextContent("59% Full");
+    expect(dialog).toHaveTextContent(/~296K \/ 500K Tokens/);
+  });
+
   it("hides token rows when estimatedTokens are missing", async () => {
     const user = userEvent.setup();
     render(<ContextUsageIndicator utilization={0.42} />);
@@ -188,7 +206,7 @@ describe("ContextUsageIndicator", () => {
     render(
       <ContextUsageIndicator
         utilization={0.39}
-        estimatedTokens={105_141}
+        estimatedTokens={390_000}
         breakdown={fixtureBreakdown()}
         model="claude-opus-4-8"
         cumulativeInputTokens={1_000_000}

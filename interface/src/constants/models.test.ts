@@ -534,6 +534,29 @@ describe("effort-scaled credits", () => {
 });
 
 describe("reasoning-effort validity per model", () => {
+  it("defines a context window for every managed chat model", () => {
+    for (const model of AURA_MANAGED_CHAT_MODELS) {
+      expect(model.contextWindow, model.id).toBeGreaterThan(0);
+    }
+  });
+
+  it("uses Google's exact 1,048,576-token windows", () => {
+    for (const id of [
+      "aura-gemini-3-1-pro",
+      "aura-gemini-3-5-flash",
+      "aura-gemini-3-flash",
+      "aura-gemini-3-1-flash-lite",
+      "aura-gemini-2-5-pro",
+      "aura-gemini-2-5-flash",
+      "aura-gemini-2-5-flash-lite",
+    ]) {
+      const model = AURA_MANAGED_CHAT_MODELS.find(
+        (candidate) => candidate.id === id,
+      );
+      expect(model?.contextWindow, id).toBe(1_048_576);
+    }
+  });
+
   it("never lists a defaultEffort that is not also an offered effort", () => {
     for (const model of AURA_MANAGED_CHAT_MODELS) {
       if (!model.defaultEffort) continue;
