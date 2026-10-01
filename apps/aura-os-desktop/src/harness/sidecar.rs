@@ -326,9 +326,15 @@ fn parse_windows_sidecar_processes(
             let pid = pid.parse::<u32>().ok()?;
             let path = std::path::PathBuf::from(executable);
             let name = path.file_name()?.to_str()?;
+            #[cfg(target_os = "windows")]
+            let in_managed_dir = path
+                .parent()
+                .is_some_and(|parent| super::binary::same_windows_path(parent, managed_dir));
+            #[cfg(not(target_os = "windows"))]
+            let in_managed_dir = path.parent() == Some(managed_dir);
             // Restrict process management to executables directly in our staging
             // directory. An unrelated listener must never be stopped.
-            if path.parent() != Some(managed_dir)
+            if !in_managed_dir
                 || !(name == "aura-node.exe"
                     || (name.starts_with("aura-node-") && name.ends_with(".exe")))
             {
@@ -337,7 +343,16 @@ fn parse_windows_sidecar_processes(
             Some(ManagedSidecarProcess {
                 pid,
                 command_line: executable.to_string(),
-                kind: if path == expected_binary {
+                kind: if {
+                    #[cfg(target_os = "windows")]
+                    {
+                        super::binary::same_windows_path(&path, expected_binary)
+                    }
+                    #[cfg(not(target_os = "windows"))]
+                    {
+                        path == expected_binary
+                    }
+                } {
                     ManagedSidecarKind::Current
                 } else {
                     ManagedSidecarKind::Stale
@@ -495,12 +510,37 @@ mod tests {
 
     #[test]
     fn windows_listener_discovery_only_manages_our_sidecars() {
-        let managed = Path::new("/data/runtime/sidecar");
+        let root = tempfile::tempdir().unwrap();
+        let managed = root.path().join("data/runtime/sidecar");
+        let external = root.path().join("other");
+        let adjacent = root.path().join("data/runtime/sidecar-other");
+        for directory in [&managed, &external, &adjacent] {
+            std::fs::create_dir_all(directory).unwrap();
+        }
+        // Only the Windows parser resolves aliases. Keep the portable fixture
+        // paths identical on hosts where /tmp itself is a symlink.
+        #[cfg(not(target_os = "windows"))]
+        let managed = managed.canonicalize().unwrap();
         let expected = managed.join("aura-node.exe");
-        let processes = parse_windows_sidecar_processes(
-            "12|/data/runtime/sidecar/aura-node.exe\n13|/data/runtime/sidecar/aura-node-old.exe\n14|/other/aura-node.exe\n15|/data/runtime/sidecar-other/aura-node.exe\ninvalid\n16|/data/runtime/sidecar/unrelated.exe\n",
-            managed, &expected,
+        let paths = [
+            expected.clone(),
+            managed.join("aura-node-old.exe"),
+            external.join("aura-node.exe"),
+            adjacent.join("aura-node.exe"),
+            managed.join("unrelated.exe"),
+        ];
+        for path in &paths {
+            std::fs::write(path, b"fixture").unwrap();
+        }
+        let output = format!(
+            "12|{}\n13|{}\n14|{}\n15|{}\ninvalid\n16|{}\n",
+            paths[0].canonicalize().unwrap().display(),
+            paths[1].canonicalize().unwrap().display(),
+            paths[2].display(),
+            paths[3].display(),
+            paths[4].display(),
         );
+        let processes = parse_windows_sidecar_processes(&output, &managed, &expected);
         assert_eq!(processes.len(), 2);
         assert_eq!(processes[0].pid, 12);
         assert_eq!(processes[0].kind, ManagedSidecarKind::Current);

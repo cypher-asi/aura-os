@@ -274,27 +274,61 @@ fn stop_staged_windows_sidecar(binary: &Path) -> Result<(), String> {
     if !binary.is_file() {
         return Ok(());
     }
-    // Rust joins can contain mixed separators, and canonicalize adds a
-    // verbatim prefix. CIM reports a native absolute path without that prefix.
-    // Compare the same representation so a running managed copy is not missed.
-    let absolute_binary = binary
-        .canonicalize()
-        .map_err(|error| format!("failed to resolve previous managed sidecar: {error}"))?;
-    let process_path = windows_process_path(&absolute_binary.to_string_lossy());
+    // CIM preserves the launch path (including 8.3 aliases such as RUNNER~1).
+    // Resolve both paths on disk before comparing, not just our expected path.
     let output = std::process::Command::new("powershell.exe")
         .creation_flags(0x0800_0000) // CREATE_NO_WINDOW
         .args(["-NoProfile", "-NonInteractive", "-Command",
-            "$ErrorActionPreference = 'Stop'; Get-CimInstance Win32_Process -Filter \"Name = 'aura-node.exe'\" | Where-Object { $_.ExecutablePath -eq $env:AURA_SIDECAR_REPLACE_PATH } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force; Wait-Process -Id $_.ProcessId -ErrorAction SilentlyContinue }"])
-        .env("AURA_SIDECAR_REPLACE_PATH", process_path)
+            "$ErrorActionPreference = 'Stop'; Get-CimInstance Win32_Process -Filter \"Name = 'aura-node.exe'\" | ForEach-Object { Write-Output ($_.ProcessId.ToString() + '|' + $_.ExecutablePath) }"])
         .output()
-        .map_err(|error| format!("failed to stop previous managed sidecar: {error}"))?;
+        .map_err(|error| format!("failed to discover previous managed sidecar: {error}"))?;
     if !output.status.success() {
         return Err(format!(
-            "failed to stop previous managed sidecar: {}",
+            "failed to discover previous managed sidecar: {}",
             String::from_utf8_lossy(&output.stderr)
         ));
     }
+    for line in String::from_utf8_lossy(&output.stdout).lines() {
+        let Some((pid, executable)) = line.trim().split_once('|') else {
+            continue;
+        };
+        let Ok(pid) = pid.parse::<u32>() else {
+            continue;
+        };
+        if !same_windows_path(Path::new(executable), binary) {
+            continue;
+        }
+        // Revalidate the original CIM path and PID immediately before stopping
+        // it, so a reused PID cannot select an unrelated process.
+        let stopped = std::process::Command::new("powershell.exe")
+            .creation_flags(0x0800_0000)
+            .args(["-NoProfile", "-NonInteractive", "-Command",
+                "$ErrorActionPreference = 'Stop'; Get-CimInstance Win32_Process -Filter \"ProcessId = $env:AURA_SIDECAR_REPLACE_PID\" | Where-Object { $_.Name -eq 'aura-node.exe' -and $_.ExecutablePath -eq $env:AURA_SIDECAR_REPLACE_PATH } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force; Wait-Process -Id $_.ProcessId -ErrorAction SilentlyContinue }"])
+            .env("AURA_SIDECAR_REPLACE_PID", pid.to_string())
+            .env("AURA_SIDECAR_REPLACE_PATH", executable)
+            .output()
+            .map_err(|error| format!("failed to stop previous managed sidecar: {error}"))?;
+        if !stopped.status.success() {
+            return Err(format!(
+                "failed to stop previous managed sidecar: {}",
+                String::from_utf8_lossy(&stopped.stderr)
+            ));
+        }
+    }
     Ok(())
+}
+
+#[cfg(any(target_os = "windows", test))]
+pub(super) fn same_windows_path(actual: &Path, expected: &Path) -> bool {
+    match (actual.canonicalize(), expected.canonicalize()) {
+        (Ok(actual), Ok(expected)) => match (actual.to_str(), expected.to_str()) {
+            (Some(actual), Some(expected)) => {
+                windows_process_path(actual) == windows_process_path(expected)
+            }
+            _ => false,
+        },
+        _ => false,
+    }
 }
 
 #[cfg(any(target_os = "windows", test))]
@@ -401,7 +435,7 @@ mod tests {
     use super::{
         configured_harness_binary, harness_binary_name, harness_resource_candidates_for,
         is_managed_staged_harness_binary, restage_bundled_harness_binary_from_source,
-        stage_bundled_harness_binary, stage_bundled_harness_binary_for_platform,
+        same_windows_path, stage_bundled_harness_binary, stage_bundled_harness_binary_for_platform,
         windows_process_path,
     };
     use std::path::PathBuf;
@@ -456,6 +490,32 @@ mod tests {
             windows_process_path(r"\\?\UNC\server\share\aura-node.exe"),
             r"\\server\share\aura-node.exe"
         );
+    }
+
+    #[test]
+    fn windows_executable_identity_requires_the_same_existing_path() {
+        let root = tempfile::tempdir().unwrap();
+        let managed_dir = root.path().join("managed");
+        let external_dir = root.path().join("external");
+        std::fs::create_dir_all(&managed_dir).unwrap();
+        std::fs::create_dir_all(&external_dir).unwrap();
+        let managed = managed_dir.join("aura-node.exe");
+        let external = external_dir.join("aura-node.exe");
+        std::fs::write(&managed, b"same-payload").unwrap();
+        std::fs::write(&external, b"same-payload").unwrap();
+        assert!(same_windows_path(
+            &managed,
+            &managed.canonicalize().unwrap()
+        ));
+        assert!(same_windows_path(
+            &managed_dir.join("../managed/aura-node.exe"),
+            &managed
+        ));
+        assert!(!same_windows_path(&external, &managed));
+        assert!(!same_windows_path(
+            &root.path().join("missing.exe"),
+            &managed
+        ));
     }
 
     #[test]
