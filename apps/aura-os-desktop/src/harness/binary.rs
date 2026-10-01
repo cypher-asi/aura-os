@@ -596,17 +596,47 @@ mod tests {
         };
         let mut managed = spawn(&staged, "managed-ready");
         let mut unrelated = spawn(&external, "external-ready");
+        let previous_identity = super::stable_sidecar_build_identity(&source).unwrap();
         std::fs::OpenOptions::new()
             .append(true)
             .open(&source)
             .unwrap()
             .write_all(b"new-build")
             .unwrap();
+        assert_ne!(
+            super::stable_sidecar_build_identity(&source).unwrap(),
+            previous_identity,
+            "fixture payload must trigger a sidecar replacement"
+        );
         assert_eq!(
             stage_bundled_harness_binary(&source, &data).unwrap(),
             staged
         );
-        assert!(managed.0.try_wait().unwrap().is_some());
+        if managed.0.try_wait().unwrap().is_none() {
+            // Keep the live-process assertion strict, but expose the runner's
+            // actual process identity instead of guessing at a path mismatch.
+            let diagnostic = std::process::Command::new("powershell.exe")
+                .creation_flags(0x0800_0000)
+                .args([
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-Command",
+                    "Get-CimInstance Win32_Process | Where-Object { $_.ProcessId -eq $env:AURA_TEST_MANAGED_PID -or $_.ProcessId -eq $env:AURA_TEST_EXTERNAL_PID } | Select-Object ProcessId, Name, ExecutablePath | Format-List",
+                ])
+                .env("AURA_TEST_MANAGED_PID", managed.0.id().to_string())
+                .env("AURA_TEST_EXTERNAL_PID", unrelated.0.id().to_string())
+                .output()
+                .unwrap();
+            panic!(
+                "previous managed process still running: staged={}, canonical={}, source={}, diagnostic status={}, stdout={}, stderr={}",
+                staged.display(),
+                staged.canonicalize().unwrap().display(),
+                source.display(),
+                diagnostic.status,
+                String::from_utf8_lossy(&diagnostic.stdout),
+                String::from_utf8_lossy(&diagnostic.stderr),
+            );
+        }
         assert!(unrelated.0.try_wait().unwrap().is_none());
         assert_eq!(
             std::fs::read(&staged).unwrap(),
