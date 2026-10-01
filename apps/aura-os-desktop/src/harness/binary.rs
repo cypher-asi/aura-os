@@ -274,11 +274,18 @@ fn stop_staged_windows_sidecar(binary: &Path) -> Result<(), String> {
     if !binary.is_file() {
         return Ok(());
     }
+    // Rust joins can contain mixed separators, and canonicalize adds a
+    // verbatim prefix. CIM reports a native absolute path without that prefix.
+    // Compare the same representation so a running managed copy is not missed.
+    let absolute_binary = binary
+        .canonicalize()
+        .map_err(|error| format!("failed to resolve previous managed sidecar: {error}"))?;
+    let process_path = windows_process_path(&absolute_binary.to_string_lossy());
     let output = std::process::Command::new("powershell.exe")
         .creation_flags(0x0800_0000) // CREATE_NO_WINDOW
         .args(["-NoProfile", "-NonInteractive", "-Command",
             "$ErrorActionPreference = 'Stop'; Get-CimInstance Win32_Process -Filter \"Name = 'aura-node.exe'\" | Where-Object { $_.ExecutablePath -eq $env:AURA_SIDECAR_REPLACE_PATH } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force; Wait-Process -Id $_.ProcessId -ErrorAction SilentlyContinue }"])
-        .env("AURA_SIDECAR_REPLACE_PATH", binary)
+        .env("AURA_SIDECAR_REPLACE_PATH", process_path)
         .output()
         .map_err(|error| format!("failed to stop previous managed sidecar: {error}"))?;
     if !output.status.success() {
@@ -288,6 +295,16 @@ fn stop_staged_windows_sidecar(binary: &Path) -> Result<(), String> {
         ));
     }
     Ok(())
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn windows_process_path(path: &str) -> String {
+    let native = path.replace('/', "\\");
+    if let Some(unc) = native.strip_prefix(r"\\?\UNC\") {
+        format!(r"\\{unc}")
+    } else {
+        native.strip_prefix(r"\\?\").unwrap_or(&native).to_string()
+    }
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -385,6 +402,7 @@ mod tests {
         configured_harness_binary, harness_binary_name, harness_resource_candidates_for,
         is_managed_staged_harness_binary, restage_bundled_harness_binary_from_source,
         stage_bundled_harness_binary, stage_bundled_harness_binary_for_platform,
+        windows_process_path,
     };
     use std::path::PathBuf;
     use std::sync::Mutex;
@@ -395,8 +413,8 @@ mod tests {
     fn packaged_resource_candidates_precede_source_tree_fallbacks() {
         let exe_dir = PathBuf::from("/Applications/AURA.app/Contents/MacOS");
         let candidates = harness_resource_candidates_for(Some(&exe_dir));
-        let packaged =
-            PathBuf::from("/Applications/AURA.app/Contents/Resources/resources/sidecar/aura-node");
+        let packaged = PathBuf::from("/Applications/AURA.app/Contents/Resources/resources/sidecar")
+            .join(harness_binary_name());
         let source_tree = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("resources/sidecar")
             .join(harness_binary_name());
@@ -421,6 +439,23 @@ mod tests {
                 .map(|value| value.as_nanos())
                 .unwrap_or(0)
         ))
+    }
+
+    #[test]
+    fn windows_process_paths_match_cim_native_paths() {
+        let expected = r"C:\Aura\runtime\sidecar\aura-node.exe";
+        assert_eq!(
+            windows_process_path(r"C:\Aura\runtime/sidecar\aura-node.exe"),
+            expected
+        );
+        assert_eq!(
+            windows_process_path(r"\\?\C:\Aura\runtime\sidecar\aura-node.exe"),
+            expected
+        );
+        assert_eq!(
+            windows_process_path(r"\\?\UNC\server\share\aura-node.exe"),
+            r"\\server\share\aura-node.exe"
+        );
     }
 
     #[test]
