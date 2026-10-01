@@ -252,7 +252,8 @@ jobs:
 
       - name: Test Windows managed sidecar lifecycle
         if: matrix.target == 'windows-x64'
-        run: cargo test -p aura-os-desktop --no-default-features --features stable-channel harness::
+        run: |
+          cargo test -p aura-os-desktop --no-default-features --features stable-channel harness::
 
       - name: Show sccache stats
         if: always() && steps.sccache.outcome == 'success'
