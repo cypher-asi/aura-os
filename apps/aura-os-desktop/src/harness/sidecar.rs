@@ -233,8 +233,8 @@ fn stop_stale_managed_sidecar_if_needed(
 
 #[derive(Debug, PartialEq, Eq)]
 // Variants are matched on every platform but only constructed by the
-// Unix-only port-detection path (and the cross-platform tests).
-#[cfg_attr(not(any(unix, test)), allow(dead_code))]
+// Port-detection paths (and the cross-platform tests).
+#[cfg_attr(not(any(unix, target_os = "windows", test)), allow(dead_code))]
 enum ManagedSidecarKind {
     Current,
     Stale,
@@ -290,7 +290,79 @@ fn managed_sidecars_listening_on_port(
         .collect()
 }
 
-#[cfg(not(unix))]
+#[cfg(target_os = "windows")]
+fn managed_sidecars_listening_on_port(
+    port: u16,
+    managed_dir: &Path,
+    expected_binary: &Path,
+) -> Vec<ManagedSidecarProcess> {
+    use std::os::windows::process::CommandExt;
+    let Ok(output) = Command::new("powershell.exe")
+        .creation_flags(0x0800_0000) // CREATE_NO_WINDOW
+        .args(["-NoProfile", "-NonInteractive", "-Command",
+            "Get-NetTCPConnection -State Listen -LocalPort $env:AURA_SIDECAR_PORT -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Get-CimInstance Win32_Process -Filter \"ProcessId = $_\" } | ForEach-Object { Write-Output ($_.ProcessId.ToString() + '|' + $_.ExecutablePath) }"])
+        .env("AURA_SIDECAR_PORT", port.to_string())
+        .output()
+    else {
+        return Vec::new();
+    };
+    parse_windows_sidecar_processes(
+        &String::from_utf8_lossy(&output.stdout),
+        managed_dir,
+        expected_binary,
+    )
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn parse_windows_sidecar_processes(
+    output: &str,
+    managed_dir: &Path,
+    expected_binary: &Path,
+) -> Vec<ManagedSidecarProcess> {
+    output
+        .lines()
+        .filter_map(|line| {
+            let (pid, executable) = line.trim().split_once('|')?;
+            let pid = pid.parse::<u32>().ok()?;
+            let path = std::path::PathBuf::from(executable);
+            let name = path.file_name()?.to_str()?;
+            #[cfg(target_os = "windows")]
+            let in_managed_dir = path
+                .parent()
+                .is_some_and(|parent| super::binary::same_windows_path(parent, managed_dir));
+            #[cfg(not(target_os = "windows"))]
+            let in_managed_dir = path.parent() == Some(managed_dir);
+            // Restrict process management to executables directly in our staging
+            // directory. An unrelated listener must never be stopped.
+            if !in_managed_dir
+                || !(name == "aura-node.exe"
+                    || (name.starts_with("aura-node-") && name.ends_with(".exe")))
+            {
+                return None;
+            }
+            Some(ManagedSidecarProcess {
+                pid,
+                command_line: executable.to_string(),
+                kind: if {
+                    #[cfg(target_os = "windows")]
+                    {
+                        super::binary::same_windows_path(&path, expected_binary)
+                    }
+                    #[cfg(not(target_os = "windows"))]
+                    {
+                        path == expected_binary
+                    }
+                } {
+                    ManagedSidecarKind::Current
+                } else {
+                    ManagedSidecarKind::Stale
+                },
+            })
+        })
+        .collect()
+}
+
+#[cfg(not(any(unix, target_os = "windows")))]
 fn managed_sidecars_listening_on_port(
     _port: u16,
     _managed_dir: &Path,
@@ -355,7 +427,19 @@ fn terminate_stale_managed_sidecar(pid: u32, harness_url: &str) {
     });
 }
 
-#[cfg(not(unix))]
+#[cfg(target_os = "windows")]
+fn terminate_stale_managed_sidecar(pid: u32, harness_url: &str) {
+    use std::os::windows::process::CommandExt;
+    let _ = Command::new("taskkill.exe")
+        .creation_flags(0x0800_0000) // CREATE_NO_WINDOW
+        .args(["/PID", &pid.to_string(), "/T", "/F"])
+        .output();
+    let _ = wait_for_harness_health(Duration::from_secs(2), Duration::from_millis(100), || {
+        !probe_http_ok(harness_url, "/health")
+    });
+}
+
+#[cfg(not(any(unix, target_os = "windows")))]
 fn terminate_stale_managed_sidecar(_pid: u32, _harness_url: &str) {}
 
 /// Configure a `Command` so it runs fully in the background: no console
@@ -419,10 +503,50 @@ pub(crate) fn stop_managed_local_harness(managed_local_harness: &mut Option<Chil
 mod tests {
     use super::{
         classify_managed_sidecar_command, external_harness_url_configured, parse_pid_lines,
-        wait_for_harness_health,
+        parse_windows_sidecar_processes, wait_for_harness_health, ManagedSidecarKind,
     };
     use std::path::Path;
     use std::time::Duration;
+
+    #[test]
+    fn windows_listener_discovery_only_manages_our_sidecars() {
+        let root = tempfile::tempdir().unwrap();
+        let managed = root.path().join("data/runtime/sidecar");
+        let external = root.path().join("other");
+        let adjacent = root.path().join("data/runtime/sidecar-other");
+        for directory in [&managed, &external, &adjacent] {
+            std::fs::create_dir_all(directory).unwrap();
+        }
+        // Only the Windows parser resolves aliases. Keep the portable fixture
+        // paths identical on hosts where /tmp itself is a symlink.
+        #[cfg(not(target_os = "windows"))]
+        let managed = managed.canonicalize().unwrap();
+        let expected = managed.join("aura-node.exe");
+        let paths = [
+            expected.clone(),
+            managed.join("aura-node-old.exe"),
+            external.join("aura-node.exe"),
+            adjacent.join("aura-node.exe"),
+            managed.join("unrelated.exe"),
+        ];
+        for path in &paths {
+            std::fs::write(path, b"fixture").unwrap();
+        }
+        let output = format!(
+            "12|{}\n13|{}\n14|{}\n15|{}\ninvalid\n16|{}\n",
+            paths[0].canonicalize().unwrap().display(),
+            paths[1].canonicalize().unwrap().display(),
+            paths[2].display(),
+            paths[3].display(),
+            paths[4].display(),
+        );
+        let processes = parse_windows_sidecar_processes(&output, &managed, &expected);
+        assert_eq!(processes.len(), 2);
+        assert_eq!(processes[0].pid, 12);
+        assert_eq!(processes[0].kind, ManagedSidecarKind::Current);
+        assert_eq!(processes[1].pid, 13);
+        assert_eq!(processes[1].kind, ManagedSidecarKind::Stale);
+    }
 
     // Run a real child process: changing the desktop environment after spawn
     // cannot repair the callback address the child has already inherited.

@@ -130,6 +130,39 @@ pub(crate) fn stage_bundled_harness_binary(
     source: &Path,
     data_dir: &Path,
 ) -> Result<PathBuf, String> {
+    stage_bundled_harness_binary_for_platform(source, data_dir, cfg!(target_os = "windows"))
+}
+
+fn stable_sidecar_build_identity(source: &Path) -> Result<String, String> {
+    use std::hash::Hasher;
+    use std::io::Read;
+    // This is a cache identity, not a security signature. Hash the payload so
+    // equal-size rebuilds with preserved timestamps cannot reuse an old copy.
+    let mut file = std::fs::File::open(source)
+        .map_err(|error| format!("failed to read bundled sidecar build: {error}"))?;
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    let mut buf = [0; 65536];
+    loop {
+        let len = file
+            .read(&mut buf)
+            .map_err(|error| format!("failed to fingerprint bundled sidecar: {error}"))?;
+        if len == 0 {
+            break;
+        }
+        hasher.write(&buf[..len]);
+    }
+    Ok(format!(
+        "{}-{:016x}",
+        crate::release_version::current_version(),
+        hasher.finish()
+    ))
+}
+
+fn stage_bundled_harness_binary_for_platform(
+    source: &Path,
+    data_dir: &Path,
+    stable_path: bool,
+) -> Result<PathBuf, String> {
     let staged_dir = managed_staging_dir(data_dir);
     std::fs::create_dir_all(&staged_dir).map_err(|error| {
         format!(
@@ -138,8 +171,22 @@ pub(crate) fn stage_bundled_harness_binary(
         )
     })?;
 
-    let staged_binary = staged_dir.join(staged_harness_binary_name(source));
-    if staged_binary.is_file() {
+    let fingerprint = if stable_path {
+        stable_sidecar_build_identity(source)?
+    } else {
+        staged_harness_binary_name(source)
+    };
+    // Firewall program rules follow the full executable path. Keep that path
+    // stable on Windows, and record the build identity separately instead.
+    let staged_binary = staged_dir.join(if stable_path {
+        "aura-node.exe".to_string()
+    } else {
+        fingerprint.clone()
+    });
+    let build_record = staged_dir.join("aura-node.build");
+    let matching_build = !stable_path
+        || std::fs::read_to_string(&build_record).ok().as_deref() == Some(&fingerprint);
+    if staged_binary.is_file() && matching_build {
         return Ok(staged_binary);
     }
 
@@ -183,10 +230,25 @@ pub(crate) fn stage_bundled_harness_binary(
         ));
     }
 
-    if let Err(error) = std::fs::rename(&temp_binary, &staged_binary) {
-        if staged_binary.exists() {
+    if stable_path {
+        if let Err(error) = stop_staged_windows_sidecar(&staged_binary) {
             let _ = std::fs::remove_file(&temp_binary);
-            return Ok(staged_binary);
+            return Err(error);
+        }
+    }
+    // Windows cannot overwrite a running executable. Retain the old copy
+    // until installation succeeds, and restore it if the final move fails.
+    let backup = temp_binary.with_extension("previous");
+    let had_previous = stable_path && staged_binary.is_file();
+    if had_previous {
+        if let Err(error) = std::fs::rename(&staged_binary, &backup) {
+            let _ = std::fs::remove_file(&temp_binary);
+            return Err(format!("failed to move previous sidecar aside: {error}"));
+        }
+    }
+    if let Err(error) = std::fs::rename(&temp_binary, &staged_binary) {
+        if had_previous {
+            let _ = std::fs::rename(&backup, &staged_binary);
         }
         let _ = std::fs::remove_file(&temp_binary);
         return Err(format!(
@@ -195,8 +257,93 @@ pub(crate) fn stage_bundled_harness_binary(
             staged_binary.display()
         ));
     }
+    if had_previous {
+        let _ = std::fs::remove_file(&backup);
+    }
+    if stable_path {
+        std::fs::write(&build_record, &fingerprint)
+            .map_err(|error| format!("failed to record staged sidecar build: {error}"))?;
+    }
 
     Ok(staged_binary)
+}
+
+#[cfg(target_os = "windows")]
+fn stop_staged_windows_sidecar(binary: &Path) -> Result<(), String> {
+    use std::os::windows::process::CommandExt;
+    if !binary.is_file() {
+        return Ok(());
+    }
+    // CIM preserves the launch path (including 8.3 aliases such as RUNNER~1).
+    // Resolve both paths on disk before comparing, not just our expected path.
+    let output = std::process::Command::new("powershell.exe")
+        .creation_flags(0x0800_0000) // CREATE_NO_WINDOW
+        .args(["-NoProfile", "-NonInteractive", "-Command",
+            "$ErrorActionPreference = 'Stop'; Get-CimInstance Win32_Process -Filter \"Name = 'aura-node.exe'\" | ForEach-Object { Write-Output ($_.ProcessId.ToString() + '|' + $_.ExecutablePath) }"])
+        .output()
+        .map_err(|error| format!("failed to discover previous managed sidecar: {error}"))?;
+    if !output.status.success() {
+        return Err(format!(
+            "failed to discover previous managed sidecar: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+    for line in String::from_utf8_lossy(&output.stdout).lines() {
+        let Some((pid, executable)) = line.trim().split_once('|') else {
+            continue;
+        };
+        let Ok(pid) = pid.parse::<u32>() else {
+            continue;
+        };
+        if !same_windows_path(Path::new(executable), binary) {
+            continue;
+        }
+        // Revalidate the original CIM path and PID immediately before stopping
+        // it, so a reused PID cannot select an unrelated process.
+        let stopped = std::process::Command::new("powershell.exe")
+            .creation_flags(0x0800_0000)
+            .args(["-NoProfile", "-NonInteractive", "-Command",
+                "$ErrorActionPreference = 'Stop'; Get-CimInstance Win32_Process -Filter \"ProcessId = $env:AURA_SIDECAR_REPLACE_PID\" | Where-Object { $_.Name -eq 'aura-node.exe' -and $_.ExecutablePath -eq $env:AURA_SIDECAR_REPLACE_PATH } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force; Wait-Process -Id $_.ProcessId -ErrorAction SilentlyContinue }"])
+            .env("AURA_SIDECAR_REPLACE_PID", pid.to_string())
+            .env("AURA_SIDECAR_REPLACE_PATH", executable)
+            .output()
+            .map_err(|error| format!("failed to stop previous managed sidecar: {error}"))?;
+        if !stopped.status.success() {
+            return Err(format!(
+                "failed to stop previous managed sidecar: {}",
+                String::from_utf8_lossy(&stopped.stderr)
+            ));
+        }
+    }
+    Ok(())
+}
+
+#[cfg(any(target_os = "windows", test))]
+pub(super) fn same_windows_path(actual: &Path, expected: &Path) -> bool {
+    match (actual.canonicalize(), expected.canonicalize()) {
+        (Ok(actual), Ok(expected)) => match (actual.to_str(), expected.to_str()) {
+            (Some(actual), Some(expected)) => {
+                windows_process_path(actual) == windows_process_path(expected)
+            }
+            _ => false,
+        },
+        _ => false,
+    }
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn windows_process_path(path: &str) -> String {
+    let native = path.replace('/', "\\");
+    if let Some(unc) = native.strip_prefix(r"\\?\UNC\") {
+        format!(r"\\{unc}")
+    } else {
+        native.strip_prefix(r"\\?\").unwrap_or(&native).to_string()
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn stop_staged_windows_sidecar(_binary: &Path) -> Result<(), String> {
+    Ok(())
 }
 
 pub(crate) fn resolve_managed_harness_binary(data_dir: &Path) -> Option<PathBuf> {
@@ -288,7 +435,8 @@ mod tests {
     use super::{
         configured_harness_binary, harness_binary_name, harness_resource_candidates_for,
         is_managed_staged_harness_binary, restage_bundled_harness_binary_from_source,
-        stage_bundled_harness_binary,
+        same_windows_path, stage_bundled_harness_binary, stage_bundled_harness_binary_for_platform,
+        windows_process_path,
     };
     use std::path::PathBuf;
     use std::sync::Mutex;
@@ -299,8 +447,8 @@ mod tests {
     fn packaged_resource_candidates_precede_source_tree_fallbacks() {
         let exe_dir = PathBuf::from("/Applications/AURA.app/Contents/MacOS");
         let candidates = harness_resource_candidates_for(Some(&exe_dir));
-        let packaged =
-            PathBuf::from("/Applications/AURA.app/Contents/Resources/resources/sidecar/aura-node");
+        let packaged = PathBuf::from("/Applications/AURA.app/Contents/Resources/resources/sidecar")
+            .join(harness_binary_name());
         let source_tree = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("resources/sidecar")
             .join(harness_binary_name());
@@ -325,6 +473,49 @@ mod tests {
                 .map(|value| value.as_nanos())
                 .unwrap_or(0)
         ))
+    }
+
+    #[test]
+    fn windows_process_paths_match_cim_native_paths() {
+        let expected = r"C:\Aura\runtime\sidecar\aura-node.exe";
+        assert_eq!(
+            windows_process_path(r"C:\Aura\runtime/sidecar\aura-node.exe"),
+            expected
+        );
+        assert_eq!(
+            windows_process_path(r"\\?\C:\Aura\runtime\sidecar\aura-node.exe"),
+            expected
+        );
+        assert_eq!(
+            windows_process_path(r"\\?\UNC\server\share\aura-node.exe"),
+            r"\\server\share\aura-node.exe"
+        );
+    }
+
+    #[test]
+    fn windows_executable_identity_requires_the_same_existing_path() {
+        let root = tempfile::tempdir().unwrap();
+        let managed_dir = root.path().join("managed");
+        let external_dir = root.path().join("external");
+        std::fs::create_dir_all(&managed_dir).unwrap();
+        std::fs::create_dir_all(&external_dir).unwrap();
+        let managed = managed_dir.join("aura-node.exe");
+        let external = external_dir.join("aura-node.exe");
+        std::fs::write(&managed, b"same-payload").unwrap();
+        std::fs::write(&external, b"same-payload").unwrap();
+        assert!(same_windows_path(
+            &managed,
+            &managed.canonicalize().unwrap()
+        ));
+        assert!(same_windows_path(
+            &managed_dir.join("../managed/aura-node.exe"),
+            &managed
+        ));
+        assert!(!same_windows_path(&external, &managed));
+        assert!(!same_windows_path(
+            &root.path().join("missing.exe"),
+            &managed
+        ));
     }
 
     #[test]
@@ -363,6 +554,154 @@ mod tests {
         assert_eq!(staged_again, staged);
 
         std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn windows_sidecar_updates_keep_the_executable_path() {
+        let root = unique_test_dir("stable-windows-sidecar");
+        let source_dir = root.join("install");
+        let data_dir = root.join("data");
+        std::fs::create_dir_all(&source_dir).unwrap();
+        let source = source_dir.join("aura-node.exe");
+        std::fs::write(&source, b"old-build").unwrap();
+        let first = stage_bundled_harness_binary_for_platform(&source, &data_dir, true).unwrap();
+        assert_eq!(first, data_dir.join("runtime/sidecar/aura-node.exe"));
+        let first_record =
+            std::fs::read_to_string(first.with_file_name("aura-node.build")).unwrap();
+        // Same length: identity must come from the payload, not its size.
+        std::fs::write(&source, b"new-build").unwrap();
+        let second = stage_bundled_harness_binary_for_platform(&source, &data_dir, true).unwrap();
+        assert_eq!(first, second);
+        assert_eq!(std::fs::read(&second).unwrap(), b"new-build");
+        assert_ne!(
+            std::fs::read_to_string(second.with_file_name("aura-node.build")).unwrap(),
+            first_record
+        );
+        assert_eq!(
+            stage_bundled_harness_binary_for_platform(&source, &data_dir, true).unwrap(),
+            second
+        );
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn windows_sidecar_without_build_record_is_refreshed() {
+        let root = unique_test_dir("missing-windows-build-record");
+        let source_dir = root.join("install");
+        let data_dir = root.join("data");
+        std::fs::create_dir_all(&source_dir).unwrap();
+        std::fs::create_dir_all(data_dir.join("runtime/sidecar")).unwrap();
+        let source = source_dir.join("aura-node.exe");
+        std::fs::write(&source, b"bundled-build").unwrap();
+        std::fs::write(
+            data_dir.join("runtime/sidecar/aura-node.exe"),
+            b"stale-build",
+        )
+        .unwrap();
+        let staged = stage_bundled_harness_binary_for_platform(&source, &data_dir, true).unwrap();
+        assert_eq!(std::fs::read(staged).unwrap(), b"bundled-build");
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn windows_sidecar_process_probe() {
+        let Some(ready) = std::env::var_os("AURA_SIDECAR_TEST_READY") else {
+            return;
+        };
+        std::fs::write(ready, b"ready").unwrap();
+        std::thread::sleep(std::time::Duration::from_secs(60));
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn windows_update_stops_only_the_previous_managed_executable() {
+        use std::io::Write;
+        use std::os::windows::process::CommandExt;
+        struct Probe(std::process::Child);
+        impl Drop for Probe {
+            fn drop(&mut self) {
+                let _ = self.0.kill();
+                let _ = self.0.wait();
+            }
+        }
+        let root = tempfile::tempdir().unwrap();
+        let source = root.path().join("bundled.exe");
+        std::fs::copy(std::env::current_exe().unwrap(), &source).unwrap();
+        let data = root.path().join("data");
+        let staged = stage_bundled_harness_binary(&source, &data).unwrap();
+        let external = root.path().join("external/aura-node.exe");
+        std::fs::create_dir_all(external.parent().unwrap()).unwrap();
+        std::fs::copy(&source, &external).unwrap();
+        let spawn = |binary: &std::path::Path, label: &str| {
+            let ready = root.path().join(label);
+            let child = std::process::Command::new(binary)
+                .creation_flags(0x0800_0000)
+                .args([
+                    "--exact",
+                    "harness::binary::tests::windows_sidecar_process_probe",
+                ])
+                .env("AURA_SIDECAR_TEST_READY", &ready)
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .spawn()
+                .unwrap();
+            let probe = Probe(child);
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+            while !ready.exists() && std::time::Instant::now() < deadline {
+                std::thread::sleep(std::time::Duration::from_millis(50));
+            }
+            assert!(ready.exists(), "sidecar probe did not start");
+            probe
+        };
+        let mut managed = spawn(&staged, "managed-ready");
+        let mut unrelated = spawn(&external, "external-ready");
+        let previous_identity = super::stable_sidecar_build_identity(&source).unwrap();
+        std::fs::OpenOptions::new()
+            .append(true)
+            .open(&source)
+            .unwrap()
+            .write_all(b"new-build")
+            .unwrap();
+        assert_ne!(
+            super::stable_sidecar_build_identity(&source).unwrap(),
+            previous_identity,
+            "fixture payload must trigger a sidecar replacement"
+        );
+        assert_eq!(
+            stage_bundled_harness_binary(&source, &data).unwrap(),
+            staged
+        );
+        if managed.0.try_wait().unwrap().is_none() {
+            // Keep the live-process assertion strict, but expose the runner's
+            // actual process identity instead of guessing at a path mismatch.
+            let diagnostic = std::process::Command::new("powershell.exe")
+                .creation_flags(0x0800_0000)
+                .args([
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-Command",
+                    "Get-CimInstance Win32_Process | Where-Object { $_.ProcessId -eq $env:AURA_TEST_MANAGED_PID -or $_.ProcessId -eq $env:AURA_TEST_EXTERNAL_PID } | Select-Object ProcessId, Name, ExecutablePath | Format-List",
+                ])
+                .env("AURA_TEST_MANAGED_PID", managed.0.id().to_string())
+                .env("AURA_TEST_EXTERNAL_PID", unrelated.0.id().to_string())
+                .output()
+                .unwrap();
+            panic!(
+                "previous managed process still running: staged={}, canonical={}, source={}, diagnostic status={}, stdout={}, stderr={}",
+                staged.display(),
+                staged.canonicalize().unwrap().display(),
+                source.display(),
+                diagnostic.status,
+                String::from_utf8_lossy(&diagnostic.stdout),
+                String::from_utf8_lossy(&diagnostic.stderr),
+            );
+        }
+        assert!(unrelated.0.try_wait().unwrap().is_none());
+        assert_eq!(
+            std::fs::read(&staged).unwrap(),
+            std::fs::read(&source).unwrap()
+        );
     }
 
     #[test]
