@@ -1,0 +1,28 @@
+name: Desktop Publication Contract
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/release-*.yml'
+      - '.github/workflows/desktop-publication-test.yml'
+      - 'infra/scripts/release/**'
+      - 'scripts/ci/verify-release-preflight.mjs'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/release-*.yml'
+      - '.github/workflows/desktop-publication-test.yml'
+      - 'infra/scripts/release/**'
+      - 'scripts/ci/verify-release-preflight.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  partial-publication:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-node
+      - name: Test partial publication and manifest safety
+        run: node --test infra/scripts/release/desktop-partial-publication.test.mjs infra/scripts/release/desktop-manifest-validate.test.mjs infra/scripts/release/desktop-downloads-validate.test.mjs

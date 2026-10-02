@@ -13,6 +13,11 @@ import {
 const args = new Set(process.argv.slice(2));
 const withCargoCheck = args.has("--cargo-check");
 
+run("node", ["--test", "infra/scripts/release/desktop-partial-publication.test.mjs"], {
+  cwd: repoRoot,
+  label: "preflight:partial-desktop-publication-test",
+});
+
 assertDesktopRuntime({ requireHarness: false });
 
 run("node", ["--check", "infra/scripts/release/desktop-local-auto-update-smoke.mjs"], {
