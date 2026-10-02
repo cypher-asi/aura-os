@@ -406,6 +406,11 @@ pub struct ProgressMsg {
     /// Optional human-readable label / detail string.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
+    /// UTF-8 suffix lengths from the interrupted attempt only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reset_text_bytes: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reset_thinking_bytes: Option<u64>,
 }
 
 // ============================================================================

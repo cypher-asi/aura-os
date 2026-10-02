@@ -34,6 +34,7 @@ export function getStreamingPhaseLabel(state: {
    */
   isWriting?: boolean;
 }): string | null {
+  if (state.progressText === "model_retrying") return "Connection interrupted — retrying…";
   const realToolCalls = state.toolCalls.filter((tc) => !tc.synthetic);
   const pending = realToolCalls.find((tc) => tc.pending);
   if (pending) return TOOL_PHASE_LABELS[pending.name] ?? "Working...";

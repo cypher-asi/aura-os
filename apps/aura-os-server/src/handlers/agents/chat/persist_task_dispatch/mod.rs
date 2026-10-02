@@ -55,6 +55,10 @@ pub(super) async fn handle_outbound(
             handle_thinking_delta(state, ctx, &delta.thinking).await;
             true
         }
+        HarnessOutbound::Progress(progress) if progress.stage == "stream_reset" => {
+            message::handle_stream_reset(state, ctx, progress).await;
+            true
+        }
         HarnessOutbound::ToolUseStart(tool) => {
             handle_tool_use_start(state, ctx, &tool.id, &tool.name).await;
             true

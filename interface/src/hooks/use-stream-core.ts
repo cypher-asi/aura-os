@@ -41,6 +41,7 @@ export {
   resetStreamForReplay,
   handleThinkingDelta,
   handleTextDelta,
+  handleStreamReset,
   handleToolCallStarted,
   handleToolCallSnapshot,
   handleToolCall,

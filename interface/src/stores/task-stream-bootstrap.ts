@@ -13,6 +13,7 @@ import { persistTaskTurns } from "./task-turn-cache";
 import {
   resetStreamBuffers,
   handleTextDelta,
+  handleStreamReset,
   handleThinkingDelta,
   handleToolCallStarted,
   handleToolCallSnapshot,
@@ -484,7 +485,11 @@ function handleProgressEvent(e: AuraEvent): void {
   if (!taskId) return;
   const stage = (c.stage as string) ?? "";
   if (!stage) return;
-  const { setters } = contextForTask(taskId);
+  const { refs, setters } = contextForTask(taskId);
+  if (stage === "stream_reset") {
+    handleStreamReset(refs, setters, c);
+    return;
+  }
   setters.setProgressText(stage);
 }
 

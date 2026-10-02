@@ -126,6 +126,76 @@ pub(super) async fn handle_message_end(
     }
 }
 
+/// Roll back only the failed sampling attempt. Previous iterations' text,
+/// thinking and tool results are still authoritative.
+pub(super) async fn handle_stream_reset(
+    state: &mut PersistTaskState,
+    ctx: &ChatPersistCtx,
+    progress: &aura_os_harness::ProgressMsg,
+) {
+    rollback_stream_suffix(
+        state,
+        progress.reset_text_bytes.unwrap_or(0),
+        progress.reset_thinking_bytes.unwrap_or(0),
+    );
+    if persist_event(
+        ctx,
+        "progress",
+        json!({
+            "message_id": &state.message_id,
+            "stage": "stream_reset",
+            "reset_text_bytes": progress.reset_text_bytes,
+            "reset_thinking_bytes": progress.reset_thinking_bytes,
+            "seq": state.seq,
+        }),
+    )
+    .await
+    {
+        state.persisted_events += 1;
+    }
+}
+
+fn rollback_stream_suffix(state: &mut PersistTaskState, text_bytes: u64, thinking_bytes: u64) {
+    fn truncate_suffix(text: &mut String, bytes: u64) {
+        let bytes = usize::try_from(bytes).unwrap_or(usize::MAX);
+        let new_len = text.len().saturating_sub(bytes);
+        // A malformed wire length must never split a UTF-8 character.
+        if text.is_char_boundary(new_len) {
+            text.truncate(new_len);
+        }
+    }
+    truncate_suffix(&mut state.full_text, text_bytes);
+    truncate_suffix(&mut state.text_segment, text_bytes);
+    truncate_suffix(&mut state.thinking_buf, thinking_bytes);
+}
+
+#[cfg(test)]
+mod reset_tests {
+    use super::*;
+
+    #[test]
+    fn stream_reset_preserves_previous_iterations_and_tools() {
+        let mut state = PersistTaskState::new();
+        state.full_text = "Earlier answer.failed 😀".into();
+        state.text_segment = "failed 😀".into();
+        state.thinking_buf = "Earlier thought.failed 🧠".into();
+        state
+            .content_blocks
+            .push(json!({"type": "tool_use", "id": "already_done"}));
+        rollback_stream_suffix(
+            &mut state,
+            "failed 😀".len() as u64,
+            "failed 🧠".len() as u64,
+        );
+        assert_eq!(state.full_text, "Earlier answer.");
+        assert!(state.text_segment.is_empty());
+        assert_eq!(state.thinking_buf, "Earlier thought.");
+        assert_eq!(state.content_blocks.len(), 1);
+        state.full_text.push_str("Recovered answer.");
+        assert_eq!(state.full_text, "Earlier answer.Recovered answer.");
+    }
+}
+
 pub(super) async fn handle_error(
     state: &mut PersistTaskState,
     ctx: &ChatPersistCtx,

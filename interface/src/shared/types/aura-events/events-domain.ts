@@ -42,6 +42,8 @@ export type DomainEventVariant =
   | { type: typeof EventType.Progress; content: {
       message_id?: string;
       stage: string;
+      reset_text_bytes?: number;
+      reset_thinking_bytes?: number;
     } }
   | { type: typeof EventType.ToolCallStarted; content: {
       message_id?: string;
