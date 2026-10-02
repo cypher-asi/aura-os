@@ -803,8 +803,9 @@ jobs:
           path: dist/
 
   validate-artifacts:
-    needs: package
-    if: github.event_name == 'workflow_dispatch' && !inputs.publish_live
+    # Failed platforms stay failed; publication selects only validated uploads.
+    needs: [release-preflight, package]
+    if: ${{ !cancelled() && needs.release-preflight.result == 'success' && (github.event_name == 'workflow_dispatch' && !inputs.publish_live) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -818,16 +819,17 @@ jobs:
         uses: actions/download-artifact@v5
         with:
           pattern: installers-*
-          path: all-artifacts
-          merge-multiple: true
+          path: packaged-artifacts
 
-      - name: Validate artifact versions
+      - name: Validate and select successful platform artifacts
+        id: publication
         run: |
-          node infra/scripts/release/validate-release-artifact-versions.mjs \
-            --artifacts-dir all-artifacts \
+          node infra/scripts/release/desktop-partial-publication.mjs prepare \
+            --input packaged-artifacts \
+            --output all-artifacts \
             --channel stable \
             --version "${{ github.event.inputs.version }}" \
-            --output-dir validation
+            --report validation
 
       - name: Dry-run release asset reconciliation
         shell: bash
@@ -839,74 +841,20 @@ jobs:
             all-artifacts
 
       - name: Generate preview update manifests
-        shell: bash
         run: |
-          VERSION="${{ github.event.inputs.version }}"
-          TAG="v${VERSION}"
-          BASE_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}"
-
-          generate_manifest() {
-            local target=$1 arch=$2 filename=$3 format=$4
-            local sig_file="all-artifacts/${filename}.sig"
-            local signature='""'
-            if [ -f "$sig_file" ]; then
-              signature=$(jq -Rs . < "$sig_file")
-            fi
-
-            mkdir -p "stable/${target}"
-            cat > "stable/${target}/${arch}.json" <<MANIFEST
-          {
-            "version": "${VERSION}",
-            "url": "${BASE_URL}/${filename}",
-            "signature": ${signature},
-            "format": "${format}"
-          }
-          MANIFEST
-          }
-
-          generate_manifest "windows" "x86_64" "aura-os-desktop_${VERSION}_x64-setup.exe" "nsis"
-          generate_manifest "macos" "aarch64" "aura-os-desktop_${VERSION}_aarch64.app.tar.gz" "app"
-          generate_manifest "macos" "x86_64" "aura-os-desktop_${VERSION}_x86_64.app.tar.gz" "app"
-          generate_manifest "linux" "x86_64" "aura-os-desktop_${VERSION}_x86_64.AppImage" "appimage"
-
-          mkdir -p downloads
-          cat > downloads/stable.json <<MANIFEST
-          {
-            "channel": "stable",
-            "version": "${VERSION}",
-            "release_url": "https://github.com/${{ github.repository }}/releases/tag/${TAG}",
-            "generated_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-            "desktop": {
-              "windows": {
-                "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/aura-os-desktop_${VERSION}_x64-setup.exe"
-              },
-              "mac": {
-                "apple-silicon": {
-                  "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/AURA_${VERSION}_aarch64.dmg"
-                },
-                "intel": {
-                  "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/AURA_${VERSION}_x64.dmg"
-                }
-              },
-              "linux": {
-                "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/aura-os-desktop_${VERSION}_x86_64.AppImage"
-              }
-            }
-          }
-          MANIFEST
+          node infra/scripts/release/desktop-partial-publication.mjs manifests \
+            --input all-artifacts \
+            --root . \
+            --channel stable \
+            --version "${{ github.event.inputs.version }}" \
+            --repository "${{ github.repository }}" \
+            --tag "v${{ github.event.inputs.version }}" \
+            --report validation
 
       - name: Validate preview manifests
         run: |
           node infra/scripts/release/desktop-manifest-validate.mjs \
             --root-dir . \
-            --channel stable \
-            --output-dir validation
-
-      - name: Validate preview download manifest
-        run: |
-          node infra/scripts/release/desktop-downloads-validate.mjs \
-            --manifest downloads/stable.json \
-            --artifacts-dir all-artifacts \
             --channel stable \
             --output-dir validation
 
@@ -936,8 +884,9 @@ jobs:
             validation/**
 
   release:
-    needs: package
-    if: github.event_name != 'workflow_dispatch' || inputs.publish_live
+    # Failed platforms stay failed; publication selects only validated uploads.
+    needs: [release-preflight, package]
+    if: ${{ !cancelled() && needs.release-preflight.result == 'success' && (github.event_name != 'workflow_dispatch' || inputs.publish_live) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -954,12 +903,24 @@ jobs:
             echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Install Node.js
+        uses: ./.github/actions/setup-node
+
       - name: Download all artifacts
         uses: actions/download-artifact@v5
         with:
           pattern: installers-*
-          path: all-artifacts
-          merge-multiple: true
+          path: packaged-artifacts
+
+      - name: Validate and select successful platform artifacts
+        id: publication
+        run: |
+          node infra/scripts/release/desktop-partial-publication.mjs prepare \
+            --input packaged-artifacts \
+            --output all-artifacts \
+            --channel stable \
+            --version "${{ steps.version.outputs.version }}" \
+            --report release-validation
 
       - name: Write release metadata
         shell: bash
@@ -995,6 +956,10 @@ jobs:
           draft: false
           prerelease: false
           files: all-artifacts/**/*
+          body: |
+            Automated release at ${{ github.sha }}.
+            **Available platforms**: ${{ steps.publication.outputs.available_platforms }}
+            Failed platforms are not included; previous updater manifests remain unchanged.
 
       - name: Reconcile stable release assets
         env:
@@ -1015,8 +980,9 @@ jobs:
           done
 
   publish-manifests:
-    needs: [package, release]
-    if: github.event_name != 'workflow_dispatch' || inputs.publish_live
+    # Failed platforms stay failed; publication selects only validated uploads.
+    needs: [release]
+    if: ${{ !cancelled() && needs.release.result == 'success' && (github.event_name != 'workflow_dispatch' || inputs.publish_live) }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -1054,81 +1020,36 @@ jobs:
         uses: actions/download-artifact@v5
         with:
           pattern: installers-*
-          path: all-artifacts
-          merge-multiple: true
+          path: packaged-artifacts
 
-      - name: Generate update manifests
-        shell: bash
+      - name: Validate and select successful platform artifacts
+        id: publication
         run: |
           cd repo
-          VERSION="${{ steps.version.outputs.version }}"
-          TAG="${{ steps.version.outputs.tag }}"
-          BASE_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}"
+          node infra/scripts/release/desktop-partial-publication.mjs prepare \
+            --input ../packaged-artifacts \
+            --output ../all-artifacts \
+            --channel stable \
+            --version "${{ steps.version.outputs.version }}" \
+            --report ../manifest-validation
 
-          generate_manifest() {
-            local target=$1 arch=$2 filename=$3 format=$4
-            local sig_file="../all-artifacts/${filename}.sig"
-            local signature='""'
-            if [ -f "$sig_file" ]; then
-              signature=$(jq -Rs . < "$sig_file")
-            fi
-
-            mkdir -p "../pages/stable/${target}"
-            cat > "../pages/stable/${target}/${arch}.json" <<MANIFEST
-          {
-            "version": "${VERSION}",
-            "url": "${BASE_URL}/${filename}",
-            "signature": ${signature},
-            "format": "${format}"
-          }
-          MANIFEST
-          }
-
-          generate_manifest "windows" "x86_64" "aura-os-desktop_${VERSION}_x64-setup.exe" "nsis"
-          generate_manifest "macos" "aarch64" "aura-os-desktop_${VERSION}_aarch64.app.tar.gz" "app"
-          generate_manifest "macos" "x86_64" "aura-os-desktop_${VERSION}_x86_64.app.tar.gz" "app"
-          generate_manifest "linux" "x86_64" "aura-os-desktop_${VERSION}_x86_64.AppImage" "appimage"
-
-          mkdir -p "../pages/downloads"
-          cat > "../pages/downloads/stable.json" <<MANIFEST
-          {
-            "channel": "stable",
-            "version": "${VERSION}",
-            "release_url": "https://github.com/${{ github.repository }}/releases/tag/${TAG}",
-            "generated_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-            "desktop": {
-              "windows": {
-                "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/aura-os-desktop_${VERSION}_x64-setup.exe"
-              },
-              "mac": {
-                "apple-silicon": {
-                  "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/AURA_${VERSION}_aarch64.dmg"
-                },
-                "intel": {
-                  "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/AURA_${VERSION}_x64.dmg"
-                }
-              },
-              "linux": {
-                "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/aura-os-desktop_${VERSION}_x86_64.AppImage"
-              }
-            }
-          }
-          MANIFEST
+      - name: Generate update manifests
+        run: |
+          cd repo
+          node infra/scripts/release/desktop-partial-publication.mjs manifests \
+            --input ../all-artifacts \
+            --root ../pages \
+            --channel stable \
+            --version "${{ steps.version.outputs.version }}" \
+            --repository "${{ github.repository }}" \
+            --tag "${{ steps.version.outputs.tag }}" \
+            --report ../manifest-validation
 
       - name: Validate stable update manifests
         run: |
           cd repo
           node infra/scripts/release/desktop-manifest-validate.mjs \
             --root-dir ../pages \
-            --channel stable \
-            --output-dir ../manifest-validation
-
-      - name: Validate stable download manifest
-        run: |
-          cd repo
-          node infra/scripts/release/desktop-downloads-validate.mjs \
-            --manifest ../pages/downloads/stable.json \
-            --artifacts-dir ../all-artifacts \
             --channel stable \
             --output-dir ../manifest-validation
 

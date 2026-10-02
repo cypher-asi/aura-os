@@ -921,26 +921,31 @@ jobs:
           path: dist/
 
   release:
-    needs: [resolve-version, package]
-    if: github.ref_name == 'main' || (github.event_name == 'workflow_dispatch' && inputs.publish_live)
+    # Failed platforms stay failed; publication selects only validated uploads.
+    needs: [resolve-version, release-preflight, package]
+    if: ${{ !cancelled() && needs.release-preflight.result == 'success' && needs.resolve-version.result == 'success' && ((github.event_name == 'push' && github.ref_name == 'main') || (github.event_name == 'workflow_dispatch' && inputs.publish_live)) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+
+      - name: Install Node.js
+        uses: ./.github/actions/setup-node
 
       - name: Download all artifacts
         uses: actions/download-artifact@v5
         with:
           pattern: installers-*
-          path: all-artifacts
-          merge-multiple: true
+          path: packaged-artifacts
 
-      - name: Validate artifact versions
+      - name: Validate and select successful platform artifacts
+        id: publication
         run: |
-          node infra/scripts/release/validate-release-artifact-versions.mjs \
-            --artifacts-dir all-artifacts \
+          node infra/scripts/release/desktop-partial-publication.mjs prepare \
+            --input packaged-artifacts \
+            --output all-artifacts \
             --channel nightly \
             --version "${{ needs.resolve-version.outputs.version }}" \
-            --output-dir release-validation
+            --report release-validation
 
       - name: Write release metadata
         shell: bash
@@ -982,6 +987,8 @@ jobs:
             Automated nightly build from `main` at ${{ github.sha }}.
 
             **Version**: `${{ needs.resolve-version.outputs.version }}`
+            **Available platforms**: ${{ steps.publication.outputs.available_platforms }}
+            Failed platforms are not included; previous updater manifests remain unchanged.
 
       - name: Reconcile immutable nightly release assets
         env:
@@ -1018,6 +1025,8 @@ jobs:
             Automated nightly build from `main` at ${{ github.sha }}.
 
             **Version**: `${{ needs.resolve-version.outputs.version }}`
+            **Available platforms**: ${{ steps.publication.outputs.available_platforms }}
+            Failed platforms are not included; previous updater manifests remain unchanged.
             **Immutable release**: `https://github.com/${{ github.repository }}/releases/tag/${{ needs.resolve-version.outputs.tag }}`
 
       - name: Reconcile nightly alias release assets
@@ -1040,8 +1049,9 @@ jobs:
           done
 
   preview-manifests:
-    needs: [resolve-version]
-    if: github.ref_name != 'main' || (github.event_name == 'workflow_dispatch' && !inputs.publish_live)
+    # Failed platforms stay failed; publication selects only validated uploads.
+    needs: [resolve-version, release-preflight, package]
+    if: ${{ !cancelled() && needs.release-preflight.result == 'success' && needs.resolve-version.result == 'success' && ((github.event_name == 'push' && github.ref_name != 'main') || (github.event_name == 'workflow_dispatch' && !inputs.publish_live)) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -1051,36 +1061,21 @@ jobs:
       - name: Install Node.js
         uses: ./.github/actions/setup-node
 
-      - name: Wait for installer artifacts
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          node scripts/ci/wait-gh-artifacts.mjs \
-            --artifact "installers-windows-x86_64" \
-            --artifact "installers-macos-aarch64" \
-            --artifact "installers-macos-x86_64" \
-            --artifact "installers-linux-x86_64" \
-            --interval-seconds 5 \
-            --fail-job "package (windows-latest, windows, x86_64)" \
-            --fail-job "package (macos-latest, macos, aarch64)" \
-            --fail-job "package (macos-15-intel, macos, x86_64)" \
-            --fail-job "package (ubuntu-latest, linux, x86_64)"
-
       - name: Download all artifacts
         uses: actions/download-artifact@v5
         with:
           pattern: installers-*
-          path: all-artifacts
-          merge-multiple: true
+          path: packaged-artifacts
 
-      - name: Validate artifact versions
+      - name: Validate and select successful platform artifacts
+        id: publication
         run: |
-          node infra/scripts/release/validate-release-artifact-versions.mjs \
-            --artifacts-dir all-artifacts \
+          node infra/scripts/release/desktop-partial-publication.mjs prepare \
+            --input packaged-artifacts \
+            --output all-artifacts \
             --channel nightly \
             --version "${{ needs.resolve-version.outputs.version }}" \
-            --output-dir manifest-validation
+            --report manifest-validation
 
       - name: Dry-run release asset reconciliation
         shell: bash
@@ -1103,74 +1098,20 @@ jobs:
             all-artifacts
 
       - name: Generate preview update manifests
-        shell: bash
         run: |
-          VERSION="${{ needs.resolve-version.outputs.version }}"
-          TAG="${{ needs.resolve-version.outputs.tag }}"
-          BASE_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}"
-
-          generate_manifest() {
-            local target=$1 arch=$2 filename=$3 format=$4
-            local sig_file="all-artifacts/${filename}.sig"
-            local signature='""'
-            if [ -f "$sig_file" ]; then
-              signature=$(jq -Rs . < "$sig_file")
-            fi
-
-            mkdir -p "nightly/${target}"
-            cat > "nightly/${target}/${arch}.json" <<MANIFEST
-          {
-            "version": "${VERSION}",
-            "url": "${BASE_URL}/${filename}",
-            "signature": ${signature},
-            "format": "${format}"
-          }
-          MANIFEST
-          }
-
-          generate_manifest "windows" "x86_64" "aura-os-desktop_${VERSION}_x64-setup.exe" "nsis"
-          generate_manifest "macos" "aarch64" "aura-os-desktop_${VERSION}_aarch64.app.tar.gz" "app"
-          generate_manifest "macos" "x86_64" "aura-os-desktop_${VERSION}_x86_64.app.tar.gz" "app"
-          generate_manifest "linux" "x86_64" "aura-os-desktop_${VERSION}_x86_64.AppImage" "appimage"
-
-          mkdir -p downloads
-          cat > downloads/nightly.json <<MANIFEST
-          {
-            "channel": "nightly",
-            "version": "${VERSION}",
-            "release_url": "https://github.com/${{ github.repository }}/releases/tag/${TAG}",
-            "generated_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-            "desktop": {
-              "windows": {
-                "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/aura-os-desktop_${VERSION}_x64-setup.exe"
-              },
-              "mac": {
-                "apple-silicon": {
-                  "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/AURA_${VERSION}_aarch64.dmg"
-                },
-                "intel": {
-                  "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/AURA_${VERSION}_x64.dmg"
-                }
-              },
-              "linux": {
-                "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/aura-os-desktop_${VERSION}_x86_64.AppImage"
-              }
-            }
-          }
-          MANIFEST
+          node infra/scripts/release/desktop-partial-publication.mjs manifests \
+            --input all-artifacts \
+            --root . \
+            --channel nightly \
+            --version "${{ needs.resolve-version.outputs.version }}" \
+            --repository "${{ github.repository }}" \
+            --tag "${{ needs.resolve-version.outputs.tag }}" \
+            --report manifest-validation
 
       - name: Validate preview manifests
         run: |
           node infra/scripts/release/desktop-manifest-validate.mjs \
             --root-dir . \
-            --channel nightly \
-            --output-dir manifest-validation
-
-      - name: Validate preview download manifest
-        run: |
-          node infra/scripts/release/desktop-downloads-validate.mjs \
-            --manifest downloads/nightly.json \
-            --artifacts-dir all-artifacts \
             --channel nightly \
             --output-dir manifest-validation
 
@@ -1198,8 +1139,9 @@ jobs:
             manifest-validation/**
 
   publish-manifests:
-    needs: [resolve-version, package, release]
-    if: github.ref_name == 'main' || (github.event_name == 'workflow_dispatch' && inputs.publish_live)
+    # Failed platforms stay failed; publication selects only validated uploads.
+    needs: [resolve-version, release]
+    if: ${{ !cancelled() && needs.release.result == 'success' && ((github.event_name == 'push' && github.ref_name == 'main') || (github.event_name == 'workflow_dispatch' && inputs.publish_live)) }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -1225,90 +1167,36 @@ jobs:
         uses: actions/download-artifact@v5
         with:
           pattern: installers-*
-          path: all-artifacts
-          merge-multiple: true
+          path: packaged-artifacts
 
-      - name: Validate artifact versions
+      - name: Validate and select successful platform artifacts
+        id: publication
         run: |
           cd repo
-          node infra/scripts/release/validate-release-artifact-versions.mjs \
-            --artifacts-dir ../all-artifacts \
+          node infra/scripts/release/desktop-partial-publication.mjs prepare \
+            --input ../packaged-artifacts \
+            --output ../all-artifacts \
             --channel nightly \
             --version "${{ needs.resolve-version.outputs.version }}" \
-            --output-dir ../manifest-validation
+            --report ../manifest-validation
 
       - name: Generate update manifests
-        shell: bash
         run: |
           cd repo
-          VERSION="${{ needs.resolve-version.outputs.version }}"
-          TAG="${{ needs.resolve-version.outputs.tag }}"
-          BASE_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}"
-
-          generate_manifest() {
-            local target=$1 arch=$2 filename=$3 format=$4
-            local sig_file="../all-artifacts/${filename}.sig"
-            local signature='""'
-            if [ -f "$sig_file" ]; then
-              signature=$(jq -Rs . < "$sig_file")
-            fi
-
-            mkdir -p "../pages/nightly/${target}"
-            cat > "../pages/nightly/${target}/${arch}.json" <<MANIFEST
-          {
-            "version": "${VERSION}",
-            "url": "${BASE_URL}/${filename}",
-            "signature": ${signature},
-            "format": "${format}"
-          }
-          MANIFEST
-          }
-
-          generate_manifest "windows" "x86_64" "aura-os-desktop_${VERSION}_x64-setup.exe" "nsis"
-          generate_manifest "macos" "aarch64" "aura-os-desktop_${VERSION}_aarch64.app.tar.gz" "app"
-          generate_manifest "macos" "x86_64" "aura-os-desktop_${VERSION}_x86_64.app.tar.gz" "app"
-          generate_manifest "linux" "x86_64" "aura-os-desktop_${VERSION}_x86_64.AppImage" "appimage"
-
-          mkdir -p "../pages/downloads"
-          cat > "../pages/downloads/nightly.json" <<MANIFEST
-          {
-            "channel": "nightly",
-            "version": "${VERSION}",
-            "release_url": "https://github.com/${{ github.repository }}/releases/tag/${TAG}",
-            "generated_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-            "desktop": {
-              "windows": {
-                "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/aura-os-desktop_${VERSION}_x64-setup.exe"
-              },
-              "mac": {
-                "apple-silicon": {
-                  "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/AURA_${VERSION}_aarch64.dmg"
-                },
-                "intel": {
-                  "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/AURA_${VERSION}_x64.dmg"
-                }
-              },
-              "linux": {
-                "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/aura-os-desktop_${VERSION}_x86_64.AppImage"
-              }
-            }
-          }
-          MANIFEST
+          node infra/scripts/release/desktop-partial-publication.mjs manifests \
+            --input ../all-artifacts \
+            --root ../pages \
+            --channel nightly \
+            --version "${{ needs.resolve-version.outputs.version }}" \
+            --repository "${{ github.repository }}" \
+            --tag "${{ needs.resolve-version.outputs.tag }}" \
+            --report ../manifest-validation
 
       - name: Validate nightly update manifests
         run: |
           cd repo
           node infra/scripts/release/desktop-manifest-validate.mjs \
             --root-dir ../pages \
-            --channel nightly \
-            --output-dir ../manifest-validation
-
-      - name: Validate nightly download manifest
-        run: |
-          cd repo
-          node infra/scripts/release/desktop-downloads-validate.mjs \
-            --manifest ../pages/downloads/nightly.json \
-            --artifacts-dir ../all-artifacts \
             --channel nightly \
             --output-dir ../manifest-validation
 
