@@ -14,26 +14,30 @@
  * inbound (`#[serde(default)]`) so older harness/client pairs that
  * don't know about them deserialize cleanly.
  */
-export type ProgressMsg = { 
+export type ProgressMsg = {
 /**
  * Short machine-readable stage tag. The aura-os chat client
  * renders unknown values as the literal label, so adding new
  * stages does not require a coordinated client release.
  */
-stage: string, 
+stage: string,
 /**
  * Tool whose long-running execution is producing this heartbeat.
  * Set on `stage = "tool_running"`; left `None` for stages that
  * don't refer to a single tool (e.g. `"lagged"`).
  */
-tool_name: string | null, 
+tool_name: string | null,
 /**
  * Wall-clock milliseconds since the heartbeat's reference event
  * (tool start for `"tool_running"`). Optional — older clients
  * ignore it.
  */
-elapsed_ms: bigint | null, 
+elapsed_ms: bigint | null,
 /**
  * Optional human-readable label / detail string.
  */
-message: string | null, };
+message: string | null,
+/**
+ * UTF-8 suffix lengths from the interrupted attempt only.
+ */
+reset_text_bytes: bigint | null, reset_thinking_bytes: bigint | null, };

@@ -441,6 +441,8 @@ fn reconnecting_progress(reason: &DisconnectReason) -> OutboundMessage {
         tool_name: None,
         elapsed_ms: None,
         message: Some(format!("Reconnecting to the agent ({detail})...")),
+        reset_text_bytes: None,
+        reset_thinking_bytes: None,
     })
 }
 

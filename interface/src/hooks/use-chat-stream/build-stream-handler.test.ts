@@ -109,6 +109,26 @@ describe("buildStreamHandler", () => {
       .toBeUndefined();
   });
 
+  it("routes a retry rollback without losing earlier text or tool cards", () => {
+    const refs = makeRefs();
+    const setters = makeSetters();
+    const handler = makeHandler(refs, setters);
+    refs.streamBuffer.current = "Earlier.failed 😀";
+    refs.timeline.current = [
+      { kind: "text", content: "Earlier.", id: "earlier" },
+      { kind: "tool", toolCallId: "done", id: "tool" },
+      { kind: "text", content: "failed 😀", id: "failed" },
+    ];
+    handler.onEvent(event(EventType.Progress, {
+      stage: "stream_reset",
+      reset_text_bytes: new TextEncoder().encode("failed 😀").length,
+      reset_thinking_bytes: 0,
+    }));
+    expect(refs.streamBuffer.current).toBe("Earlier.");
+    expect(refs.timeline.current).toHaveLength(2);
+    expect(refs.timeline.current[1].kind).toBe("tool");
+  });
+
   it("routes chat tool retry and terminal failure events into the stream reducers", () => {
     const refs = makeRefs();
     const setters = makeSetters();

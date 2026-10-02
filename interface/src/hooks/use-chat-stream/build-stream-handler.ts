@@ -13,6 +13,7 @@ import {
   resetStreamBuffers,
   handleThinkingDelta,
   handleTextDelta,
+  handleStreamReset,
   handleToolCallStarted,
   handleToolCallSnapshot,
   handleToolCall as coreHandleToolCall,
@@ -276,6 +277,10 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
       }
       case EventType.Progress: {
         const stage = event.content.stage;
+        if (stage === "stream_reset") {
+          handleStreamReset(refs, setters, event.content);
+          break;
+        }
         if (stage === "heartbeat") {
           // Server-side SSE heartbeat (`SSE_HEARTBEAT_INTERVAL` in
           // `apps/aura-os-server/src/handlers/agents/chat/streaming.rs`).

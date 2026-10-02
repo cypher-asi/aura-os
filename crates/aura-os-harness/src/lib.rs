@@ -67,7 +67,7 @@ pub use aura_protocol::{
     InstalledIntegration, InstalledTool, InstalledToolIntegrationRequirement,
     InstalledToolRuntimeAuth, InstalledToolRuntimeExecution, InstalledToolRuntimeIntegration,
     InstalledToolRuntimeProviderExecution, MessageAttachment, OutboundMessage as HarnessOutbound,
-    RuntimeRequest, RuntimeRequestType, RuntimeRunResponse, SessionModelOverrides, SessionReady,
-    SessionUsage, SkillInfo, SubagentSpawned, SubagentStatus, TextDelta, ThinkingDelta, ToolAuth,
-    ToolCallSnapshot, ToolInfo, ToolResultMsg, ToolUseStart, UserMessage,
+    ProgressMsg, RuntimeRequest, RuntimeRequestType, RuntimeRunResponse, SessionModelOverrides,
+    SessionReady, SessionUsage, SkillInfo, SubagentSpawned, SubagentStatus, TextDelta,
+    ThinkingDelta, ToolAuth, ToolCallSnapshot, ToolInfo, ToolResultMsg, ToolUseStart, UserMessage,
 };

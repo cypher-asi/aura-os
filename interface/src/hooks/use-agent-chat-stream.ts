@@ -34,6 +34,7 @@ import {
   resetStreamForReplay,
   handleThinkingDelta,
   handleTextDelta,
+  handleStreamReset,
   handleToolCallStarted,
   handleToolCallSnapshot,
   handleToolCall,
@@ -447,6 +448,10 @@ export function useAgentChatStream({
             }
             case EventType.Progress: {
               const stage = event.content.stage;
+              if (stage === "stream_reset") {
+                handleStreamReset(refs, partitionSetters, event.content);
+                break;
+              }
               if (stage === "heartbeat") {
                 // Pure stuck-stream-watchdog ack from the server-side
                 // SSE heartbeat (`SSE_HEARTBEAT_INTERVAL` in
@@ -1139,6 +1144,10 @@ export function useAgentChatStream({
           }
           case EventType.Progress: {
             const stage = event.content.stage;
+            if (stage === "stream_reset") {
+              handleStreamReset(refs, partitionSetters, event.content);
+              break;
+            }
             if (stage === "heartbeat") {
               markStreamProgress(getPartitionKey());
               break;
