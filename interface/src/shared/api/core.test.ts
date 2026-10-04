@@ -8,6 +8,8 @@ import {
   INSUFFICIENT_CREDITS_EVENT,
   apiFetch,
 } from "./core";
+import { streamsApi } from "./streams";
+import * as authToken from "../lib/auth-token";
 
 function mockFetch(
   status: number,
@@ -308,6 +310,75 @@ describe("apiFetch", () => {
       "/api/test",
       expect.objectContaining({ method: "POST", body: '{"a":1}' }),
     );
+  });
+
+  it.each([
+    { "Content-Type": "application/json", "X-Environment-Id": "desktop-1" },
+    { "content-type": "application/json", "X-Environment-Id": "desktop-1" },
+    new Headers({ "CONTENT-TYPE": "application/json", "X-Environment-Id": "desktop-1" }),
+    [["Content-Type", "application/json"], ["X-Environment-Id", "desktop-1"]] as [string, string][],
+  ])("sends one JSON media type when callers supply headers: %j", async (headers) => {
+    const fetchMock = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+      // Fetch combines differently-cased object keys. Axum's Json extractor
+      // rejects `application/json, application/json` with HTTP 415.
+      const wireHeaders = new Headers(init?.headers);
+      expect(wireHeaders.get("content-type")).toBe("application/json");
+      expect(wireHeaders.get("x-environment-id")).toBe("desktop-1");
+      expect(wireHeaders.has("x-app-platform")).toBe(true);
+      return new Response(JSON.stringify({ accepted: true }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    globalThis.fetch = fetchMock;
+    await apiFetch("/api/test", { method: "POST", headers, body: "{}" });
+  });
+
+  it("replaces the default content type rather than appending to it", async () => {
+    globalThis.fetch = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+      expect(new Headers(init?.headers).get("content-type")).toBe("text/plain");
+      return new Response("{}", { headers: { "Content-Type": "application/json" } });
+    });
+    await apiFetch("/api/test", { method: "POST", headers: { "content-type": "text/plain" }, body: "hello" });
+  });
+
+  it.each(["user input", "tool approval"])("delivers %s replies with a valid JSON media type", async (kind) => {
+    globalThis.fetch = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      const accepted = headers.get("content-type") === "application/json";
+      expect(String(url)).toContain("/api/streams/");
+      expect(init?.method).toBe("POST");
+      expect(JSON.parse(String(init?.body))).toEqual(kind === "user input"
+        ? { answers: { approach: "Keep the change narrow" } }
+        : { decision: "on", remember: "once" });
+      return new Response(JSON.stringify(accepted
+        ? { accepted: true }
+        : { error: "Unsupported Media Type", code: "unsupported_media_type", details: null }), {
+        status: accepted ? 200 : 415,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    const result = kind === "user input"
+      ? streamsApi.respondToUserInput("input-1", { approach: "Keep the change narrow" })
+      : streamsApi.respondToToolApproval("approval-1", "on", "once");
+    await expect(result).resolves.toEqual({ accepted: true });
+  });
+
+  it("preserves authentication with routing hints and replaces explicit auth overrides", async () => {
+    vi.spyOn(authToken, "authHeaders").mockReturnValue({
+      Authorization: "Bearer default-test-token",
+      "X-App-Platform": "desktop-windows",
+    });
+    const wireHeaders: Headers[] = [];
+    globalThis.fetch = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+      wireHeaders.push(new Headers(init?.headers));
+      return new Response("{}", { headers: { "Content-Type": "application/json" } });
+    });
+    await apiFetch("/api/test", { headers: { "X-Environment-Id": "desktop-1" } });
+    expect(wireHeaders[0].get("authorization")).toBe("Bearer default-test-token");
+    expect(wireHeaders[0].get("x-environment-id")).toBe("desktop-1");
+    await apiFetch("/api/test", { headers: { authorization: "Bearer override-test-token" } });
+    expect(wireHeaders[1].get("authorization")).toBe("Bearer override-test-token");
+    expect(wireHeaders[1].get("x-app-platform")).toBe("desktop-windows");
   });
 
   it("keeps same-origin requests local despite a configured API host", async () => {
