@@ -287,7 +287,14 @@ export async function apiFetch<T>(
   };
   if (rest.headers) {
     new Headers(rest.headers).forEach((value, name) => {
-      mergedHeaders[name] = value;
+      // Headers normalizes caller names to lowercase, while the defaults
+      // above use canonical casing. Replace the same field case-insensitively:
+      // keeping both makes fetch send `application/json, application/json`,
+      // which the server rejects with 415 (including agent question replies).
+      const existingName = Object.keys(mergedHeaders).find(
+        (key) => key.toLowerCase() === name,
+      );
+      mergedHeaders[existingName ?? name] = value;
     });
   }
 
