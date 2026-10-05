@@ -383,10 +383,10 @@ async fn start_automaton_forwards_model_selection() {
     let response = client
         .start_automaton(
             &HarnessAutomatonStartParams {
-                kind: "scheduled_process".to_string(),
+                kind: "dev_loop".to_string(),
                 project_id: "project-123".to_string(),
                 auth_token: Some("body-jwt".to_string()),
-                process_id: Some("process-123".to_string()),
+                process_id: None,
                 model: Some("aura-claude-sonnet-4-6".to_string()),
                 input: None,
                 aura_org_id: Some("org-123".to_string()),
@@ -424,10 +424,10 @@ async fn start_automaton_prefers_transport_auth_but_keeps_body_jwt() {
     client
         .start_automaton(
             &HarnessAutomatonStartParams {
-                kind: "scheduled_process".to_string(),
+                kind: "dev_loop".to_string(),
                 project_id: "project-123".to_string(),
                 auth_token: Some("body-jwt".to_string()),
-                process_id: Some("process-123".to_string()),
+                process_id: None,
                 model: Some("aura-claude-sonnet-4-6".to_string()),
                 input: None,
                 aura_org_id: Some("org-123".to_string()),
