@@ -14,6 +14,18 @@ use crate::state::AppState;
 
 const SCHEDULED_PROCESS_AUTOMATON_KIND: &str = "scheduled_process";
 
+fn ensure_process_execution_supported() -> ApiResult<()> {
+    // The harness has no process-graph run contract. Reject before creating a
+    // storage run rather than queueing unrelated project tasks and leaving the
+    // process pending indefinitely. Remove this gate only with a real executor.
+    Err((StatusCode::NOT_IMPLEMENTED, Json(ApiError {
+        error: "Scheduled process execution is unavailable: a dedicated process-graph executor is required. No project tasks were started.".into(),
+        code: "process_execution_unavailable".into(),
+        details: None,
+        data: None,
+    })))
+}
+
 pub(crate) async fn trigger_process_run(
     state: &AppState,
     client: &StorageClient,
@@ -27,6 +39,7 @@ pub(crate) async fn trigger_process_run(
         .map_err(map_storage_error)?;
 
     reject_active_run(client, process_id, jwt).await?;
+    ensure_process_execution_supported()?;
 
     let trigger_wire = process_trigger_wire(trigger);
     let run_id = ProcessRunId::new().to_string();
@@ -336,6 +349,14 @@ fn is_active_run(status: Option<&str>) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn unsupported_process_execution_has_an_explicit_error() {
+        let (status, Json(error)) = ensure_process_execution_supported().unwrap_err();
+        assert_eq!(status, StatusCode::NOT_IMPLEMENTED);
+        assert_eq!(error.code, "process_execution_unavailable");
+        assert!(error.error.contains("No project tasks were started"));
+    }
 
     fn node(node_type: Option<&str>, agent_id: Option<&str>) -> StorageProcessNode {
         StorageProcessNode {

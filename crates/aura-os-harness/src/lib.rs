@@ -12,6 +12,8 @@ mod harness;
 mod harness_auth;
 mod harness_url;
 mod local_harness;
+#[cfg(test)]
+mod process_guard_tests;
 pub mod runner;
 pub mod session;
 pub mod signals;

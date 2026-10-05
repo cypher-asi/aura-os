@@ -2,11 +2,11 @@
 
 use std::time::Duration;
 
-use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue};
+use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use serde::{Deserialize, Serialize};
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
-use tokio_tungstenite::tungstenite::http::HeaderValue as WsHeaderValue;
 use tokio_tungstenite::tungstenite::http::header::AUTHORIZATION as WS_AUTHORIZATION;
+use tokio_tungstenite::tungstenite::http::HeaderValue as WsHeaderValue;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 use tracing::instrument;
 
@@ -242,25 +242,23 @@ impl HarnessClient {
 
     /// Start a harness-owned automaton run via `POST /v1/run`.
     ///
-    /// Phase A: the harness's start endpoint moved from
-    /// `POST /automaton/start` (with the bespoke
-    /// `HarnessAutomatonStartParams` shape) to `POST /v1/run` (with
-    /// the canonical [`aura_protocol::RuntimeRequest`] shape). This
-    /// method bridges the legacy aura-os-server "scheduled process"
-    /// path onto the new wire by translating
-    /// [`HarnessAutomatonStartParams`] into a
-    /// [`aura_protocol::RuntimeRequestType::DevLoop`] runtime request
-    /// at the call site. The `kind` / `process_id` / `input` fields
-    /// the legacy shape carried are not part of the canonical
-    /// request — they were never enforced by the harness's
-    /// `AutomatonStartRequest` either, just stored on the run config
-    /// JSON.
+    /// Bridges legacy dev-loop parameters to the canonical runtime request.
+    /// Process graphs and their input payloads require a dedicated executor;
+    /// reject them instead of silently running unrelated project tasks.
     #[instrument(skip(self, params, jwt), fields(kind = %params.kind, project_id = %params.project_id))]
     pub async fn start_automaton(
         &self,
         params: &HarnessAutomatonStartParams,
         jwt: Option<&str>,
     ) -> Result<HarnessAutomatonStartResponse, HarnessClientError> {
+        if params.kind != "dev_loop" || params.process_id.is_some() || params.input.is_some() {
+            // The canonical runtime currently has no process-graph variant.
+            // Never turn a process trigger into unrelated project task execution.
+            return Err(HarnessClientError::Status {
+                status: 501,
+                body: "This automaton requires a dedicated runtime executor; scheduled processes cannot be run as project dev loops.".into(),
+            });
+        }
         use aura_protocol::{
             AgentCapabilities, AgentIdentity, AgentPermissionsWire, ModelSelection, ProjectContext,
             RuntimeRequest, RuntimeRequestType, WorkspaceLocation,
