@@ -144,56 +144,69 @@ export default defineConfig(({ mode, command }) => {
       cssMinify: "esbuild",
       rollupOptions: {
         output: {
-          manualChunks(id) {
-            if (!id.includes("node_modules")) {
-              return undefined;
-            }
-            if (
-              id.includes("/react/") ||
-              id.includes("/react-dom/") ||
-              id.includes("/react-router-dom/") ||
-              id.includes("/@tanstack/")
-            ) {
-              return "framework";
-            }
-            if (
-              id.includes("/@cypher-asi/zui/") ||
-              id.includes("/lucide-react/") ||
-              id.includes("/@fontsource-variable/")
-            ) {
-              return "ui-vendor";
-            }
-            if (id.includes("/@xyflow/")) {
-              return "diagram-vendor";
-            }
-            // Keep three.js out of the catch-all vendor chunk: it is only
-            // needed by lazily-mounted WebGL scenes (marketing device
-            // props, persona backgrounds, aura3d), so it must not ride
-            // along with the entry-critical vendor graph.
-            if (id.includes("/node_modules/three/")) {
-              return "three-vendor";
-            }
-            if (id.includes("/highlight.js/") && !id.endsWith(".css") && !id.includes("/styles/")) {
-              return "highlight-vendor";
-            }
-            if (
-              id.includes("/react-markdown/") ||
-              id.includes("/remark-gfm/") ||
-              id.includes("/rehype-highlight/")
-            ) {
-              return "markdown-vendor";
-            }
-            if (id.includes("/@xterm/")) {
-              return "terminal-vendor";
-            }
-            // Capacitor initializes and replaces window.Capacitor as soon as
-            // its module is evaluated. Keep it out of the entry-critical
-            // vendor chunk so web sessions only load it after native runtime
-            // detection succeeds.
-            if (id.includes("/@capacitor/")) {
-              return "capacitor-native";
-            }
-            return "vendor";
+          codeSplitting: {
+            groups: [
+              // Claim the shared helper before recursively grouping lazy
+              // dependencies; otherwise PDF parsing becomes entry-critical.
+              { name: "preload-runtime", test: /vite[/\\:]preload-helper/, priority: 10 },
+              { name(id) {
+                if (!id.includes("node_modules")) {
+                  return undefined;
+                }
+                if (
+                  id.includes("/react/") ||
+                  id.includes("/react-dom/") ||
+                  id.includes("/react-router-dom/") ||
+                  id.includes("/@tanstack/")
+                ) {
+                  return "framework";
+                }
+                if (
+                  id.includes("/@cypher-asi/zui/") ||
+                  id.includes("/lucide-react/") ||
+                  id.includes("/@fontsource-variable/")
+                ) {
+                  return "ui-vendor";
+                }
+                if (id.includes("/@xyflow/")) {
+                  return "diagram-vendor";
+                }
+                // Keep three.js out of the catch-all vendor chunk: it is only
+                // needed by lazily-mounted WebGL scenes (marketing device
+                // props, persona backgrounds, aura3d), so it must not ride
+                // along with the entry-critical vendor graph.
+                if (id.includes("/node_modules/three/")) {
+                  return "three-vendor";
+                }
+                // PDF parsing is only needed after a PDF is selected. The
+                // catch-all vendor group would eagerly preload this large lazy
+                // dependency on every app startup despite dynamic import().
+                if (id.includes("/node_modules/pdfjs-dist/")) {
+                  return "pdf-parser";
+                }
+                if (id.includes("/highlight.js/") && !id.endsWith(".css") && !id.includes("/styles/")) {
+                  return "highlight-vendor";
+                }
+                if (
+                  id.includes("/react-markdown/") ||
+                  id.includes("/remark-gfm/") ||
+                  id.includes("/rehype-highlight/")
+                ) {
+                  return "markdown-vendor";
+                }
+                if (id.includes("/@xterm/")) {
+                  return "terminal-vendor";
+                }
+                // Capacitor initializes and replaces window.Capacitor as soon as
+                // its module is evaluated. Keep it out of the entry-critical
+                // vendor chunk so web sessions only load it after native runtime
+                // detection succeeds.
+                if (id.includes("/@capacitor/")) {
+                  return "capacitor-native";
+                }
+                return "vendor";
+              } },
+            ],
           },
         },
       },

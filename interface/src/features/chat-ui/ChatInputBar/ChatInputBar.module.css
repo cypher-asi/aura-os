@@ -18,6 +18,15 @@
    the bar look misaligned (e.g. the context pill drifting up because
    it was an inline `<span>` with smaller padding than the
    flex-centered sibling buttons). Keep these in lockstep. */
+.attachmentNotice {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  padding: 4px 10px;
+  white-space: pre-line;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
 .contextIndicator {
   display: inline-flex;
   align-items: center;

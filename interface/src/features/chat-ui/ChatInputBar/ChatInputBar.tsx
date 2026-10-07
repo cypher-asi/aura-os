@@ -500,12 +500,13 @@ export const DesktopChatInputBar = memo(
       [],
     );
 
-    const { canAddMore, addFiles, addFileFromPath, handleRemove } = useFileAttachments(
+    const { canAddMore, addFiles, addFileFromPath, handleRemove, isProcessing, attachmentNotice } = useFileAttachments(
       attachments,
       onAttachmentsChange,
       onRemoveAttachment,
       textareaRefShim as React.RefObject<HTMLTextAreaElement | null>,
       remoteAgentId,
+      streamKey,
     );
     const [agentMentionState, setAgentMentionState] = useState<{
       streamKey: string;
@@ -814,7 +815,7 @@ export const DesktopChatInputBar = memo(
 
     const handleSubmit = useCallback(() => {
       stopVoiceDictation();
-      if (sendDisabled || isPromptTooLong) return;
+      if (sendDisabled || isPromptTooLong || isProcessing) return;
       const asideSelected = selectedCommands.some(
         (command) => command.id === "btw",
       );
@@ -856,6 +857,7 @@ export const DesktopChatInputBar = memo(
       selectedModel,
       selectedMode,
       isPromptTooLong,
+      isProcessing,
       sendDisabled,
       stopVoiceDictation,
       streamKey,
@@ -955,6 +957,8 @@ export const DesktopChatInputBar = memo(
             ))}
           </div>
         ) : null}
+        {isProcessing ? <div role="status" className={styles.attachmentNotice}>Reading attachments…</div> : null}
+        {attachmentNotice ? <div role="alert" className={styles.attachmentNotice}>{attachmentNotice}</div> : null}
         <AttachmentPreviews
           attachments={attachments}
           onRemove={handleRemove}
@@ -1155,7 +1159,7 @@ export const DesktopChatInputBar = memo(
             ? "Ask Aura anything..."
             : "What do you want to create?";
 
-    const isUploading = generationMode !== "image" && attachments.some((a) => a.uploading);
+    const isUploading = isProcessing || (generationMode !== "image" && attachments.some((a) => a.uploading));
 
     // Stacked chrome in the `containerTop` slot (slash/mention menus,
     // attachments, the record-demo settings panel, queued/disabled hints)
