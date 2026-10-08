@@ -75,6 +75,8 @@ const mockSetSelectedMode = vi.fn();
 const mockSetPinnedSourceImage = vi.fn();
 const mockAddFiles = vi.fn();
 const mockHandleRemove = vi.fn();
+let mockAttachmentProcessing = false;
+let mockAttachmentNotice: string | null = null;
 vi.mock("../../../stores/chat-ui-store", () => ({
   useChatUI: () => ({
     selectedMode: mockSelectedMode,
@@ -121,6 +123,8 @@ vi.mock("./useFileAttachments", () => ({
     addFiles: mockAddFiles,
     addFileFromPath: vi.fn(),
     handleRemove: mockHandleRemove,
+    isProcessing: mockAttachmentProcessing,
+    attachmentNotice: mockAttachmentNotice,
   }),
 }));
 
@@ -205,6 +209,8 @@ function withMockDataTransfer(fileList: FileList, run: () => void) {
 }
 
 beforeEach(() => {
+  mockAttachmentProcessing = false;
+  mockAttachmentNotice = null;
   mockIsStreaming = false;
   mockIsMobileLayout = false;
   mockLinkedWorkspace = true;
@@ -484,6 +490,20 @@ describe("ChatInputBar", () => {
   it("enables send button when input has text", () => {
     render(<ChatInputBar {...makeProps({ input: "Hey" })} />);
     expect(screen.getByRole("button", { name: "Send" })).toBeEnabled();
+  });
+
+  it("shows attachment feedback and prevents click/Enter submission while parsing", async () => {
+    mockAttachmentProcessing = true;
+    mockAttachmentNotice = "Archive contains more than five files. Attach the rest in another message.";
+    const onSend = vi.fn();
+    render(<ChatInputBar {...makeProps({ input: "Research these files", onSend })} />);
+    expect(screen.getByRole("status")).toHaveTextContent("Reading attachments");
+    expect(screen.getByRole("alert")).toHaveTextContent("more than five files");
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await userEvent.click(screen.getByPlaceholderText("/ for commands, @ for context"));
+    await userEvent.keyboard("{Enter}");
+    expect(onSend).not.toHaveBeenCalled();
   });
 
   it("calls onSend when send button is clicked", async () => {
