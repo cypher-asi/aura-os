@@ -497,15 +497,23 @@ fn append_user_event(
                     Some(serde_json::json!({ "type": "text", "text": text }))
                 }
                 ChatContentBlock::Image {
-                    media_type, data, ..
-                } => Some(serde_json::json!({
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": media_type,
-                        "data": data,
-                    }
-                })),
+                    media_type,
+                    data,
+                    source_url,
+                } => {
+                    // Uploaded images are persisted as references, not bytes.
+                    // Preserve legacy inline images, but never replay a URL-only
+                    // snapshot as an empty base64 image.
+                    let source = match source_url {
+                        Some(url) if data.is_empty() => serde_json::json!({
+                            "type": "url", "url": url,
+                        }),
+                        _ => serde_json::json!({
+                            "type": "base64", "media_type": media_type, "data": data,
+                        }),
+                    };
+                    Some(serde_json::json!({ "type": "image", "source": source }))
+                }
                 _ => None,
             })
             .collect();

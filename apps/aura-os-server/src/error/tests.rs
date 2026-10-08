@@ -210,3 +210,18 @@ fn map_chat_persist_storage_error_non_server_has_no_upstream_status() {
         "no upstream HTTP status for non-Server storage errors"
     );
 }
+
+#[test]
+fn map_chat_persist_storage_size_error_is_actionable_and_keeps_status() {
+    let err = aura_os_storage::StorageError::Server {
+        status: 413,
+        body: "length limit exceeded".into(),
+    };
+    let (status, Json(api_err)) =
+        map_chat_persist_storage_error(err, ChatPersistErrorCtx::default());
+    assert_eq!(status, StatusCode::BAD_GATEWAY);
+    assert_eq!(api_err.code, "chat_persist_failed");
+    assert!(api_err.error.contains("fewer/smaller attachments"));
+    assert!(api_err.error.contains("agent has not received this turn"));
+    assert_eq!(api_err.data.unwrap()["upstream_status"], 413);
+}

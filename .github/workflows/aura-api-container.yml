@@ -34,6 +34,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  chat-persistence-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Rust toolchain
+        uses: ./.github/actions/setup-rust-toolchain
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: analytics-contract
+      - name: Verify server invariants including realistic photo persistence
+        run: cargo test -p aura-os-server --lib --no-default-features --features dev-channel
+      - name: Verify chat storage integration
+        run: cargo test -p aura-os-server --test chat_events_test --no-default-features --features dev-channel
+
   build-and-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 45
