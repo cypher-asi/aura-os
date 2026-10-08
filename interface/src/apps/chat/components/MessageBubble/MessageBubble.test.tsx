@@ -574,13 +574,13 @@ describe("MessageBubble", () => {
             {
               type: "image",
               media_type: "image/png",
-              data: "AAAA",
+              data: "",
               source_url: "https://cdn/a.png",
             },
             {
               type: "image",
               media_type: "image/png",
-              data: "BBBB",
+              data: "",
               source_url: "https://cdn/b.png",
             },
           ],

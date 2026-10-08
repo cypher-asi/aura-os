@@ -92,6 +92,10 @@ pub(crate) fn map_chat_persist_storage_error(
         _ => None,
     };
     let reason = match &e {
+        aura_os_storage::StorageError::Server { status: 413, .. } => {
+            "Chat could not be saved because this message exceeds the storage size limit. Retry the file uploads, or send fewer/smaller attachments. The agent has not received this turn."
+                .to_string()
+        }
         aura_os_storage::StorageError::Server { status, body } => {
             let preview: String = body.chars().take(400).collect();
             format!("storage returned {status}: {preview}")

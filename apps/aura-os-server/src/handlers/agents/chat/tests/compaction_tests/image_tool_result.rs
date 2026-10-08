@@ -14,6 +14,22 @@ use super::{
 };
 
 #[test]
+fn agent_history_keeps_legacy_inline_images_even_with_a_source_url() {
+    let mut user = user_event("");
+    user.content_blocks = Some(vec![ChatContentBlock::Image {
+        media_type: "image/png".into(),
+        data: "aGVsbG8=".into(),
+        source_url: Some("https://cdn.example/legacy.png".into()),
+    }]);
+    let history = session_events_to_agent_history(&[user]);
+    let source = &history[0]["content"][0]["source"];
+    assert_eq!(source["type"], "base64");
+    assert_eq!(source["media_type"], "image/png");
+    assert_eq!(source["data"], "aGVsbG8=");
+    assert!(source.get("url").is_none());
+}
+
+#[test]
 fn agent_history_emits_image_block_for_image_tool_result() {
     let assistant = assistant_event(
         "",

@@ -95,13 +95,23 @@ fn build_user_message_payload(
             .iter()
             .filter(|a| a.type_ == "image")
             .map(|a| {
+                // The model turn still receives the original inline data. Only
+                // the storage snapshot uses the durable upload reference:
+                // five individually valid images can exceed storage's 2 MiB
+                // JSON body limit after base64 expansion. Keep inline fallback
+                // when there is no usable URL; never silently drop the image.
+                let source_url = a.source_url.as_deref().filter(|url| {
+                    url::Url::parse(url).is_ok_and(|parsed| {
+                        matches!(parsed.scheme(), "https" | "http") && parsed.host_str().is_some()
+                    })
+                });
                 let mut block = serde_json::json!({
                     "type": "image",
                     "media_type": a.media_type,
-                    "data": a.data,
+                    "data": if source_url.is_some() { "" } else { &a.data },
                 });
-                if let Some(ref url) = a.source_url {
-                    block["source_url"] = serde_json::Value::String(url.clone());
+                if let Some(url) = source_url {
+                    block["source_url"] = serde_json::Value::String(url.to_string());
                 }
                 block
             })
@@ -171,6 +181,173 @@ mod build_user_message_payload_tests {
     //! shape rather than the in-memory `ChatPersistCtx` field.
     use super::attachments_from_persisted_user_event;
     use super::build_user_message_payload;
+    use super::{persist_user_message, ChatAttachmentDto, ChatPersistCtx};
+
+    fn image(data: &str, source_url: Option<&str>) -> ChatAttachmentDto {
+        ChatAttachmentDto {
+            type_: "image".into(),
+            media_type: "image/jpeg".into(),
+            data: data.into(),
+            name: Some("photo.jpg".into()),
+            source_url: source_url.map(str::to_string),
+        }
+    }
+
+    #[test]
+    fn uploaded_images_persist_references_without_changing_model_payload() {
+        let attachments = Some(vec![image(
+            "aW1hZ2U=",
+            Some("https://cdn.example/photo.jpg"),
+        )]);
+        let payload = build_user_message_payload("inspect", &attachments, None, Some("turn-1"));
+        assert_eq!(payload["content_blocks"][1]["data"], "");
+        assert_eq!(
+            payload["content_blocks"][1]["source_url"],
+            "https://cdn.example/photo.jpg"
+        );
+        assert_eq!(payload["client_command_id"], "turn-1");
+        // Persistence must not mutate the DTO that is sent to the harness.
+        assert_eq!(
+            attachments.as_ref().map(|atts| atts[0].data.as_str()),
+            Some("aW1hZ2U=")
+        );
+    }
+
+    #[test]
+    fn inline_fallback_is_preserved_without_a_usable_upload_url() {
+        for source in [
+            None,
+            Some(""),
+            Some(" "),
+            Some("not-a-url"),
+            Some("data:image/png;base64,AAAA"),
+        ] {
+            let payload =
+                build_user_message_payload("", &Some(vec![image("aW1hZ2U=", source)]), None, None);
+            assert_eq!(payload["content_blocks"][0]["data"], "aW1hZ2U=");
+            assert!(payload["content_blocks"][0].get("source_url").is_none());
+        }
+    }
+
+    #[tokio::test]
+    async fn two_five_photo_batches_persist_and_resume_under_real_json_body_limit() {
+        use aura_os_storage::{CreateSessionEventRequest, StorageClient};
+        use std::sync::Arc;
+        use tower::ServiceExt;
+
+        // Axum's mock-storage JSON extractor enforces the same 2 MiB limit
+        // as production storage. The previous tiny image mocks never crossed it.
+        let (storage_url, db) = aura_os_storage::testutil::start_mock_storage().await;
+        let ctx = ChatPersistCtx {
+            storage: Arc::new(StorageClient::with_base_url(&storage_url)),
+            jwt: "test-token".into(),
+            user_id: Some("owner".into()),
+            session_id: aura_os_core::SessionId::new(),
+            project_agent_id: "project-agent".into(),
+            project_id: "project".into(),
+            agent_id: None,
+            originating_agent_id: None,
+            cross_agent_depth: 0,
+            from_agent_id: None,
+        };
+        // Each photo is within the browser's 1,100,000-byte image threshold,
+        // but its encoded form and five-photo aggregate exceed 2 MiB.
+        let data = "A".repeat(1_466_668);
+        let mut all_urls = Vec::new();
+        for batch in 0..2 {
+            let attachments = Some(
+                (0..5)
+                    .map(|index| {
+                        let url = format!("https://cdn.example/batch-{batch}/photo-{index}.jpg");
+                        all_urls.push(url.clone());
+                        image(&data, Some(&url))
+                    })
+                    .collect(),
+            );
+            let event = persist_user_message(
+                &ctx,
+                "Research these photos",
+                &attachments,
+                Some(&format!("batch-{batch}")),
+            )
+            .await
+            .expect("uploaded five-image batch must persist");
+            assert!(serde_json::to_vec(&event).unwrap().len() < 4096);
+            let resumed = attachments_from_persisted_user_event(&event).expect("resume references");
+            assert_eq!(resumed.len(), 5);
+            for (index, attachment) in resumed.iter().enumerate() {
+                assert!(attachment.data.is_empty());
+                assert_eq!(
+                    attachment.source_url.as_deref(),
+                    Some(all_urls[batch * 5 + index].as_str())
+                );
+            }
+            let history = crate::handlers::agents::conversions::events_to_session_history(
+                &[event],
+                &ctx.project_agent_id,
+                &ctx.project_id,
+            );
+            assert_eq!(history[0].content_blocks.as_ref().unwrap().len(), 6);
+            let replay = crate::handlers::agents::chat::session_events_to_agent_history(&history);
+            for (index, block) in replay[0]["content"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .skip(1)
+                .enumerate()
+            {
+                assert_eq!(block["source"]["type"], "url");
+                assert_eq!(block["source"]["url"], all_urls[batch * 5 + index]);
+                assert!(block["source"].get("data").is_none());
+            }
+        }
+        assert_eq!(db.lock().await.events.len(), 2);
+
+        // Reproduce the pre-fix wire payload: uploaded references PLUS all
+        // base64 bytes. Drive the router in-process to avoid an early 413
+        // closing a large HTTP upload before reqwest finishes writing it.
+        let inline = Some((0..5).map(|_| image(&data, None)).collect());
+        let mut old_payload =
+            build_user_message_payload("Research these photos", &inline, None, None);
+        for (index, block) in old_payload["content_blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .skip(1)
+            .enumerate()
+        {
+            block["source_url"] = serde_json::json!(all_urls[index]);
+        }
+        let old_request = CreateSessionEventRequest {
+            session_id: Some(ctx.session_id.to_string()),
+            user_id: None,
+            agent_id: Some(ctx.project_agent_id.clone()),
+            sender: Some("user".into()),
+            project_id: Some(ctx.project_id.clone()),
+            org_id: None,
+            event_type: "user_message".into(),
+            content: Some(old_payload),
+        };
+        let old_body = serde_json::to_vec(&old_request).unwrap();
+        assert!(old_body.len() > 7_000_000);
+        let response = aura_os_storage::testutil::mock_storage_router(db.clone())
+            .oneshot(
+                axum::http::Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/sessions/{}/events", ctx.session_id))
+                    .header("content-type", "application/json")
+                    .body(axum::body::Body::from(old_body))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), axum::http::StatusCode::PAYLOAD_TOO_LARGE);
+        assert_eq!(
+            db.lock().await.events.len(),
+            2,
+            "failed write must not look persisted"
+        );
+    }
 
     #[test]
     fn build_user_message_payload_omits_from_agent_id_when_none() {

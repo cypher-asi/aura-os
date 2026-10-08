@@ -3,6 +3,25 @@ import type { DisplaySessionEvent } from "../../../shared/types/stream";
 import { collectSessionImages } from "./collect-session-images";
 
 describe("collectSessionImages", () => {
+  it("keeps all ten URL-only photos after two persisted five-photo turns", () => {
+    const messages: DisplaySessionEvent[] = [0, 1].map((batch) => ({
+      id: `batch-${batch}`,
+      role: "user",
+      content: "Research these photos",
+      contentBlocks: Array.from({ length: 5 }, (_, index) => ({
+        type: "image" as const,
+        media_type: "image/jpeg",
+        data: "",
+        source_url: `https://cdn.example/batch-${batch}/photo-${index}.jpg`,
+      })),
+    }));
+    const images = collectSessionImages(messages);
+    expect(images).toHaveLength(10);
+    expect(images.map((image) => image.src)).toEqual(messages.flatMap((message) =>
+      message.contentBlocks!.map((block) => (block as { source_url: string }).source_url),
+    ));
+  });
+
   it("returns an empty array for an empty / missing thread", () => {
     expect(collectSessionImages(undefined)).toEqual([]);
     expect(collectSessionImages([])).toEqual([]);
