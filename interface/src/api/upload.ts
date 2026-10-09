@@ -17,6 +17,7 @@ export async function requestPresignedUrl(
   contentType: string,
   filename: string,
   prefix?: string,
+  signal?: AbortSignal,
 ): Promise<PresignResponse> {
   const body: Record<string, string> = {
     content_type: contentType,
@@ -28,6 +29,8 @@ export async function requestPresignedUrl(
   return apiFetch<PresignResponse>("/api/upload/presign", {
     method: "POST",
     body: JSON.stringify(body),
+    signal,
+    timeoutMs: 30_000,
   });
 }
 
@@ -48,12 +51,23 @@ export function uploadToS3(
   signal?: AbortSignal,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new Error("S3 upload aborted"));
+      return;
+    }
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", uploadUrl);
     xhr.setRequestHeader("Content-Type", contentType);
+    xhr.timeout = 120_000;
+    const abort = () => xhr.abort();
+    const settle = (error?: Error) => {
+      signal?.removeEventListener("abort", abort);
+      if (error) reject(error);
+      else resolve();
+    };
 
     if (signal) {
-      signal.addEventListener("abort", () => xhr.abort());
+      signal.addEventListener("abort", abort, { once: true });
     }
 
     if (onProgress) {
@@ -66,17 +80,24 @@ export function uploadToS3(
 
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        resolve();
+        settle();
       } else {
-        reject(new Error(`S3 upload failed: HTTP ${xhr.status}`));
+        // Keep only the bounded S3 error code, never the signed URL or
+        // full XML response (which may contain credential/request details).
+        const code = xhr.responseText?.match(/<Code>([A-Za-z0-9_]{1,80})<\/Code>/)?.[1];
+        settle(new Error(`S3 upload failed: HTTP ${xhr.status}${code ? ` (${code})` : ""}`));
       }
     };
 
-    xhr.onerror = () => reject(new Error("S3 upload failed: network error"));
-    xhr.ontimeout = () => reject(new Error("S3 upload failed: timeout"));
-    xhr.onabort = () => reject(new Error("S3 upload aborted"));
+    xhr.onerror = () => settle(new Error("S3 upload failed: network error"));
+    xhr.ontimeout = () => settle(new Error("S3 upload failed: timeout"));
+    xhr.onabort = () => settle(new Error("S3 upload aborted"));
 
-    xhr.send(data);
+    try {
+      xhr.send(data);
+    } catch {
+      settle(new Error("S3 upload failed: could not start request"));
+    }
   });
 }
 
@@ -93,7 +114,7 @@ export async function uploadFile(
   onProgress?: (percent: number) => void,
   signal?: AbortSignal,
 ): Promise<string> {
-  const presigned = await requestPresignedUrl(contentType, filename);
+  const presigned = await requestPresignedUrl(contentType, filename, undefined, signal);
   await uploadToS3(presigned.upload_url, file, contentType, onProgress, signal);
   return presigned.file_url;
 }

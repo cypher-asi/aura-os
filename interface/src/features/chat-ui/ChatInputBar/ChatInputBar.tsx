@@ -21,6 +21,7 @@ import { useSidekickStore } from "../../../stores/sidekick-store";
 import type { ContextContentsResponse } from "../../../shared/api/agents";
 import { useIsStreaming } from "../../../hooks/stream/hooks";
 import { useFileAttachments } from "./useFileAttachments";
+import { hasUnuploadedImages } from "./attachment-upload-state";
 import type { GenerationMode } from "../../../constants/models";
 import { modelSupportsQuality } from "../../../constants/models";
 import { isGenerationCommand } from "../../../constants/commands";
@@ -98,13 +99,13 @@ export interface AttachmentItem {
   name: string;
   attachmentType: "image" | "text";
   preview?: string;
-  /** S3 URL after upload. When set, sent as source_url instead of base64. */
+  /** Durable upload URL; storage persists this reference instead of base64. */
   fileUrl?: string;
   /** True while S3 upload is in flight. */
   uploading?: boolean;
   /** Upload progress 0-100. */
   uploadProgress?: number;
-  /** Error message if S3 upload failed. Falls back to base64. */
+  /** Visible, retryable upload error. Failed images cannot be sent as chat. */
   uploadError?: string;
 }
 
@@ -500,7 +501,7 @@ export const DesktopChatInputBar = memo(
       [],
     );
 
-    const { canAddMore, addFiles, addFileFromPath, handleRemove, isProcessing, attachmentNotice } = useFileAttachments(
+    const { canAddMore, addFiles, addFileFromPath, handleRemove, retryUpload, isProcessing, attachmentNotice } = useFileAttachments(
       attachments,
       onAttachmentsChange,
       onRemoveAttachment,
@@ -813,9 +814,14 @@ export const DesktopChatInputBar = memo(
       setPinnedSourceImage(streamKey, null);
     }, [setPinnedSourceImage, streamKey]);
 
+    // Image generation consumes inline reference images without a persisted
+    // chat turn; keep that flow usable even if the background upload fails.
+    const attachmentsBlocked = (generationMode !== "image" && attachments.some((a) => a.uploading)) ||
+      (generationMode === "chat" && hasUnuploadedImages(attachments));
+
     const handleSubmit = useCallback(() => {
       stopVoiceDictation();
-      if (sendDisabled || isPromptTooLong || isProcessing) return;
+      if (sendDisabled || isPromptTooLong || isProcessing || attachmentsBlocked) return;
       const asideSelected = selectedCommands.some(
         (command) => command.id === "btw",
       );
@@ -858,6 +864,7 @@ export const DesktopChatInputBar = memo(
       selectedMode,
       isPromptTooLong,
       isProcessing,
+      attachmentsBlocked,
       sendDisabled,
       stopVoiceDictation,
       streamKey,
@@ -962,6 +969,7 @@ export const DesktopChatInputBar = memo(
         <AttachmentPreviews
           attachments={attachments}
           onRemove={handleRemove}
+          onRetry={retryUpload}
         />
         {isRecordDemoActive ? (
           <DemoRecordSettings
@@ -1159,7 +1167,7 @@ export const DesktopChatInputBar = memo(
             ? "Ask Aura anything..."
             : "What do you want to create?";
 
-    const isUploading = isProcessing || (generationMode !== "image" && attachments.some((a) => a.uploading));
+    const isUploading = isProcessing || attachmentsBlocked;
 
     // Stacked chrome in the `containerTop` slot (slash/mention menus,
     // attachments, the record-demo settings panel, queued/disabled hints)
@@ -1183,8 +1191,8 @@ export const DesktopChatInputBar = memo(
         onSubmit={handleSubmit}
         onStop={onStop}
         isStreaming={isStreaming}
-        disabled={isUploading || sendDisabled}
-        isSendEnabled={!sendDisabled && !isPromptTooLong && isSendEnabled}
+        disabled={isProcessing || (generationMode !== "image" && attachments.some((a) => a.uploading)) || sendDisabled}
+        isSendEnabled={!isUploading && !sendDisabled && !isPromptTooLong && isSendEnabled}
         isVisible={isVisible}
         isCentered={isCentered}
         centeredHeading={

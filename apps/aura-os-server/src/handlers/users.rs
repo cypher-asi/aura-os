@@ -348,7 +348,9 @@ async fn rehost_mxc_avatar(
         .await
         .ok()?;
     if !upload_resp.status().is_success() {
-        tracing::warn!(status = %upload_resp.status(), "Failed to upload avatar to S3");
+        let status = upload_resp.status();
+        let body = upload_resp.text().await.unwrap_or_default();
+        tracing::warn!(%status, s3_error_code = ?super::upload::s3_error_code(&body), "Failed to upload avatar to S3");
         return None;
     }
 

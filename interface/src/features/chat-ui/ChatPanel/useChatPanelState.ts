@@ -3,6 +3,7 @@ import { useScrollAnchorV2 } from "../../../shared/hooks/use-scroll-anchor-v2";
 import { useIsStreaming } from "../../../hooks/stream/hooks";
 import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import type { ChatInputBarHandle, AttachmentItem } from "../ChatInputBar";
+import { hasUnuploadedImages } from "../ChatInputBar/attachment-upload-state";
 import {
   enqueueQueuedMessage,
   prepareNextQueuedMessage,
@@ -392,6 +393,12 @@ export function useChatPanelState({
         userCommandIds,
         pinnedSourceImageUrl,
       });
+
+      // Also guard direct/programmatic sends and queue insertion. A failed
+      // photo upload must never silently become a multi-megabyte chat snapshot.
+      const draftAttachments = atts ?? attachmentsRef.current;
+      if ((resolved.kind === "chat" || resolved.kind === "chat_action") &&
+        (draftAttachments.some((a) => a.uploading) || hasUnuploadedImages(draftAttachments))) return;
 
       const clearSentComposer = () => {
         setDraft("");
