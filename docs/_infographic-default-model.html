@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>The default_model gap — infographic</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --panel: #161b22;
+    --panel-2: #1c2229;
+    --border: #2a3038;
+    --text: #d7dde4;
+    --text-dim: #9aa4b0;
+    --accent: #6ea8fe;
+    --accent-2: #79e3a4;
+    --warn: #f0a868;
+    --bad: #f07171;
+    --good: #79e3a4;
+    --code-bg: #0b0f14;
+    --code-fg: #e0e6ed;
+    --table-stripe: #1a2027;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.55; }
+  .wrap { width: 1100px; margin: 0 auto; padding: 36px 36px 48px; }
+
+  .ig-doc-header { padding-bottom: 18px; margin-bottom: 22px; border-bottom: 1px solid var(--border); }
+  .ig-doc-header h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -0.02em; }
+  .ig-doc-header .sub { font-size: 13px; color: var(--text-dim); }
+
+  code { background: var(--code-bg); color: var(--code-fg); padding: 1px 6px; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; overflow-x: auto; font-size: 12px; line-height: 1.5; }
+  pre code { background: transparent; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 13px; }
+  th, td { padding: 8px 12px; border: 1px solid var(--border); text-align: left; vertical-align: top; }
+  th { background: var(--panel-2); font-weight: 600; }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+  p { margin: 8px 0; }
+  h3 { font-size: 17px; margin: 24px 0 10px; color: var(--accent); }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+  .pill.gap { background: rgba(240,113,113,0.15); color: var(--bad); border: 1px solid rgba(240,113,113,0.3); }
+
+  /* Infographic styles — copied verbatim from §13.9 in the parent doc */
+  .ig-section { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 22px 24px; margin: 16px 0; }
+  .ig-heading { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 14px; }
+  .ig-heading.bad { color: var(--bad); }
+  .ig-heading.good { color: var(--good); }
+  .ig-twocol { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .ig-card { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+  .ig-card.cloud { border-color: rgba(110,168,254,0.4); background: rgba(110,168,254,0.04); }
+  .ig-card.local { border-color: rgba(240,168,104,0.4); background: rgba(240,168,104,0.04); }
+  .ig-card.outlier { border-color: var(--bad); background: rgba(240,113,113,0.08); }
+  .ig-card .ig-card-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+  .ig-card.cloud .ig-card-title { color: var(--accent); }
+  .ig-card.local .ig-card-title { color: var(--warn); }
+  .ig-card.outlier .ig-card-title { color: var(--bad); }
+  .ig-field-list { font-size: 12px; font-family: ui-monospace, monospace; line-height: 1.8; color: var(--text-dim); margin: 0; padding: 0; list-style: none; }
+  .ig-field-list li { padding-left: 16px; position: relative; }
+  .ig-field-list li::before { content: "·"; position: absolute; left: 4px; color: var(--text-dim); }
+  .ig-field-list li.highlight { color: var(--bad); font-weight: 700; }
+  .ig-field-list li.highlight::before { content: "⚠"; color: var(--bad); }
+  .ig-big-number { font-size: 42px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+  .ig-big-number.local { color: var(--warn); }
+  .ig-big-number.cloud { color: var(--accent); }
+  .ig-big-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); }
+  .ig-counter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+  .ig-counter { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; text-align: center; }
+  .ig-flow { display: grid; grid-template-columns: 1fr 32px 1fr; gap: 12px; align-items: stretch; margin: 14px 0; }
+  .ig-flow-side { display: flex; flex-direction: column; gap: 8px; }
+  .ig-flow-arrow { display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--accent); }
+  .ig-flow-now { padding: 12px 14px; background: rgba(240,113,113,0.06); border: 1px solid rgba(240,113,113,0.3); border-radius: 8px; font-size: 13px; }
+  .ig-flow-fix { padding: 12px 14px; background: rgba(121,227,164,0.06); border: 1px solid rgba(121,227,164,0.3); border-radius: 8px; font-size: 13px; }
+  .ig-flow-step { font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .ig-flow-now .ig-flow-step { color: var(--bad); }
+  .ig-flow-fix .ig-flow-step { color: var(--good); }
+  .ig-consequence-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 14px 0; }
+  .ig-consequence { background: var(--panel-2); border: 1px solid var(--border); border-left: 3px solid var(--bad); border-radius: 0 6px 6px 0; padding: 12px 14px; }
+  .ig-consequence .ig-cons-icon { font-size: 22px; margin-bottom: 6px; }
+  .ig-consequence .ig-cons-title { font-size: 12px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
+  .ig-consequence .ig-cons-body { font-size: 12px; color: var(--text-dim); }
+  .ig-migration { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; margin: 12px 0; }
+  .ig-migration ol { margin: 8px 0 0; padding-left: 22px; font-size: 13px; }
+  .ig-migration ol li { margin: 6px 0; }
+  .ig-migration code { font-size: 11px; }
+  .ig-tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-left: 6px; }
+  .ig-tag.now { background: rgba(240,113,113,0.15); color: var(--bad); border: 1px solid rgba(240,113,113,0.3); }
+  .ig-tag.benefit { background: rgba(121,227,164,0.15); color: var(--good); border: 1px solid rgba(121,227,164,0.3); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="ig-doc-header">
+  <h1>The <code>default_model</code> gap</h1>
+  <div class="sub">Why agent model selection needs to move cloud-side · A small schema migration on <code>aura-network</code></div>
+</div>
+
+<h3>13.9 The data-model gap — why <code>default_model</code> needs to move cloud-side <span class="pill gap">Schema gap</span></h3>
+<p>The pattern of "bake the model into each delegate" only works if <code>default_model</code> sticks. Today it doesn't sync. Below: the gap visually, the consequences, and the case for fixing it via a small migration on <code>aura-network</code>.</p>
+
+<!-- INFOGRAPHIC: Field audit -->
+<div class="ig-section">
+  <div class="ig-heading">Agent-record field audit — what aura-network knows vs what only your machine knows</div>
+  <p style="font-size: 13px; color: var(--text-dim); margin: 0 0 12px;">Every field that defines an agent should follow the same persistence rule. One field doesn't — and it's the one we'd want to lean on most for multi-agent workflows.</p>
+
+  <div class="ig-twocol">
+    <div class="ig-card cloud">
+      <div class="ig-card-title">✓ Cloud-synced (on aura-network)</div>
+      <ul class="ig-field-list">
+        <li>name</li>
+        <li>role</li>
+        <li>personality</li>
+        <li>system_prompt</li>
+        <li>skills <span style="color: var(--text-dim);">(labels)</span></li>
+        <li>icon</li>
+        <li>machine_type</li>
+        <li>permissions</li>
+        <li>intent_classifier</li>
+        <li>listing_status</li>
+        <li>expertise</li>
+        <li>tags</li>
+        <li>wallet_address</li>
+        <li>vm_id</li>
+        <li>jobs / revenue_usd / reputation</li>
+      </ul>
+      <p style="font-size: 11px; color: var(--text-dim); margin-top: 10px;">15 fields. All survive device changes. All visible in marketplace browse. All travel if the agent is hired.</p>
+    </div>
+    <div class="ig-card outlier">
+      <div class="ig-card-title">✗ Local-only (per-machine)</div>
+      <ul class="ig-field-list">
+        <li class="highlight">default_model</li>
+      </ul>
+      <p style="font-size: 11px; color: var(--text-dim); margin-top: 10px;">1 field. The only piece of an agent's configuration that <strong>doesn't</strong> follow the same persistence rule as everything else.</p>
+      <p style="font-size: 11px; color: var(--text-dim); margin-top: 6px;"><em>Stored at:</em> local Aura server's agent shadow + runtime config (aura-os-core, not aura-network).</p>
+    </div>
+  </div>
+
+  <div class="ig-counter-row">
+    <div class="ig-counter">
+      <div class="ig-big-number cloud">15</div>
+      <div class="ig-big-label">fields synced via <code>aura-network</code></div>
+    </div>
+    <div class="ig-counter">
+      <div class="ig-big-number local">1</div>
+      <div class="ig-big-label">field stuck on the local machine</div>
+    </div>
+  </div>
+</div>
+
+<!-- INFOGRAPHIC: What works today vs what would work -->
+<div class="ig-section">
+  <div class="ig-heading">Current behavior vs the path with cloud-synced <code>default_model</code></div>
+
+  <div class="ig-flow">
+    <div class="ig-flow-side">
+      <div class="ig-flow-now">
+        <div class="ig-flow-step">Today <span class="ig-tag now">no UI input</span></div>
+        User never sets <code>default_model</code>. New agents end up with <code>None</code>.
+      </div>
+      <div class="ig-flow-now">
+        <div class="ig-flow-step">Multi-agent call</div>
+        CEO delegates to worker. Worker has no <code>default_model</code>. Worker runs on the harness env-default — whatever the deployment configured.
+      </div>
+      <div class="ig-flow-now">
+        <div class="ig-flow-step">Side effect</div>
+        No prompt cache key gets pinned. Cost/latency penalty on repeated calls.
+      </div>
+      <div class="ig-flow-now">
+        <div class="ig-flow-step">Move to a new device</div>
+        Even if you'd set it via API, the new device's local store doesn't have it. Setting drifts per machine.
+      </div>
+    </div>
+
+    <div class="ig-flow-arrow">→</div>
+
+    <div class="ig-flow-side">
+      <div class="ig-flow-fix">
+        <div class="ig-flow-step">With cloud-synced default_model <span class="ig-tag benefit">After migration</span></div>
+        User picks a model in the editor. Value stored on the aura-network record.
+      </div>
+      <div class="ig-flow-fix">
+        <div class="ig-flow-step">Multi-agent call</div>
+        CEO delegates to worker. Worker's <code>default_model</code> arrives with the agent record. <code>effective_model()</code> resolves to it. <strong>Predictable model per worker, every call.</strong>
+      </div>
+      <div class="ig-flow-fix">
+        <div class="ig-flow-step">Side effect</div>
+        Cache key + 24h retention auto-engage via <code>session_model_overrides_with_cache</code>. Cheaper, faster for hot agents.
+      </div>
+      <div class="ig-flow-fix">
+        <div class="ig-flow-step">Move to a new device</div>
+        Setting follows the agent. Same behavior everywhere. No drift.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- INFOGRAPHIC: Consequences of the gap -->
+<div class="ig-section">
+  <div class="ig-heading bad">What stays broken if <code>default_model</code> stays local</div>
+
+  <div class="ig-consequence-grid">
+    <div class="ig-consequence">
+      <div class="ig-cons-icon">🖥️</div>
+      <div class="ig-cons-title">Per-device drift</div>
+      <div class="ig-cons-body">Same agent on your laptop vs desktop runs on different models if you only set the dropdown on one. No way to make a setting that follows the agent.</div>
+    </div>
+    <div class="ig-consequence">
+      <div class="ig-cons-icon">🛒</div>
+      <div class="ig-cons-title">Marketplace gap — hired agents lose their model</div>
+      <div class="ig-cons-body">When an agent is marked <code>hireable</code>, all 15 cloud-synced fields are part of what's discoverable. <code>default_model</code> isn't — so a buyer can't see what model the agent runs on, and the owner can't guarantee consistent behavior across hire flows.</div>
+    </div>
+    <div class="ig-consequence">
+      <div class="ig-cons-icon">📦</div>
+      <div class="ig-cons-title">Blueprint marketplace blocker</div>
+      <div class="ig-cons-body">The proposed Blueprint Marketplace (<code>docs/agent-blueprint-proposal.md</code>) versions agent definitions for distribution. If <code>default_model</code> isn't a cloud-side field, it can't ship as part of a blueprint version — the new installer would need to re-pick the model manually.</div>
+    </div>
+    <div class="ig-consequence">
+      <div class="ig-cons-icon">🔁</div>
+      <div class="ig-cons-title">Cloud agent runs lose the preference</div>
+      <div class="ig-cons-body">A <code>machine_type: remote</code> agent runs on a swarm pod whose harness doesn't know about your local store. Even if you set <code>default_model</code> locally, it never reaches the pod — the remote agent always uses the harness env-default.</div>
+    </div>
+    <div class="ig-consequence">
+      <div class="ig-cons-icon">📊</div>
+      <div class="ig-cons-title">No marketplace analytics by model</div>
+      <div class="ig-cons-body">The aura-network agent record drives discoverability, reputation, revenue tracking. Without <code>default_model</code> on the record, "show me all agents running on Sonnet" isn't queryable. Cost-per-model breakdowns aren't easy to compute server-side either.</div>
+    </div>
+    <div class="ig-consequence">
+      <div class="ig-cons-icon">⚙️</div>
+      <div class="ig-cons-title">Inconsistent persistence rule</div>
+      <div class="ig-cons-body">Every other piece of an agent's identity and config follows the "cloud is source of truth" rule. <code>default_model</code> is the outlier. New engineers reading the code will assume it works like the rest — and be surprised.</div>
+    </div>
+  </div>
+</div>
+
+<!-- INFOGRAPHIC: The migration case -->
+<div class="ig-section">
+  <div class="ig-heading good">The fix — a small migration on aura-network</div>
+  <p style="font-size: 13px; color: var(--text-dim); margin: 0 0 12px;">Three coordinated changes. The local side is already wired — these changes complete the round-trip.</p>
+
+  <div class="ig-migration">
+    <div style="font-size: 12px; font-weight: 700; color: var(--accent); margin-bottom: 6px;">STEP 1 · Database migration</div>
+    <p style="font-size: 13px; margin: 0;">Add the column on <code>aura-network/crates/db/migrations/00XX_add_agent_default_model.sql</code>:</p>
+    <pre style="margin: 8px 0 0;"><code>ALTER TABLE agents ADD COLUMN default_model TEXT;</code></pre>
+    <p style="font-size: 11px; color: var(--text-dim); margin: 8px 0 0;">Nullable. No backfill needed — existing rows default to NULL, preserving current behavior (harness env-default).</p>
+  </div>
+
+  <div class="ig-migration">
+    <div style="font-size: 12px; font-weight: 700; color: var(--accent); margin-bottom: 6px;">STEP 2 · Domain model</div>
+    <p style="font-size: 13px; margin: 0;">In <code>aura-network/crates/domain/agents/src/models.rs</code>, add three field lines:</p>
+    <pre style="margin: 8px 0 0;"><code>// Agent struct
+pub default_model: Option&lt;String&gt;,
+
+// CreateAgentRequest
+pub default_model: Option&lt;String&gt;,
+
+// UpdateAgentRequest
+pub default_model: Option&lt;Option&lt;String&gt;&gt;,    // outer None = don't change</code></pre>
+  </div>
+
+  <div class="ig-migration">
+    <div style="font-size: 12px; font-weight: 700; color: var(--accent); margin-bottom: 6px;">STEP 3 · Conversion plumbing on aura-os-server</div>
+    <p style="font-size: 13px; margin: 0;">The local <code>agent_from_network</code> conversion (in <code>handlers/agents/conversions/</code>) needs one extra line copying <code>net.default_model</code> onto the local <code>Agent</code>. Symmetric line on the create/update side. <strong>Once both sides match, serde does the rest automatically.</strong></p>
+  </div>
+
+  <div style="background: rgba(121,227,164,0.06); border: 1px solid rgba(121,227,164,0.3); border-radius: 8px; padding: 14px 16px; margin-top: 14px;">
+    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--good); margin-bottom: 6px;">What stays the same — zero refactoring needed</div>
+    <ul style="font-size: 13px; margin: 0; padding-left: 20px;">
+      <li>The local <code>CreateAgentRequest</code> DTO already has <code>default_model</code> — no change.</li>
+      <li><code>effective_model()</code> resolver already reads <code>agent.default_model</code> — no change.</li>
+      <li><code>session_model_overrides_with_cache</code> already wraps the value with cache key + retention — no change.</li>
+      <li>The form's React state already manages <code>defaultModel</code> — no change. The form just needs the input field exposed in <code>AgentEditorForm.tsx</code>.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- INFOGRAPHIC: The argument -->
+<div class="ig-section">
+  <div class="ig-heading">Why this migration is consistent — the symmetry argument</div>
+  <p style="font-size: 13px; margin: 0 0 12px;">Look at how every other "agent runtime preference" field is currently handled:</p>
+
+  <table style="margin: 0; font-size: 13px;">
+    <thead><tr><th>Field</th><th>Where stored</th><th>Synced?</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><code>system_prompt</code></td><td>aura-network</td><td>Yes</td><td>Defines agent behavior</td></tr>
+      <tr><td><code>permissions</code></td><td>aura-network</td><td>Yes</td><td>Defines agent capabilities</td></tr>
+      <tr><td><code>intent_classifier</code></td><td>aura-network</td><td>Yes</td><td>Defines per-turn tool narrowing</td></tr>
+      <tr><td><code>machine_type</code></td><td>aura-network</td><td>Yes</td><td>Defines where the agent runs</td></tr>
+      <tr><td><code>icon</code></td><td>aura-network</td><td>Yes</td><td>Visual identity</td></tr>
+      <tr style="background: rgba(240,113,113,0.08);"><td><code>default_model</code></td><td><strong>local only</strong></td><td><strong>No</strong></td><td><strong>Defines which model the agent uses ← inconsistent</strong></td></tr>
+    </tbody>
+  </table>
+
+  <p style="font-size: 13px; margin-top: 14px; padding: 12px 14px; background: var(--panel-2); border-radius: 6px; border-left: 3px solid var(--accent);"><strong>The pattern is clear.</strong> Anything that defines what an agent <em>is</em> or <em>how it behaves</em> lives on aura-network. <code>default_model</code> is one of the most behavior-defining fields possible — and it's the lone outlier in the local store. Moving it to <code>aura-network</code> isn't a new pattern; it's restoring the existing one. Three small changes; downstream code already supports it.</p>
+</div>
+
+</div>
+</body>
+</html>
