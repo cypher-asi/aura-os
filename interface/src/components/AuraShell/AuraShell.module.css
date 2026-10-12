@@ -377,6 +377,32 @@
 }
 
 /*
+ * Desktop (authed) wordmark. Rendered as a masked box so the AURA
+ * lettermark can be tinted by the user's `--desktop-logo-color`
+ * preference (Settings → Appearance). The PNG-backed SVG is used purely
+ * as a mask — only its alpha coverage matters, so a raster source
+ * recolors fine. An unset color falls through to the `:root` theme
+ * default (white in dark, black in light) from index.css. SVG intrinsic
+ * aspect ratio is 3322 × 421.
+ */
+.titleLogoDesktop {
+  height: 11px;
+  aspect-ratio: 3322 / 421;
+  display: block;
+  user-select: none;
+  pointer-events: none;
+  background-color: var(--desktop-logo-color, white);
+  mask-image: url('/AURA_logo_text_mark.svg');
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-image: url('/AURA_logo_text_mark.svg');
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+}
+
+/*
  * Wraps the public leading-slot wordmark in a home link. The `<img>`
  * keeps `pointer-events: none` so the click target is the link box
  * itself; the inline-flex display collapses the link to the

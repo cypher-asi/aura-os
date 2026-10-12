@@ -9,6 +9,7 @@ import { PublicTopNav } from "../../views/public-chat/PublicTopNav";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useAppUIStore } from "../../stores/app-ui-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";
+import { AuraWordmark } from "./AuraWordmark";
 import { track } from "../../lib/analytics";
 import type { UIMode } from "../../stores/ui-mode-store";
 import styles from "./AuraShell.module.css";
@@ -127,13 +128,7 @@ export function AuraTitlebar(props: AuraTitlebarProps): React.ReactElement {
           {isPublic ? (
             <PublicTopNav />
           ) : (
-            <img
-              src="/AURA_logo_text_mark.png"
-              alt="AURA"
-              draggable={false}
-              className={styles.titleLogo}
-              data-aura-wordmark
-            />
+            <AuraWordmark />
           )}
         </span>
       }
