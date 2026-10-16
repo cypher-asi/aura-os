@@ -42,6 +42,14 @@ jobs:
       - run: npm ci
       - run: npm run lint:mobile
       - run: npm run test:mobile
+      - name: Verify realistic failed photo uploads and retry recovery
+        run: >-
+          npx vitest run src/api/upload.test.ts
+          src/features/chat-ui/ChatInputBar/useFileAttachments.test.tsx
+          src/features/chat-ui/ChatInputBar/ChatInputBar.test.tsx
+          src/features/chat-ui/ChatPanel/useChatPanelState.test.tsx
+          src/mobile/chat/MobileChatInputBar/MobileChatInputBar.test.tsx
+          --maxWorkers=4
       - run: node --test scripts/validate-native-release-host.test.mjs
       - uses: ruby/setup-ruby@v1
         with:

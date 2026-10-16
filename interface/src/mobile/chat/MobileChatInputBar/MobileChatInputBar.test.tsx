@@ -79,6 +79,8 @@ vi.mock("../../../features/chat-ui/ChatInputBar/useFileAttachments", () => ({
     canAddMore: true,
     addFiles: vi.fn(),
     handleRemove: vi.fn(),
+    retryUpload: vi.fn(),
+    isProcessing: false,
   }),
 }));
 
@@ -133,6 +135,22 @@ function renderInputBar(
 }
 
 describe("MobileChatInputBar", () => {
+  it("blocks failed photos on mobile while keeping the draft editable and retry visible", async () => {
+    const user = userEvent.setup();
+    const onSend = vi.fn();
+    const photos = Array.from({ length: 5 }, (_, i) => ({
+      id: `${i}`, file: new File([], `${i}.jpg`), data: "A".repeat(1_466_668),
+      mediaType: "image/jpeg", name: `${i}.jpg`, attachmentType: "image" as const,
+      uploadError: "S3 upload failed: HTTP 403 (AccessDenied)",
+    }));
+    renderInputBar({ input: "Research these photos", attachments: photos, onSend });
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+    expect(screen.getByRole("textbox")).not.toBeDisabled();
+    expect(screen.getAllByRole("button", { name: /Retry upload/ })).toHaveLength(5);
+    await user.click(screen.getByRole("textbox"));
+    await user.keyboard("{Enter}");
+    expect(onSend).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     mockStopVoiceDictation.mockClear();
     mockRefreshAuraRuntimeCapabilities.mockClear();

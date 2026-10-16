@@ -7,6 +7,15 @@ use serde::{Deserialize, Serialize};
 use crate::error::{ApiError, ApiResult};
 use crate::state::{AppState, AuthJwt, AuthSession};
 
+/// Log only S3's bounded error code, never signed URLs or full response bodies.
+pub(crate) fn s3_error_code(body: &str) -> Option<&str> {
+    let code = body.split_once("<Code>")?.1.split_once("</Code>")?.0;
+    (!code.is_empty()
+        && code.len() <= 80
+        && code.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'_'))
+    .then_some(code)
+}
+
 #[derive(Debug, Deserialize)]
 pub(crate) struct PresignRequest {
     pub content_type: String,
@@ -72,4 +81,35 @@ pub(crate) async fn presign_upload(
     })?;
 
     Ok(Json(result))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::s3_error_code;
+
+    #[test]
+    fn captures_only_the_s3_code_not_credentials_or_signature_details() {
+        assert_eq!(
+            s3_error_code(
+                "<Error><Code>AccessDenied</Code><Message>private details</Message></Error>"
+            ),
+            Some("AccessDenied")
+        );
+        assert_eq!(
+            s3_error_code("<Code>SignatureDoesNotMatch</Code>"),
+            Some("SignatureDoesNotMatch")
+        );
+        for body in [
+            "not XML",
+            "<Code></Code>",
+            "<Code>key/secret</Code>",
+            "<Code>truncated",
+        ] {
+            assert_eq!(s3_error_code(body), None);
+        }
+        assert_eq!(
+            s3_error_code(&format!("<Code>{}</Code>", "A".repeat(81))),
+            None
+        );
+    }
 }

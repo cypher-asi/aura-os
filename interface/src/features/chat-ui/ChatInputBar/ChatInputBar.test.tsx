@@ -123,6 +123,7 @@ vi.mock("./useFileAttachments", () => ({
     addFiles: mockAddFiles,
     addFileFromPath: vi.fn(),
     handleRemove: mockHandleRemove,
+    retryUpload: vi.fn(),
     isProcessing: mockAttachmentProcessing,
     attachmentNotice: mockAttachmentNotice,
   }),
@@ -1406,9 +1407,40 @@ describe("ChatInputBar", () => {
       mediaType: "image/png",
       name: "test.png",
       attachmentType: "image",
+      fileUrl: "https://files.example/test.png",
     };
     render(<ChatInputBar {...makeProps({ input: "", attachments: [attachment] })} />);
     expect(screen.getByRole("button", { name: "Send" })).toBeEnabled();
+  });
+
+  it("blocks click and Enter for realistic photos after upload failure without clearing the draft", async () => {
+    const user = userEvent.setup();
+    const props = makeProps({
+      input: "Research these photos",
+      attachments: Array.from({ length: 5 }, (_, i) => ({
+        id: `photo-${i}`, file: new File([], `${i}.jpg`),
+        data: "A".repeat(1_466_668), mediaType: "image/jpeg", name: `${i}.jpg`,
+        attachmentType: "image" as const, uploading: false,
+        uploadError: "S3 upload failed: HTTP 403 (AccessDenied)",
+      })),
+    });
+    const { rerender } = render(<ChatInputBar {...props} />);
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+    expect(screen.getAllByRole("alert")[0]).toHaveTextContent("Retry or remove this photo");
+    expect(screen.getAllByRole("button", { name: /Retry upload/ })).toHaveLength(5);
+    // Upload failure must not disable draft editing or discard attachments.
+    expect(screen.getByRole("textbox")).not.toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await user.click(screen.getByRole("textbox"));
+    await user.keyboard("{Enter}");
+    expect(props.onSend).not.toHaveBeenCalled();
+    expect(props.onInputChange).not.toHaveBeenCalled();
+    rerender(<ChatInputBar {...props} attachments={props.attachments.map((a) => ({
+      ...a, fileUrl: `https://files.example/${a.name}`, uploadError: undefined,
+    }))} />);
+    expect(screen.getByRole("button", { name: "Send" })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    expect(props.onSend).toHaveBeenCalledWith(props.input, undefined, undefined);
   });
 
   it("keeps send enabled in image mode while attachment upload is pending", async () => {
