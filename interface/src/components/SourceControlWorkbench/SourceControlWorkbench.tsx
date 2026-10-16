@@ -94,7 +94,19 @@ function selectionExists(
   );
 }
 
-export function SourceControlWorkbench({
+export function SourceControlWorkbench(props: SourceControlWorkbenchProps) {
+  // A refresh should retain review context, but a different workspace must not
+  // inherit the previous workspace's selected file or unsent commit message.
+  const workspaceKey = JSON.stringify([
+    props.projectId,
+    props.agentInstanceId,
+    props.remoteAgentId,
+    props.remoteWorkspacePath,
+  ]);
+  return <WorkspaceSourceControl key={workspaceKey} {...props} />;
+}
+
+function WorkspaceSourceControl({
   projectId,
   agentInstanceId,
   remoteAgentId,
@@ -124,7 +136,6 @@ export function SourceControlWorkbench({
     setStatusLoading(true);
     setStatusError(null);
     setStatus(null);
-    setSelection(null);
     setDiff(null);
     const request = remoteAgentId
       ? remoteWorkspacePath

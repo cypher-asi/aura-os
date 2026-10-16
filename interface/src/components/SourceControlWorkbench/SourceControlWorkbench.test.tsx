@@ -115,6 +115,81 @@ describe("SourceControlWorkbench", () => {
     await waitFor(() => expect(sourceControl.getStatus).toHaveBeenCalledTimes(2));
   });
 
+  it("keeps the selected staged file after refreshing", async () => {
+    const user = userEvent.setup();
+    render(<SourceControlWorkbench projectId="project-1" />);
+
+    await user.click(await screen.findByTitle("src/staged.ts"));
+    await waitFor(() => expect(sourceControl.getDiff).toHaveBeenLastCalledWith(
+      "project-1", "src/staged.ts", "staged", undefined,
+    ));
+    await user.click(screen.getByRole("button", { name: "Refresh source control" }));
+
+    await waitFor(() => expect(sourceControl.getStatus).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(sourceControl.getDiff).toHaveBeenLastCalledWith(
+      "project-1", "src/staged.ts", "staged", undefined,
+    ));
+    expect(screen.getByText("INDEX")).toBeInTheDocument();
+  });
+
+  it("falls back when the selected file is no longer in the selected area", async () => {
+    const user = userEvent.setup();
+    render(<SourceControlWorkbench projectId="project-1" />);
+    await user.click(await screen.findByTitle("src/staged.ts"));
+    sourceControl.getStatus.mockResolvedValue({
+      ...status,
+      files: [{ path: "src/staged.ts", worktree_status: "M" }],
+    });
+
+    await user.click(screen.getByRole("button", { name: "Refresh source control" }));
+    await waitFor(() => expect(sourceControl.getDiff).toHaveBeenLastCalledWith(
+      "project-1", "src/staged.ts", "worktree", undefined,
+    ));
+    expect(screen.getByText("WORKTREE")).toBeInTheDocument();
+  });
+
+  it("clears the diff when the selected file disappears and the workspace is clean", async () => {
+    const user = userEvent.setup();
+    render(<SourceControlWorkbench projectId="project-1" />);
+    await screen.findByText("+next");
+    sourceControl.getStatus.mockResolvedValue({ ...status, files: [] });
+
+    await user.click(screen.getByRole("button", { name: "Refresh source control" }));
+    expect(await screen.findByText("Working tree clean")).toBeInTheDocument();
+    expect(screen.queryByText("+next")).not.toBeInTheDocument();
+  });
+
+  it("resets selection and commit draft when the workspace changes", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<SourceControlWorkbench projectId="project-1" />);
+    await user.click(await screen.findByTitle("src/staged.ts"));
+    await user.type(screen.getByRole("textbox", { name: "Commit message" }), "First workspace draft");
+
+    rerender(<SourceControlWorkbench projectId="project-2" />);
+    await waitFor(() => expect(sourceControl.getDiff).toHaveBeenLastCalledWith(
+      "project-2", "src/app.ts", "worktree", undefined,
+    ));
+    expect(screen.getByRole("textbox", { name: "Commit message" })).toHaveValue("");
+  });
+
+  it("does not carry a selection across remote workspace paths", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<SourceControlWorkbench
+      projectId="project-1" remoteAgentId="remote-1" remoteWorkspacePath="/first"
+    />);
+    await user.click(await screen.findByTitle("src/staged.ts"));
+    await waitFor(() => expect(swarm.getRemoteGitDiff).toHaveBeenLastCalledWith(
+      "remote-1", "/first", "src/staged.ts", "staged",
+    ));
+
+    rerender(<SourceControlWorkbench
+      projectId="project-1" remoteAgentId="remote-1" remoteWorkspacePath="/second"
+    />);
+    await waitFor(() => expect(swarm.getRemoteGitDiff).toHaveBeenLastCalledWith(
+      "remote-1", "/second", "src/app.ts", "worktree",
+    ));
+  });
+
   it("commits staged changes and clears the message", async () => {
     const user = userEvent.setup();
     render(<SourceControlWorkbench projectId="project-1" />);
