@@ -14,6 +14,18 @@ import { EditorBody } from "./EditorBody";
 import styles from "./IdeView.module.css";
 
 export function IdeView() {
+  const [params] = useSearchParams();
+  const initialFile = params.get("file") ?? "";
+  const hosted = params.has("projectId") && params.has("agentInstanceId");
+  const root = params.get("root") ?? (hosted ? "" : initialFile.replace(/[\\/][^\\/]+$/, ""));
+  // Identical paths on different machines must never share open or closed drafts.
+  const workspaceKey = JSON.stringify([
+    root, params.get("remoteAgentId"), params.get("projectId"), params.get("agentInstanceId"),
+  ]);
+  return <IdeWorkspace key={workspaceKey} />;
+}
+
+function IdeWorkspace() {
   const navigate = useNavigate();
   const location = useLocation();
   const { features } = useAuraCapabilities();
@@ -108,6 +120,8 @@ export function IdeView() {
             activeTabPath={ide.activeTabPath}
             onSelectTab={ide.setActiveTabPath}
             onCloseTab={ide.closeTab}
+            onReopenClosedTab={ide.reopenClosedTab}
+            canReopenClosedTab={ide.canReopenClosedTab}
             dirty={ide.dirty}
             saving={ide.saving}
             readOnly={ide.readOnly}
