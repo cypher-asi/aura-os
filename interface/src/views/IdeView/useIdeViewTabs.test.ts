@@ -163,6 +163,130 @@ describe("useIdeViewTabs", () => {
     await act(async () => result.current.handleSave());
 
     expect(result.current.dirty).toBe(true);
-    expect(result.current.saveError).toContain("Close and reopen it");
+    expect(result.current.saveError).toContain("open the file from Files");
+  });
+
+  it("reopens clean files with a fresh read instead of stale cached contents", async () => {
+    const { result } = renderHook(() => useIdeViewTabs("/app.ts"));
+    await waitFor(() => expect(result.current.activeTab?.content).toBe("local content"));
+    act(() => result.current.closeTab("/app.ts"));
+    expect(result.current.activeTab).toBeNull();
+    expect(result.current.canReopenClosedTab).toBe(true);
+
+    mockReadFile.mockResolvedValueOnce({ ok: true, content: "agent updated" });
+    act(() => result.current.reopenClosedTab());
+    await waitFor(() => expect(result.current.activeTab?.content).toBe("agent updated"));
+    expect(result.current.canReopenClosedTab).toBe(false);
+    expect(result.current.dirty).toBe(false);
+    expect(mockWriteFile).not.toHaveBeenCalled();
+  });
+
+  it("recovers unsaved edits and their original revision without writing or rereading", async () => {
+    const { result } = renderHook(() => useIdeViewTabs("/app.ts", "remote-1"));
+    await waitFor(() => expect(result.current.activeTab?.content).toBe("remote content"));
+    act(() => result.current.handleContentChange("unsaved changes"));
+    act(() => result.current.closeTab("/app.ts"));
+    act(() => result.current.reopenClosedTab());
+    expect(result.current.activeTab).toMatchObject({
+      content: "unsaved changes", savedContent: "remote content", revision: "remote-revision",
+    });
+    expect(result.current.dirty).toBe(true);
+    expect(mockReadRemoteFile).toHaveBeenCalledTimes(1);
+    expect(mockWriteRemoteFile).not.toHaveBeenCalled();
+
+    mockWriteRemoteFile.mockRejectedValueOnce(new ApiClientError(409, {
+      error: "conflict", code: "conflict", details: null,
+    }));
+    await act(async () => result.current.handleSave());
+    expect(mockWriteRemoteFile).toHaveBeenCalledWith("remote-1", "/app.ts", "unsaved changes", "remote-revision");
+    expect(result.current.activeTab?.content).toBe("unsaved changes");
+    expect(result.current.dirty).toBe(true);
+    expect(result.current.saveError).toContain("Copy your edits");
+  });
+
+  it("reopens in last-closed order and restores dirty tabs at their original position", async () => {
+    const { result } = renderHook(() => useIdeViewTabs("/a.ts"));
+    await waitFor(() => expect(result.current.activeTab?.loading).toBe(false));
+    act(() => result.current.openTab("/b.ts"));
+    await waitFor(() => expect(result.current.activeTab?.loading).toBe(false));
+    act(() => result.current.handleContentChange("draft b"));
+    act(() => result.current.openTab("/c.ts"));
+    await waitFor(() => expect(result.current.activeTab?.loading).toBe(false));
+
+    act(() => result.current.closeTab("/b.ts"));
+    expect(result.current.activeTabPath).toBe("/c.ts");
+    act(() => result.current.closeTab("/c.ts"));
+    act(() => result.current.reopenClosedTab());
+    await waitFor(() => expect(result.current.activeTab?.loading).toBe(false));
+    expect(result.current.activeTabPath).toBe("/c.ts");
+    act(() => result.current.reopenClosedTab());
+    expect(result.current.tabs.map((tab) => tab.path)).toEqual(["/a.ts", "/b.ts", "/c.ts"]);
+    expect(result.current.activeTab?.content).toBe("draft b");
+    expect(result.current.canReopenClosedTab).toBe(false);
+  });
+
+  it("ignores a late read from a closed tab after the same path is reopened", async () => {
+    let finishRead!: (result: { ok: boolean; content: string }) => void;
+    mockReadFile.mockImplementationOnce(() => new Promise((resolve) => { finishRead = resolve; }));
+    const { result } = renderHook(() => useIdeViewTabs("/app.ts"));
+    act(() => result.current.closeTab("/app.ts"));
+    mockReadFile.mockResolvedValueOnce({ ok: true, content: "fresh read" });
+    act(() => result.current.reopenClosedTab());
+    await waitFor(() => expect(result.current.activeTab?.content).toBe("fresh read"));
+    await act(async () => finishRead({ ok: true, content: "stale read" }));
+    expect(result.current.activeTab?.content).toBe("fresh read");
+  });
+
+  it("does not start duplicate reads for the same path opened in one batch", async () => {
+    const { result } = renderHook(() => useIdeViewTabs(""));
+    act(() => { result.current.openTab("/app.ts"); result.current.openTab("/app.ts"); });
+    await waitFor(() => expect(result.current.activeTab?.loading).toBe(false));
+    expect(result.current.tabs).toHaveLength(1);
+    expect(mockReadFile).toHaveBeenCalledTimes(1);
+  });
+
+  it("removes a manual fresh-open from closed history without restoring its draft", async () => {
+    const { result } = renderHook(() => useIdeViewTabs("/app.ts"));
+    await waitFor(() => expect(result.current.activeTab?.loading).toBe(false));
+    act(() => result.current.handleContentChange("closed draft"));
+    act(() => result.current.closeTab("/app.ts"));
+    act(() => result.current.openTab("/app.ts"));
+    await waitFor(() => expect(result.current.activeTab?.content).toBe("local content"));
+    expect(result.current.canReopenClosedTab).toBe(false);
+    expect(result.current.dirty).toBe(false);
+  });
+
+  it("supports Ctrl/Cmd+Shift+T only while there is a closed tab to recover", async () => {
+    const { result } = renderHook(() => useIdeViewTabs("/app.ts"));
+    await waitFor(() => expect(result.current.activeTab?.loading).toBe(false));
+    const emptyEvent = new KeyboardEvent("keydown", { key: "T", ctrlKey: true, shiftKey: true, cancelable: true });
+    act(() => window.dispatchEvent(emptyEvent));
+    expect(emptyEvent.defaultPrevented).toBe(false);
+
+    for (const modifier of ["ctrlKey", "metaKey"]) {
+      act(() => result.current.closeTab("/app.ts"));
+      const event = new KeyboardEvent("keydown", { key: "T", [modifier]: true, shiftKey: true, cancelable: true });
+      act(() => window.dispatchEvent(event));
+      await waitFor(() => expect(result.current.activeTab?.loading).toBe(false));
+      expect(event.defaultPrevented).toBe(true);
+      expect(result.current.activeTabPath).toBe("/app.ts");
+    }
+  });
+
+  it("bounds closed history to ten entries and ignores nonexistent closes", async () => {
+    const { result } = renderHook(() => useIdeViewTabs(""));
+    act(() => result.current.closeTab("/missing.ts"));
+    expect(result.current.canReopenClosedTab).toBe(false);
+    for (let index = 0; index < 11; index += 1) {
+      act(() => result.current.openTab(`/${index}.ts`));
+      await waitFor(() => expect(result.current.activeTab?.loading).toBe(false));
+      act(() => result.current.closeTab(`/${index}.ts`));
+    }
+    for (let index = 10; index >= 1; index -= 1) {
+      act(() => result.current.reopenClosedTab());
+      await waitFor(() => expect(result.current.activeTab?.loading).toBe(false));
+      expect(result.current.activeTabPath).toBe(`/${index}.ts`);
+    }
+    expect(result.current.canReopenClosedTab).toBe(false);
   });
 });

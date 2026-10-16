@@ -1,4 +1,4 @@
-import { Save, X } from "lucide-react";
+import { RotateCcw, Save, X } from "lucide-react";
 import { filenameFromPath } from "../../ide/lang";
 import type { TabState } from "./useIdeViewTabs";
 import styles from "./IdeView.module.css";
@@ -8,6 +8,8 @@ interface Props {
   activeTabPath: string | null;
   onSelectTab: (path: string) => void;
   onCloseTab: (path: string) => void;
+  onReopenClosedTab: () => void;
+  canReopenClosedTab: boolean;
   dirty: boolean;
   saving: boolean;
   readOnly?: boolean;
@@ -20,6 +22,8 @@ export function EditorTabBar({
   activeTabPath,
   onSelectTab,
   onCloseTab,
+  onReopenClosedTab,
+  canReopenClosedTab,
   dirty,
   saving,
   readOnly = false,
@@ -35,16 +39,29 @@ export function EditorTabBar({
         {tabs.map((tab) => {
           const tabDirty = tab.content !== null && tab.savedContent !== null && tab.content !== tab.savedContent;
           return (
-            <button key={tab.path} className={`${styles.tab} ${tab.path === activeTabPath ? styles.active : ""} ${tabDirty ? styles.dirty : ""}`} onClick={() => onSelectTab(tab.path)} title={tab.path}>
-              <span className={styles.tabDot} />
-              {filenameFromPath(tab.path)}
-              <span className={styles.tabClose} onClick={(e) => { e.stopPropagation(); onCloseTab(tab.path); }}>
+            <div key={tab.path} className={`${styles.tab} ${tab.path === activeTabPath ? styles.active : ""} ${tabDirty ? styles.dirty : ""}`}>
+              <button type="button" className={styles.tabSelect} onClick={() => onSelectTab(tab.path)} title={tab.path}>
+                <span className={styles.tabDot} />
+                {filenameFromPath(tab.path)}
+              </button>
+              <button type="button" className={styles.tabClose} onClick={() => onCloseTab(tab.path)} aria-label={`Close ${filenameFromPath(tab.path)}`}>
                 <X size={12} className={styles.tabCloseIcon} />
-              </span>
-            </button>
+              </button>
+            </div>
           );
         })}
       </div>
+      <button
+        type="button"
+        className={styles.saveButton}
+        disabled={!canReopenClosedTab}
+        onClick={onReopenClosedTab}
+        aria-label="Reopen closed tab"
+        title="Reopen closed tab (Ctrl/Cmd+Shift+T). Unsaved edits are recoverable until you leave this workspace."
+      >
+        <RotateCcw size={14} />
+        Reopen
+      </button>
       <button
         className={styles.saveButton}
         disabled={readOnly || !dirty || saving}
