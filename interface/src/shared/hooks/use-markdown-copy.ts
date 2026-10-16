@@ -35,7 +35,14 @@ export function useMarkdownCopy(
       const selectedText = selection.toString();
       if (!selectedText) return;
 
-      const containerText = (node.textContent ?? "").trim();
+      // UI chrome is not selectable source text. Work on a detached clone so
+      // excluding code-block controls cannot mutate the visible transcript.
+      let contentNode = node;
+      if (node.querySelector("[data-markdown-copy-ignore]")) {
+        contentNode = node.cloneNode(true) as HTMLElement;
+        contentNode.querySelectorAll("[data-markdown-copy-ignore]").forEach((control) => control.remove());
+      }
+      const containerText = (contentNode.textContent ?? "").trim();
       if (!containerText) return;
 
       // Only override when the selection covers every renderable
