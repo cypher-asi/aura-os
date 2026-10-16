@@ -317,6 +317,63 @@
   tab-size: 2;
 }
 
+.searchableDiff {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.diffSearch {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  padding: 2px var(--space-2);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-input);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+
+.searchInput:focus-visible {
+  outline: 1px solid var(--color-accent);
+}
+
+.matchCount,
+.searchScope {
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.matchCount {
+  white-space: nowrap;
+}
+
+.searchScope {
+  padding: 4px var(--space-3);
+}
+
+.searchMatch,
+.activeMatch {
+  color: var(--color-text-primary);
+  background: color-mix(in srgb, var(--color-accent) 30%, var(--color-bg));
+}
+
+.activeMatch {
+  outline: 1px solid var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 55%, var(--color-bg));
+}
+
 .diff code {
   display: block;
   min-width: max-content;
