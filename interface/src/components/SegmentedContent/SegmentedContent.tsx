@@ -5,6 +5,7 @@ import rehypeHighlight from "rehype-highlight";
 import { FadeInImage } from "../FadeInImage";
 import { useStreamSafeContent } from "../../hooks/use-stream-safe-content";
 import { splitMarkdownBlocks } from "./split-markdown-blocks";
+import { MarkdownCodeBlock } from "./MarkdownCodeBlock";
 
 /**
  * Markdown renderer for a segment of LLM prose.
@@ -30,7 +31,7 @@ function MarkdownImage(props: ImgHTMLAttributes<HTMLImageElement>) {
   return <FadeInImage {...props} />;
 }
 
-const MD_COMPONENTS = { a: ExternalLink, img: MarkdownImage };
+const MD_COMPONENTS = { a: ExternalLink, img: MarkdownImage, pre: MarkdownCodeBlock };
 
 const MarkdownBlock = memo(function MarkdownBlock({ content }: { content: string }) {
   return (
