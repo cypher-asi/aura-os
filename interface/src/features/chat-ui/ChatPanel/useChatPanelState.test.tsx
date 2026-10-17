@@ -16,6 +16,7 @@ const scrollAnchorMocks = vi.hoisted(() => {
 const mockHandleScroll = scrollAnchorMocks.handleScroll;
 const mockScrollToBottom = scrollAnchorMocks.scrollToBottom;
 const mockUseScrollAnchorV2 = scrollAnchorMocks.useScrollAnchorV2;
+const viewMocks = vi.hoisted(() => ({ incrementUnread: vi.fn(), resetUnread: vi.fn() }));
 const mockEnqueue = vi.fn();
 const mockDequeue = vi.fn();
 const mockRemove = vi.fn();
@@ -94,8 +95,8 @@ vi.mock("../../../hooks/use-load-older-messages", () => ({
 vi.mock("../../../stores/chat-view-store", () => ({
   useChatViewStore: {
     getState: () => ({
-      incrementUnread: vi.fn(),
-      resetUnread: vi.fn(),
+      incrementUnread: viewMocks.incrementUnread,
+      resetUnread: viewMocks.resetUnread,
     }),
   },
   useThreadView: () => ({
@@ -164,7 +165,11 @@ describe("useChatPanelState", () => {
     mockChatUI.pinnedSourceImage = null;
     mockHandleScroll.mockReset();
     mockScrollToBottom.mockReset();
-    mockUseScrollAnchorV2.mockClear();
+    mockUseScrollAnchorV2.mockReset().mockReturnValue({
+      handleScroll: mockHandleScroll, scrollToBottom: mockScrollToBottom, isAutoFollowing: true,
+    });
+    viewMocks.incrementUnread.mockClear();
+    viewMocks.resetUnread.mockClear();
     mockEnqueue.mockReset();
     mockDequeue.mockReset();
     mockRemove.mockReset();
@@ -181,6 +186,24 @@ describe("useChatPanelState", () => {
         callback(0);
         return 1;
       });
+  });
+
+  it("counts only new tail messages, not restored history, prepends, or another transcript", () => {
+    mockUseScrollAnchorV2.mockReturnValue({ handleScroll: mockHandleScroll, scrollToBottom: mockScrollToBottom, isAutoFollowing: false });
+    const { rerender } = renderHook(({ key }) => useChatPanelState({ streamKey: "stream-1", transcriptKey: key, onSend: vi.fn() }),
+      { initialProps: { key: "chat-a" } });
+    mockStreamMessages = [{ id: "one", role: "user", content: "one" }];
+    rerender({ key: "chat-a" });
+    expect(viewMocks.incrementUnread).not.toHaveBeenCalled();
+    mockStreamMessages = [{ id: "older", role: "user", content: "older" }, ...mockStreamMessages];
+    rerender({ key: "chat-a" });
+    expect(viewMocks.incrementUnread).not.toHaveBeenCalled();
+    mockStreamMessages = [...mockStreamMessages, { id: "two", role: "assistant", content: "new" }];
+    rerender({ key: "chat-a" });
+    expect(viewMocks.incrementUnread).toHaveBeenCalledTimes(1);
+    mockStreamMessages = [...mockStreamMessages, { id: "other-chat", role: "assistant", content: "other" }];
+    rerender({ key: "chat-b" });
+    expect(viewMocks.incrementUnread).toHaveBeenCalledTimes(1);
   });
 
   afterEach(() => {
@@ -562,6 +585,7 @@ describe("useChatPanelState", () => {
       {
         resetKey: "agent-1",
         scrollToBottomOnReset: false,
+        readingPositionKey: JSON.stringify(["stream-1", "agent-1"]),
       },
     );
   });

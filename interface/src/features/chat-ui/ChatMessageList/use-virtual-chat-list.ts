@@ -3,6 +3,7 @@ import { useVirtualizer, type VirtualItem, type Virtualizer } from "@tanstack/re
 import { useScrollMargin } from "../../../shared/hooks/use-scroll-margin";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";
 import type { SessionBoundary } from "../../../hooks/use-prior-sessions";
+import { readChatPosition, rememberChatPosition } from "../../../shared/lib/chat-reading-positions";
 
 export const STREAM_TAIL_ROW_KEY = "__stream-tail__";
 
@@ -25,6 +26,8 @@ export type ChatRow =
   | { kind: "stream-tail"; key: typeof STREAM_TAIL_ROW_KEY };
 
 interface UseVirtualChatListOptions {
+  readingPositionKey?: string;
+  readingPositionReady?: boolean;
   rows: ChatRow[];
   scrollRef: RefObject<HTMLDivElement | null>;
   listRef: RefObject<HTMLDivElement | null>;
@@ -62,6 +65,8 @@ interface UseVirtualChatListResult {
  *   top of the transcript.
  */
 export function useVirtualChatList({
+  readingPositionKey,
+  readingPositionReady = true,
   rows,
   scrollRef,
   listRef,
@@ -85,6 +90,94 @@ export function useVirtualChatList({
 
   const virtualItems = virtualizer.getVirtualItems();
   const totalSize = virtualizer.getTotalSize();
+  const initialPosition = readChatPosition(readingPositionKey);
+  const restoreRef = useRef(initialPosition);
+  const pendingRestoreRef = useRef(initialPosition?.atEnd === false);
+  const restoredThisLayoutRef = useRef(false);
+
+  // Save on actual scrolling rather than reading a newly-switched transcript
+  // during unmount cleanup. Keys include the transcript/session, not just agent.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !readingPositionKey) return;
+    const save = () => {
+      if (pendingRestoreRef.current || !readingPositionReady) return;
+      const first = virtualizer.getVirtualItems().find((item) => item.end > el.scrollTop);
+      const row = first && rows[first.index];
+      if (!first || !row || row.kind !== "message") return;
+      rememberChatPosition(readingPositionKey, {
+        rowId: row.msg.id,
+        offsetWithinRow: el.scrollTop - first.start,
+        scrollOffset: el.scrollTop,
+        atEnd: isAutoFollowing && !(getUserUnpinnedAt?.() ?? 0),
+      });
+    };
+    const cancelRestore = () => { pendingRestoreRef.current = false; };
+    el.addEventListener("scroll", save);
+    el.addEventListener("wheel", cancelRestore, { passive: true });
+    el.addEventListener("touchstart", cancelRestore, { passive: true });
+    el.addEventListener("pointerdown", cancelRestore);
+    const keyDown = (event: KeyboardEvent) => {
+      if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) cancelRestore();
+    };
+    el.addEventListener("keydown", keyDown);
+    return () => {
+      el.removeEventListener("scroll", save);
+      el.removeEventListener("wheel", cancelRestore);
+      el.removeEventListener("touchstart", cancelRestore);
+      el.removeEventListener("pointerdown", cancelRestore);
+      el.removeEventListener("keydown", keyDown);
+    };
+  }, [scrollRef, readingPositionKey, readingPositionReady, virtualizer, rows, isAutoFollowing, getUserUnpinnedAt]);
+
+  useLayoutEffect(() => {
+    restoredThisLayoutRef.current = false;
+    if (!pendingRestoreRef.current || !hasMessages || !readingPositionReady) return;
+    const el = scrollRef.current;
+    const saved = restoreRef.current;
+    if (!el || !saved) return;
+    // Explicit Jump to latest / Send wins over restoration and late hydration.
+    if (readChatPosition(readingPositionKey)?.atEnd) {
+      pendingRestoreRef.current = false;
+      return;
+    }
+    const index = rows.findIndex((row) => row.kind === "message" && row.msg.id === saved.rowId);
+    if (index < 0) {
+      if (!hasOlderMessages && !isLoadingOlder) {
+        restoredThisLayoutRef.current = true;
+        el.scrollTop = Math.min(saved.scrollOffset, Math.max(0, el.scrollHeight - el.clientHeight));
+        pendingRestoreRef.current = false;
+      }
+      return;
+    }
+    const align = () => {
+      if (!pendingRestoreRef.current) return;
+      const item = virtualizer.getVirtualItems().find((item) => item.index === index);
+      if (item) {
+        restoredThisLayoutRef.current = true;
+        el.scrollTop = Math.max(0, item.start + saved.offsetWithinRow);
+      }
+      else virtualizer.scrollToIndex(index, { align: "start" });
+    };
+    align();
+    // Allow the virtual row to mount and measure before the final correction.
+    let frame = requestAnimationFrame(() => {
+      align();
+      frame = requestAnimationFrame(() => {
+        align();
+        pendingRestoreRef.current = false;
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [rows, hasMessages, totalSize, scrollRef, virtualizer, readingPositionKey, readingPositionReady, hasOlderMessages, isLoadingOlder]);
+
+  useEffect(() => {
+    const saved = restoreRef.current;
+    if (pendingRestoreRef.current && saved && readingPositionReady && hasMessages && hasOlderMessages && !isLoadingOlder
+      && !rows.some((row) => row.kind === "message" && row.msg.id === saved.rowId)) {
+      onLoadOlder?.();
+    }
+  }, [rows, hasMessages, readingPositionReady, hasOlderMessages, isLoadingOlder, onLoadOlder]);
 
   // Pin to bottom while the tail grows or measurements correct the
   // virtual total height. The `getUserUnpinnedAt` check is defense in
@@ -93,6 +186,7 @@ export function useVirtualChatList({
   // `isAutoFollowing` re-renders.
   useLayoutEffect(() => {
     if (!hasMessages || !isAutoFollowing) return;
+    if (pendingRestoreRef.current) return;
     if (getUserUnpinnedAt && getUserUnpinnedAt() > 0) return;
     const el = scrollRef.current;
     if (!el) return;
@@ -121,6 +215,9 @@ export function useVirtualChatList({
     const prevTopId = prevTopMessageIdRef.current;
     if (
       prevTopId !== undefined &&
+      !isAutoFollowing &&
+      !pendingRestoreRef.current &&
+      !restoredThisLayoutRef.current &&
       topId !== prevTopId &&
       messages.some((m) => m.id === prevTopId)
     ) {
@@ -131,7 +228,7 @@ export function useVirtualChatList({
       distanceFromBottom: el.scrollHeight - el.scrollTop,
     };
     prevTopMessageIdRef.current = topId;
-  }, [messages, scrollRef]);
+  }, [messages, scrollRef, isAutoFollowing]);
 
   // Infinite upward scroll: fetch the next older page as the first
   // rendered row approaches the top of the transcript. Gated on the
@@ -140,6 +237,7 @@ export function useVirtualChatList({
   const firstVisibleIndex = virtualItems[0]?.index ?? 0;
   useEffect(() => {
     if (!onLoadOlder || !hasOlderMessages || isLoadingOlder) return;
+    if (pendingRestoreRef.current) return;
     if (isAutoFollowing) return;
     if (firstVisibleIndex > AUTO_LOAD_OLDER_ROW_THRESHOLD) return;
     onLoadOlder();
