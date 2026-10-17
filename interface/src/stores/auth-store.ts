@@ -13,6 +13,7 @@ import { authApi } from "../shared/api/auth";
 import { ApiClientError } from "../shared/api/core";
 import { disconnectEventSocket, scheduleDeferredEventSocketConnect } from "./event-store";
 import { markAuthRestoreComplete } from "../lib/perf/startup-perf";
+import { clearViewedFiles } from "../shared/lib/source-control-viewed-files";
 
 async function loadAndRunShellRealtimeBootstrap(): Promise<void> {
   const { bootstrapAuthenticatedShellStores } = await import("./authenticated-realtime");
@@ -240,6 +241,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 
   logout: async () => {
+    clearViewedFiles();
     // Local cleanup MUST run even when the server call fails, otherwise a
     // transient network error or an already-expired JWT leaves localStorage,
     // IndexedDB, the event socket, and the zustand user pointing at a stale

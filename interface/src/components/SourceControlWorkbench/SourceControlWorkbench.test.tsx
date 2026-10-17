@@ -22,6 +22,7 @@ vi.mock("../../api/client", () => ({
 }));
 
 import { SourceControlWorkbench } from "./SourceControlWorkbench";
+import { clearViewedFiles } from "../../shared/lib/source-control-viewed-files";
 
 const status = {
   available: true,
@@ -46,6 +47,7 @@ const status = {
 
 describe("SourceControlWorkbench", () => {
   beforeEach(() => {
+    clearViewedFiles();
     sourceControl.getStatus.mockReset().mockResolvedValue(status);
     sourceControl.getDiff.mockReset().mockResolvedValue({
       path: "src/app.ts",
@@ -68,6 +70,91 @@ describe("SourceControlWorkbench", () => {
       truncated: false,
       binary: false,
     });
+  });
+
+  it("marks a complete diff viewed locally and retains it after refresh", async () => {
+    const user = userEvent.setup();
+    render(<SourceControlWorkbench projectId="project-1" readOnly />);
+    const checkbox = await screen.findByRole("checkbox", { name: "Viewed src/app.ts (worktree)" });
+    await waitFor(() => expect(checkbox).toBeEnabled());
+    await user.click(checkbox);
+    expect(checkbox).toBeChecked();
+    expect(screen.getByText("1 / 2 viewed in Aura")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Refresh source control" }));
+    await waitFor(() => expect(screen.getByRole("checkbox")).toBeChecked());
+    expect(sourceControl.stage).not.toHaveBeenCalled();
+  });
+
+  it("unchecks a file when its patch changes, even with the same Git status", async () => {
+    const user = userEvent.setup();
+    render(<SourceControlWorkbench projectId="project-1" />);
+    const checkbox = await screen.findByRole("checkbox");
+    await waitFor(() => expect(checkbox).toBeEnabled());
+    await user.click(checkbox);
+    sourceControl.getDiff.mockResolvedValue({ path: "src/app.ts", area: "worktree", diff: "-old\n+new revision", truncated: false, binary: false });
+    await user.click(screen.getByRole("button", { name: "Refresh source control" }));
+    await waitFor(() => expect(screen.getByRole("checkbox")).toBeEnabled());
+    expect(screen.getByRole("checkbox")).not.toBeChecked();
+    expect(screen.getByText("0 / 2 viewed in Aura")).toBeInTheDocument();
+  });
+
+  it.each(["truncated", "binary", "error"])("does not let a %s diff masquerade as reviewed", async (kind) => {
+    if (kind === "error") sourceControl.getDiff.mockRejectedValue(new Error("Diff unavailable"));
+    else sourceControl.getDiff.mockResolvedValue({ path: "src/app.ts", area: "worktree", diff: "partial", truncated: kind === "truncated", binary: kind === "binary" });
+    render(<SourceControlWorkbench projectId="project-1" />);
+    await screen.findByText(kind === "error" ? "Diff unavailable" : "partial");
+    expect(screen.getByRole("checkbox")).toBeDisabled();
+  });
+
+  it("does not transfer viewed state across branch or workspace changes", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<SourceControlWorkbench projectId="project-1" />);
+    await waitFor(() => expect(screen.getByRole("checkbox")).toBeEnabled());
+    await user.click(screen.getByRole("checkbox"));
+    sourceControl.getStatus.mockResolvedValue({ ...status, branch: "another-branch" });
+    await user.click(screen.getByRole("button", { name: "Refresh source control" }));
+    await screen.findByText("another-branch");
+    await waitFor(() => expect(screen.getByRole("checkbox")).toBeEnabled());
+    expect(screen.getByRole("checkbox")).not.toBeChecked();
+    await user.click(screen.getByRole("checkbox"));
+    rerender(<SourceControlWorkbench projectId="project-2" />);
+    await waitFor(() => expect(screen.getByRole("checkbox")).toBeEnabled());
+    expect(screen.getByRole("checkbox")).not.toBeChecked();
+  });
+
+  it("revalidates reviewed files even when another file is selected", async () => {
+    const user = userEvent.setup();
+    let stagedText = "+staged revision";
+    sourceControl.getDiff.mockImplementation((_project, path, area) => Promise.resolve({
+      path, area, diff: area === "staged" ? stagedText : "+worktree", truncated: false, binary: false,
+    }));
+    render(<SourceControlWorkbench projectId="project-1" />);
+    await screen.findByText("+worktree");
+    await user.click(screen.getByRole("button", { name: /^A\s*src\/staged.ts/ }));
+    await waitFor(() => expect(screen.getByRole("checkbox")).toBeEnabled());
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: /^M\s*src\/app.ts/ }));
+    await waitFor(() => expect(screen.getByRole("checkbox")).toBeEnabled());
+    expect(screen.getByText("1 / 2 viewed in Aura")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox")).not.toBeChecked();
+    stagedText = "+unreviewed change";
+    await user.click(screen.getByRole("button", { name: "Refresh source control" }));
+    await waitFor(() => expect(screen.getByRole("checkbox")).toBeEnabled());
+    expect(screen.getByText("0 / 2 viewed in Aura")).toBeInTheDocument();
+  });
+
+  it("retains local remote-review marks across remounts without mutating GitHub or Git", async () => {
+    const user = userEvent.setup();
+    const props = { projectId: "p", remoteAgentId: "remote", remoteWorkspacePath: "/work" };
+    const first = render(<SourceControlWorkbench {...props} />);
+    await waitFor(() => expect(screen.getByRole("checkbox")).toBeEnabled());
+    await user.click(screen.getByRole("checkbox"));
+    first.unmount();
+    render(<SourceControlWorkbench {...props} />);
+    await waitFor(() => expect(screen.getByRole("checkbox")).toBeChecked());
+    expect(sourceControl.getDiff).not.toHaveBeenCalled();
+    expect(sourceControl.stage).not.toHaveBeenCalled();
+    expect(sourceControl.commit).not.toHaveBeenCalled();
   });
 
   it("shows repository state, active PR, and an inline diff", async () => {
