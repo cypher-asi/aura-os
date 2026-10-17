@@ -1,6 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { vi } from "vitest";
 import { useScrollAnchorV2 } from "./use-scroll-anchor-v2";
+import { clearChatPositions, readChatPosition, rememberChatPosition } from "../lib/chat-reading-positions";
 
 function makeContainer(overrides: {
   scrollTop?: number;
@@ -32,12 +33,27 @@ describe("useScrollAnchorV2", () => {
   let requestAnimationFrameSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    clearChatPositions();
     requestAnimationFrameSpy = vi
       .spyOn(globalThis, "requestAnimationFrame")
       .mockImplementation((callback: FrameRequestCallback) => {
         callback(0);
         return 1;
       });
+  });
+
+  it("restores reading mode before streaming effects can pin a revisited chat", () => {
+    rememberChatPosition("saved-chat", { rowId: "msg", offsetWithinRow: 10, scrollOffset: 120, atEnd: false });
+    const container = makeContainer({ scrollTop: 120 });
+    const { result } = renderHook(() => useScrollAnchorV2({ current: container }, {
+      readingPositionKey: "saved-chat", resetKey: "saved-chat",
+    }));
+    expect(result.current.isAutoFollowing).toBe(false);
+    expect(result.current.getUserUnpinnedAt()).toBeGreaterThan(0);
+    expect(container.scrollTop).toBe(120);
+    act(() => result.current.scrollToBottom());
+    expect(result.current.isAutoFollowing).toBe(true);
+    expect(readChatPosition("saved-chat")?.atEnd).toBe(true);
   });
 
   afterEach(() => {

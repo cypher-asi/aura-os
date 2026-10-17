@@ -136,6 +136,7 @@ export function useChatPanelState({
   const { isMobileLayout } = useAuraCapabilities();
   const attachmentsRef = useRef(attachments);
   const effectiveTranscriptKey = transcriptKey ?? streamKey;
+  const readingPositionKey = JSON.stringify([effectiveTranscriptKey, scrollResetKey]);
   const { messages, bridgeMessages } = useConversationSnapshot({
     streamKey,
     transcriptKey: effectiveTranscriptKey,
@@ -182,6 +183,7 @@ export function useChatPanelState({
     useScrollAnchorV2(messageAreaRef, {
       resetKey: scrollResetKey,
       scrollToBottomOnReset,
+      readingPositionKey,
     });
 
   const { loadOlder, isLoadingOlder, hasOlderMessages } = useLoadOlderMessages({
@@ -637,6 +639,7 @@ export function useChatPanelState({
     demoRecordOptions,
     setDemoRecordOptions,
     messageAreaRef,
+    readingPositionKey,
     inputBarRef,
     isMobileLayout,
     handleScroll,

@@ -562,6 +562,7 @@ describe("useChatPanelState", () => {
       {
         resetKey: "agent-1",
         scrollToBottomOnReset: false,
+        readingPositionKey: JSON.stringify(["stream-1", "agent-1"]),
       },
     );
   });
