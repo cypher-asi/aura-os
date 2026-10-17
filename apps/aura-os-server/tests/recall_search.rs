@@ -109,6 +109,28 @@ async fn recall_returns_only_safe_completed_owned_conversation_text() {
         serde_json::json!({ "text": "Needle: authentication refresh uses the new rotation flow." }),
     )
     .await;
+    // Exercise storage pagination, not merely a larger first-page cap.
+    for index in 0..510 {
+        storage
+            .create_event(
+                &safe,
+                TEST_JWT,
+                &CreateSessionEventRequest {
+                    session_id: Some(safe.clone()),
+                    user_id: None,
+                    agent_id: Some(project_agent_id.clone()),
+                    sender: Some("user".into()),
+                    project_id: Some(project_id.clone()),
+                    org_id: None,
+                    event_type: "user_message".into(),
+                    content: Some(serde_json::json!({"text": if index == 509 {
+                format!("{} needle late page evidence", "prefix ".repeat(3000))
+            } else { "unrelated".to_string() }})),
+                },
+            )
+            .await
+            .expect("seed long history");
+    }
     let secret = seed_session(
         &storage,
         &project_agent_id,
@@ -185,6 +207,10 @@ async fn recall_returns_only_safe_completed_owned_conversation_text() {
         "only the safe completed source is eligible"
     );
     assert_eq!(results[0]["sessionId"].as_str(), Some(safe.as_str()));
+    assert!(results[0]["snippet"]
+        .as_str()
+        .unwrap()
+        .contains("late page evidence"));
     assert!(results[0]["eventId"].as_str().is_some());
     assert!(results[0]["agentId"].as_str().is_some());
     assert!(results[0]["occurredAt"].as_str().is_some());
@@ -199,4 +225,54 @@ async fn recall_returns_only_safe_completed_owned_conversation_text() {
     ] {
         assert!(!rendered.contains(forbidden), "Recall leaked {forbidden}");
     }
+}
+
+#[tokio::test]
+async fn recall_cursor_can_reach_more_than_fifty_sessions_without_dropping_small_limits() {
+    let (app, _state, storage, db, _dir) = build_test_app_with_storage_db().await;
+    let project = uuid::Uuid::new_v4().to_string();
+    let agent = seed_project_agent(&storage, &project).await;
+    let owner = uuid::Uuid::new_v4().to_string();
+    let mut expected = std::collections::HashSet::new();
+    for _ in 0..52 {
+        let id = seed_session(
+            &storage,
+            &agent,
+            &project,
+            "completed",
+            "user_message",
+            serde_json::json!({"text":"needle evidence"}),
+        )
+        .await;
+        stamp_owner(&db, &id, &owner).await;
+        expected.insert(id);
+    }
+    std::env::set_var("AURA_STORAGE_TEST_USER_ID", &owner);
+    let mut cursor = None;
+    let mut actual = std::collections::HashSet::new();
+    loop {
+        let url = format!(
+            "/api/me/sessions/search?q=needle&limit=3{}",
+            cursor
+                .as_ref()
+                .map(|id| format!("&after={id}"))
+                .unwrap_or_default()
+        );
+        let response = app
+            .clone()
+            .oneshot(json_request("GET", &url, None))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = response_json(response).await;
+        for result in body["results"].as_array().unwrap() {
+            assert!(actual.insert(result["sessionId"].as_str().unwrap().to_string()));
+        }
+        cursor = body["nextCursor"].as_str().map(str::to_owned);
+        if cursor.is_none() {
+            break;
+        }
+    }
+    std::env::remove_var("AURA_STORAGE_TEST_USER_ID");
+    assert_eq!(actual, expected);
 }

@@ -70,6 +70,7 @@ export interface RecallSearchResponse {
   results: RecallSearchResult[];
   scannedSessions: number;
   skippedSessions: number;
+  nextCursor?: string | null;
 }
 
 export interface SafeWorkspaceCheckpoint {
@@ -644,9 +645,10 @@ export const sessionsApi = {
    * explicit user action before opening a source or adding an excerpt to a
    * draft.
    */
-  searchMySessionHistory: (query: string, limit?: number) => {
+  searchMySessionHistory: (query: string, limit?: number, after?: string) => {
     const params = new URLSearchParams({ q: query });
     if (limit != null) params.set("limit", String(limit));
+    if (after) params.set("after", after);
     return apiFetch<RecallSearchResponse>(
       `/api/me/sessions/search?${params.toString()}`,
       { timeoutMs: RECALL_SEARCH_TIMEOUT_MS },

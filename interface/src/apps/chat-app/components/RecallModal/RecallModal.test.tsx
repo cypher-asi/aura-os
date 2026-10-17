@@ -80,6 +80,31 @@ describe("RecallModal", () => {
     mocks.addToDraft.mockReset();
   });
 
+  it("continues the original query through older history without losing matches", async () => {
+    mocks.search.mockResolvedValueOnce({ results: [result], skippedSessions: 1, nextCursor: "cursor" });
+    mocks.search.mockRejectedValueOnce(new Error("Try again"));
+    mocks.search.mockResolvedValueOnce({ results: [], skippedSessions: 0, nextCursor: null });
+    renderModal();
+    searchFor("authentication");
+    await screen.findByText(result.snippet);
+    fireEvent.change(screen.getByLabelText("Search completed chats"), { target: { value: "unsent edit" } });
+    fireEvent.click(screen.getByRole("button", { name: "Search more history" }));
+    await screen.findByRole("alert");
+    expect(screen.getByText(result.snippet)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Search more history" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Search more history" })).not.toBeInTheDocument());
+    expect(mocks.search).toHaveBeenLastCalledWith("authentication", undefined, "cursor");
+    expect(screen.getByRole("status")).toHaveTextContent("incomplete");
+  });
+
+  it("does not claim an empty complete search while older batches remain", async () => {
+    mocks.search.mockResolvedValue({ results: [], skippedSessions: 0, nextCursor: "cursor" });
+    renderModal();
+    searchFor();
+    await screen.findByRole("button", { name: "Search more history" });
+    expect(screen.queryByText("No matching completed chats found.")).not.toBeInTheDocument();
+  });
+
   it("shows loading and then source-linked result metadata", async () => {
     let resolve: ((value: { results: typeof result[]; scannedSessions: number; skippedSessions: number }) => void) | undefined;
     mocks.search.mockReturnValue(new Promise((done) => { resolve = done; }));
