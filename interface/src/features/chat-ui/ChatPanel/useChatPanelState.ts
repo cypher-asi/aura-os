@@ -194,17 +194,22 @@ export function useChatPanelState({
   const threadView = useThreadView(streamKey);
   const unreadCount = threadView.unreadCount;
 
-  const prevMessageCountRef = useRef(messages.length);
+  const previousTailRef = useRef({ key: readingPositionKey, id: messages.at(-1)?.id });
   useEffect(() => {
-    const prevCount = prevMessageCountRef.current;
-    prevMessageCountRef.current = messages.length;
-    if (messages.length > prevCount && !isAutoFollowing) {
-      const newCount = messages.length - prevCount;
+    const previous = previousTailRef.current;
+    previousTailRef.current = { key: readingPositionKey, id: messages.at(-1)?.id };
+    // A restored reader can start unpinned before history arrives. Hydration,
+    // prepended pages and navigation are not newly received unread messages.
+    if (previous.key !== readingPositionKey || !previous.id || isAutoFollowing
+      || previous.id === messages.at(-1)?.id) return;
+    const previousTailIndex = messages.findIndex((message) => message.id === previous.id);
+    if (previousTailIndex >= 0) {
+      const newCount = messages.length - previousTailIndex - 1;
       for (let i = 0; i < newCount; i++) {
         useChatViewStore.getState().incrementUnread(streamKey);
       }
     }
-  }, [messages.length, isAutoFollowing, streamKey]);
+  }, [messages, readingPositionKey, isAutoFollowing, streamKey]);
 
   useEffect(() => {
     if (isAutoFollowing) {
