@@ -345,7 +345,7 @@ export function SourceControlWorkbench({
 
       <div className={styles.reviewProgress} aria-live="polite">
         {viewed.marks.size} / {stagedFiles.length + worktreeFiles.length} viewed in Aura
-        <span>Local review marks · Refresh to check for changes</span>
+        <span>Local review marks · Restored marks are rechecked against current changes</span>
       </div>
 
       <div className={styles.changesPane}>
