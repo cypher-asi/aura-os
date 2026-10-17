@@ -51,22 +51,27 @@ fn common_unlabelled_credential_signatures_are_excluded() {
 }
 
 #[test]
-fn sensitivity_scan_uses_the_same_bounded_window_as_search() {
-    let outside_search_window = format!(
-        "{} api_key={}",
-        "x".repeat(MAX_SEARCHABLE_CONTENT_CHARS),
-        stripe_secret_fixture()
-    );
-    assert!(!looks_sensitive(&outside_search_window));
+fn sensitivity_scan_includes_credentials_after_the_old_prefix_limit() {
+    let outside_search_window =
+        format!("{} api_key={}", "x".repeat(16_000), stripe_secret_fixture());
+    assert!(looks_sensitive(&outside_search_window));
     assert!(looks_sensitive(&format!(
         "api_key={} before the bound",
         stripe_secret_fixture()
     )));
-    assert!(!looks_sensitive(&format!(
+    assert!(looks_sensitive(&format!(
         "api_key{}={}",
-        " ".repeat(MAX_SEARCHABLE_CONTENT_CHARS * 2),
+        " ".repeat(16_000),
         stripe_secret_fixture(),
     )));
+}
+
+#[test]
+fn search_includes_text_after_the_old_prefix_limit() {
+    let content = format!("{} late-needle", "prefix ".repeat(3_000));
+    let visible = bounded_visible_text(&content);
+    let offset = visible.find("late-needle").unwrap();
+    assert!(bounded_snippet(&visible, offset).contains("late-needle"));
 }
 
 fn stripe_secret_fixture() -> String {

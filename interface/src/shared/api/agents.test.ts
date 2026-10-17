@@ -323,6 +323,15 @@ describe("sessionsApi", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/projects/p1/sessions", expect.any(Object));
   });
 
+  it("passes Recall continuation as an encoded filter, not a session URL", async () => {
+    const fetchMock = mockFetch(200, { results: [], nextCursor: null });
+    globalThis.fetch = fetchMock;
+    await sessionsApi.searchMySessionHistory("needle", 3, "cursor/value");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/me/sessions/search?q=needle&limit=3&after=cursor%2Fvalue", expect.any(Object),
+    );
+  });
+
   it("times out Recall transport stalls after its 15 second client budget", async () => {
     vi.useFakeTimers();
     try {
