@@ -32,6 +32,8 @@ import styles from "./ChatMessageList.module.css";
 interface ChatMessageListProps {
   messages: DisplaySessionEvent[];
   streamKey: string;
+  readingPositionKey?: string;
+  readingPositionReady?: boolean;
   scrollRef: RefObject<HTMLDivElement | null>;
   emptyState?: ReactNode;
   onLoadOlder?: () => void;
@@ -92,6 +94,8 @@ interface ChatMessageListProps {
 function ChatMessageListImpl({
   messages,
   streamKey,
+  readingPositionKey,
+  readingPositionReady,
   scrollRef,
   emptyState,
   onLoadOlder,
@@ -204,6 +208,8 @@ function ChatMessageListImpl({
 
   const listRef = useRef<HTMLDivElement>(null);
   const { virtualizer, virtualItems, totalSize, scrollMargin } = useVirtualChatList({
+    readingPositionKey,
+    readingPositionReady,
     rows,
     scrollRef,
     listRef,

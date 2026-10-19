@@ -272,6 +272,7 @@ export function ChatSurface({
     handleScroll,
     isAutoFollowing,
     getUserUnpinnedAt,
+    readingPositionKey,
     isStreaming,
     queue,
     messages,
@@ -946,6 +947,9 @@ export function ChatSurface({
               className={`${styles.messageContent}${shouldHideThreadForInitialReveal ? ` ${styles.messageContentHidden}` : ""}`}
             >
               <ChatMessageList
+                key={readingPositionKey}
+                readingPositionKey={readingPositionKey}
+                readingPositionReady={historyResolved && !isLoading}
                 messages={transcriptMessages}
                 streamKey={streamKey}
                 scrollRef={messageAreaRef}
