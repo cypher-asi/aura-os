@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { followChatPosition, readChatPosition } from "../lib/chat-reading-positions";
 
 const BOTTOM_THRESHOLD_PX = 40;
 const INPUT_OVERLAY_PX = 140;
@@ -48,17 +49,18 @@ export interface UseScrollAnchorV2Return {
  */
 export function useScrollAnchorV2(
   ref: React.RefObject<HTMLElement | null>,
-  options: { resetKey?: unknown; scrollToBottomOnReset?: boolean },
+  options: { resetKey?: unknown; scrollToBottomOnReset?: boolean; readingPositionKey?: string },
 ): UseScrollAnchorV2Return {
-  const { resetKey, scrollToBottomOnReset = true } = options;
+  const { resetKey, scrollToBottomOnReset = true, readingPositionKey } = options;
+  const rememberedReading = readChatPosition(readingPositionKey)?.atEnd === false;
 
-  const pinnedRef = useRef(true);
+  const pinnedRef = useRef(!rememberedReading);
   const guardRef = useRef(false);
-  const userUnpinnedAtRef = useRef(0);
+  const userUnpinnedAtRef = useRef(rememberedReading ? 1 : 0);
   const lastTouchYRef = useRef<number | null>(null);
   const lastScrollTopRef = useRef(0);
   const lastMaxScrollTopRef = useRef(0);
-  const [isAutoFollowing, setIsAutoFollowing] = useState(true);
+  const [isAutoFollowing, setIsAutoFollowing] = useState(!rememberedReading);
 
   const syncFollowState = useCallback(() => {
     const next = pinnedRef.current;
@@ -87,17 +89,18 @@ export function useScrollAnchorV2(
   }, [ref]);
 
   useLayoutEffect(() => {
-    pinnedRef.current = true;
-    userUnpinnedAtRef.current = 0;
+    const restoring = readChatPosition(readingPositionKey)?.atEnd === false;
+    pinnedRef.current = !restoring;
+    userUnpinnedAtRef.current = restoring ? 1 : 0;
     lastScrollTopRef.current = ref.current?.scrollTop ?? 0;
     lastMaxScrollTopRef.current = ref.current
       ? Math.max(0, ref.current.scrollHeight - ref.current.clientHeight)
       : 0;
     syncFollowState();
-    if (scrollToBottomOnReset) {
+    if (scrollToBottomOnReset && !restoring) {
       guardedScrollToBottom();
     }
-  }, [ref, resetKey, guardedScrollToBottom, scrollToBottomOnReset, syncFollowState]);
+  }, [ref, resetKey, readingPositionKey, guardedScrollToBottom, scrollToBottomOnReset, syncFollowState]);
 
   const markUserUnpinned = useCallback(() => {
     userUnpinnedAtRef.current =
@@ -168,11 +171,12 @@ export function useScrollAnchorV2(
   }, [ref, syncFollowState, markUserUnpinned]);
 
   const scrollToBottom = useCallback(() => {
+    followChatPosition(readingPositionKey);
     pinnedRef.current = true;
     userUnpinnedAtRef.current = 0;
     syncFollowState();
     guardedScrollToBottom();
-  }, [guardedScrollToBottom, syncFollowState]);
+  }, [guardedScrollToBottom, syncFollowState, readingPositionKey]);
 
   // Explicit upward intent: wheel up, swipe down (which scrolls content up),
   // or PageUp/ArrowUp/Home keypresses on the container. Capture phase so we
