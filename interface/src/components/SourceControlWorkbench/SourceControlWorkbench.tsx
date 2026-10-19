@@ -18,6 +18,8 @@ import type {
   SourceControlStatus,
 } from "../../api/client";
 import { EmptyState } from "../EmptyState";
+import { useViewedFiles } from "./use-viewed-files";
+import { viewedFileKey } from "../../shared/lib/source-control-viewed-files";
 import styles from "./SourceControlWorkbench.module.css";
 
 interface SourceControlWorkbenchProps {
@@ -47,6 +49,7 @@ interface Selection {
   path: string;
   area: SourceControlArea;
 }
+const EMPTY_FILES: SourceControlFile[] = [];
 
 const STATUS_LABELS: Record<string, string> = {
   "?": "Untracked",
@@ -108,11 +111,24 @@ export function SourceControlWorkbench({
   const [selection, setSelection] = useState<Selection | null>(null);
   const [diff, setDiff] = useState<SourceControlDiff | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
+  const [diffFailed, setDiffFailed] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [commitMessage, setCommitMessage] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const effectiveReadOnly = readOnly || Boolean(remoteAgentId);
+  const loadDiff = useCallback((path: string, area: SourceControlArea) =>
+    remoteAgentId && remoteWorkspacePath
+      ? api.swarm.getRemoteGitDiff(remoteAgentId, remoteWorkspacePath, path, area)
+      : api.sourceControl.getDiff(projectId, path, area, agentInstanceId),
+  [projectId, agentInstanceId, remoteAgentId, remoteWorkspacePath]);
+  const reviewScope = status?.available ? JSON.stringify([
+    projectId, agentInstanceId, remoteAgentId, remoteWorkspacePath,
+    status.branch, status.pull_request?.url,
+  ]) : null;
+  const viewed = useViewedFiles(reviewScope, status?.files ?? EMPTY_FILES,
+    !diffLoading && !diffFailed && !statusLoading && diff?.path === selection?.path && diff?.area === selection?.area ? diff : null,
+    refreshKey, loadDiff);
 
   const refresh = useCallback(() => {
     setNotice(null);
@@ -167,6 +183,7 @@ export function SourceControlWorkbench({
     let cancelled = false;
     setDiff(null);
     setDiffLoading(true);
+    setDiffFailed(false);
     const request = remoteAgentId && remoteWorkspacePath
       ? api.swarm.getRemoteGitDiff(remoteAgentId, remoteWorkspacePath, selection.path, selection.area)
       : api.sourceControl.getDiff(projectId, selection.path, selection.area, agentInstanceId);
@@ -176,6 +193,7 @@ export function SourceControlWorkbench({
       })
       .catch((error: unknown) => {
         if (cancelled) return;
+        setDiffFailed(true);
         setDiff({
           path: selection.path,
           area: selection.area,
@@ -325,9 +343,15 @@ export function SourceControlWorkbench({
         ) : null}
       </header>
 
+      <div className={styles.reviewProgress} aria-live="polite">
+        {viewed.marks.size} / {stagedFiles.length + worktreeFiles.length} viewed in Aura
+        <span>Local review marks · Restored marks are rechecked against current changes</span>
+      </div>
+
       <div className={styles.changesPane}>
         <FileGroup
           title="Staged changes"
+          viewedMarks={viewed.marks}
           files={stagedFiles}
           area="staged"
           selection={selection}
@@ -370,6 +394,7 @@ export function SourceControlWorkbench({
 
         <FileGroup
           title="Changes"
+          viewedMarks={viewed.marks}
           files={worktreeFiles}
           area="worktree"
           selection={selection}
@@ -388,7 +413,15 @@ export function SourceControlWorkbench({
               <span className={styles.areaBadge}>
                 {selection.area === "staged" ? "INDEX" : "WORKTREE"}
               </span>
+              <label className={styles.viewedToggle} title="Review state is local to Aura, not synced to GitHub. Complete text diffs only.">
+                <input type="checkbox" checked={viewed.viewed} disabled={!viewed.canToggle}
+                  onChange={viewed.toggle} aria-label={`Viewed ${selection.path} (${selection.area})`} />
+                Viewed
+              </label>
             </div>
+            {diff && !diffLoading && !diffFailed && (diff.truncated || diff.binary) ? (
+              <div className={styles.diffMessage}>Viewed marks require a complete text diff. Binary and truncated diffs cannot be marked viewed.</div>
+            ) : null}
             <DiffView
               loading={diffLoading}
               diff={diff}
@@ -407,6 +440,7 @@ export function SourceControlWorkbench({
 }
 
 interface FileGroupProps {
+  viewedMarks: Map<string, string>;
   title: string;
   files: SourceControlFile[];
   area: SourceControlArea;
@@ -417,6 +451,7 @@ interface FileGroupProps {
 }
 
 function FileGroup({
+  viewedMarks,
   title,
   files,
   area,
@@ -483,6 +518,7 @@ function FileGroup({
                   ) : null}
                   {file.path}
                 </span>
+                {viewedMarks.has(viewedFileKey(file.path, area)) ? <Check size={13} aria-label="Viewed in Aura" /> : null}
               </button>
               {onMutate ? (
                 <button
