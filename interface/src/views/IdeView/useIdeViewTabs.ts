@@ -12,6 +12,7 @@ import {
 } from "../../shared/api/workspace-files";
 
 const MAX_HIGHLIGHT_SIZE = 100_000;
+const MAX_CLOSED_TABS = 10;
 
 export interface TabState {
   path: string;
@@ -20,6 +21,12 @@ export interface TabState {
   loading: boolean;
   error: string | null;
   revision: string | null;
+}
+
+interface ClosedTab {
+  path: string;
+  index: number;
+  draft: TabState | null;
 }
 
 export function useIdeViewTabs(
@@ -31,14 +38,20 @@ export function useIdeViewTabs(
   const [activeTabPath, setActiveTabPath] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // In-memory only: closing the workspace must not persist source or drafts.
+  const [closedTabs, setClosedTabs] = useState<ClosedTab[]>([]);
+  const openRequests = useRef(new Map<string, symbol>());
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
   const highlightRef = useRef<HTMLPreElement>(null);
 
   const openTab = useCallback((path: string) => {
-    setTabs((prev) => {
-      if (prev.find((t) => t.path === path)) return prev;
+    setSaveError(null);
+    setClosedTabs((prev) => prev.filter((tab) => tab.path !== path));
+    if (!openRequests.current.has(path)) {
+      const request = Symbol(path);
+      openRequests.current.set(path, request);
       const newTab: TabState = {
         path,
         content: null,
@@ -47,6 +60,7 @@ export function useIdeViewTabs(
         error: null,
         revision: null,
       };
+      setTabs((prev) => prev.some((tab) => tab.path === path) ? prev : [...prev, newTab]);
       const readPromise: Promise<WorkspaceFileReadResult> = hostedWorkspace
         ? api.hostedWorkspace.readFile(hostedWorkspace, path)
         : remoteAgentId
@@ -54,6 +68,7 @@ export function useIdeViewTabs(
           : api.readFile(path);
       readPromise
         .then((res) => {
+          if (openRequests.current.get(path) !== request) return;
           setTabs((prev2) => prev2.map((t) => {
             if (t.path !== path) return t;
             return res.ok && res.content != null
@@ -68,14 +83,23 @@ export function useIdeViewTabs(
           }));
         })
         .catch((e) => {
+          if (openRequests.current.get(path) !== request) return;
           setTabs((prev2) => prev2.map((t) => t.path !== path ? t : { ...t, error: String(e), loading: false }));
         });
-      return [...prev, newTab];
-    });
+    }
     setActiveTabPath(path);
   }, [hostedWorkspace, remoteAgentId]);
 
   const closeTab = useCallback((path: string) => {
+    const index = tabs.findIndex((tab) => tab.path === path);
+    const tab = tabs[index];
+    if (!tab) return;
+    openRequests.current.delete(path);
+    const hasDraft = tab.content !== null && tab.savedContent !== null && tab.content !== tab.savedContent;
+    setClosedTabs((prev) => [
+      { path, index, draft: hasDraft ? tab : null },
+      ...prev.filter((entry) => entry.path !== path),
+    ].slice(0, MAX_CLOSED_TABS));
     setTabs((prev) => {
       const idx = prev.findIndex((t) => t.path === path);
       const newTabs = prev.filter((t) => t.path !== path);
@@ -84,7 +108,27 @@ export function useIdeViewTabs(
       }
       return newTabs;
     });
-  }, [activeTabPath]);
+  }, [activeTabPath, tabs]);
+
+  const reopenClosedTab = useCallback(() => {
+    const entry = closedTabs[0];
+    if (!entry) return;
+    if (!entry.draft) {
+      // Clean files are read again, so an agent's intervening edits are visible.
+      openTab(entry.path);
+      return;
+    }
+    openRequests.current.set(entry.path, Symbol(entry.path));
+    setTabs((prev) => {
+      if (prev.some((tab) => tab.path === entry.path)) return prev;
+      const next = [...prev];
+      next.splice(Math.min(entry.index, next.length), 0, entry.draft!);
+      return next;
+    });
+    setClosedTabs((prev) => prev.filter((tab) => tab.path !== entry.path));
+    setActiveTabPath(entry.path);
+    setSaveError(null);
+  }, [closedTabs, openTab]);
 
   useEffect(() => {
     if (initialFile) openTab(initialFile);
@@ -118,6 +162,7 @@ export function useIdeViewTabs(
     }
     const tabPath = activeTab.path;
     const tabContent = activeTab.content;
+    const openRequest = openRequests.current.get(tabPath);
     const isWebWorkspace = Boolean(hostedWorkspace || remoteAgentId);
     if (isWebWorkspace && !activeTab.revision) {
       setSaveError("This workspace runtime must be updated before Aura Web can save files.");
@@ -144,6 +189,7 @@ export function useIdeViewTabs(
               activeTab.revision!,
             )
           : await api.writeFile(tabPath, tabContent);
+      if (openRequests.current.get(tabPath) !== openRequest) return;
       if (res.ok) setTabs((prev) => prev.map((t) => t.path !== tabPath ? t : {
         ...t,
         savedContent: tabContent,
@@ -151,9 +197,10 @@ export function useIdeViewTabs(
       }));
       else setSaveError(res.error ?? "Failed to save");
     } catch (e) {
+      if (openRequests.current.get(tabPath) !== openRequest) return;
       setSaveError(
         e instanceof ApiClientError && e.status === 409
-          ? "File changed since you opened it. Close and reopen it before saving."
+          ? "File changed since you opened it. Copy your edits, close this tab, then open the file from Files to reload it."
           : e instanceof Error
             ? e.message
             : String(e),
@@ -164,11 +211,17 @@ export function useIdeViewTabs(
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (!e.defaultPrevented && !e.altKey && (e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "t") {
+        if (closedTabs.length === 0) return;
+        e.preventDefault();
+        reopenClosedTab();
+        return;
+      }
       if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); handleSave(); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [handleSave]);
+  }, [closedTabs.length, handleSave, reopenClosedTab]);
 
   const highlightedHtml = useMemo(() => {
     if (activeContent == null) return "";
@@ -186,7 +239,7 @@ export function useIdeViewTabs(
 
   return {
     tabs, activeTab, activeTabPath, setActiveTabPath,
-    openTab, closeTab,
+    openTab, closeTab, reopenClosedTab, canReopenClosedTab: closedTabs.length > 0,
     saving, saveError, dirty, language, readOnly, readOnlyReason,
     handleContentChange, handleSave,
     textareaRef, gutterRef, highlightRef,
