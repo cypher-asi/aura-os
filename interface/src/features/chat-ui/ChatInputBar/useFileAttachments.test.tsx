@@ -3,6 +3,7 @@ import { useState } from "react";
 import { zipSync, strToU8 } from "fflate";
 import type { AttachmentItem } from "./ChatInputBar";
 import { processFile, useFileAttachments } from "./useFileAttachments";
+import { hasUnuploadedImages } from "./attachment-upload-state";
 
 const mocks = vi.hoisted(() => ({ upload: vi.fn(), pdf: vi.fn() }));
 vi.mock("../../../api/upload", () => ({ uploadFile: mocks.upload }));
@@ -16,14 +17,14 @@ vi.mock("./research-attachments", async (original) => ({
 function fileList(files: File[]): FileList { return files as unknown as FileList; }
 function useComposer(streamKey = "session-a") {
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
-  return { attachments, ...useFileAttachments(attachments, setAttachments, undefined, undefined, undefined, streamKey) };
+  return { attachments, ...useFileAttachments(attachments, setAttachments, (id) => setAttachments((items) => items.filter((item) => item.id !== id)), undefined, undefined, streamKey) };
 }
 function zip(entries: Record<string, Uint8Array>): File {
   return new File([new Uint8Array(zipSync(entries)).buffer], "files.zip", { type: "application/zip" });
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   mocks.upload.mockResolvedValue("https://files.example/upload");
   mocks.pdf.mockResolvedValue(new File(["[Page 1]\nPDF research café"], "report.pdf.txt", { type: "text/plain" }));
   vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => { cb(0); return 1; });
@@ -108,6 +109,69 @@ it("keeps usable inline data when S3 fails", async () => {
   await act(() => result.current.addFiles(fileList([new File(["notes"], "notes.txt")])));
   expect(result.current.attachments[0]).toMatchObject({ uploading: false, uploadError: "offline" });
   expect(atob(result.current.attachments[0].data)).toBe("notes");
+});
+
+it("keeps realistic failed photo batches blocked until each retry succeeds", async () => {
+  mocks.upload.mockRejectedValue(new Error("S3 upload failed: HTTP 403 (AccessDenied)"));
+  const { result } = renderHook(() => useComposer());
+  const photos = Array.from({ length: 5 }, (_, i) => new File([new Uint8Array(1_080_000)], `${i}.jpg`, { type: "image/jpeg" }));
+  await act(() => result.current.addFiles(fileList(photos)));
+  expect(result.current.attachments).toHaveLength(5);
+  expect(JSON.stringify(result.current.attachments.map((a) => a.data)).length).toBeGreaterThan(7_000_000);
+  expect(hasUnuploadedImages(result.current.attachments)).toBe(true);
+  const data = result.current.attachments.map((a) => a.data);
+  const resolveUploads: Array<(url: string) => void> = [];
+  mocks.upload.mockImplementation(() => new Promise<string>((resolve) => resolveUploads.push(resolve)));
+  for (const item of result.current.attachments) {
+    act(() => { result.current.retryUpload(item.id); result.current.retryUpload(item.id); });
+  }
+  expect(mocks.upload).toHaveBeenCalledTimes(10); // five original + five retries, no duplicates
+  expect(result.current.attachments.every((a) => a.uploading && !a.uploadError)).toBe(true);
+  for (const [i, finish] of resolveUploads.entries()) {
+    await act(async () => finish(`https://files.example/${i}.jpg`));
+    expect(hasUnuploadedImages(result.current.attachments)).toBe(i !== 4);
+  }
+  expect(result.current.attachments.map((a) => a.data)).toEqual(data);
+  expect(result.current.attachments.every((a) => !a.uploading && !a.uploadError)).toBe(true);
+});
+
+it.each(["", "not-a-url", "data:image/jpeg;base64,AAAA"])("does not mark an invalid upload URL %s as success", async (url) => {
+  mocks.upload.mockResolvedValue(url);
+  const { result } = renderHook(() => useComposer());
+  await act(() => result.current.addFiles(fileList([new File(["jpg"], "photo.jpg", { type: "image/jpeg" })])));
+  expect(result.current.attachments[0]).toMatchObject({ uploading: false, uploadError: "Upload returned an invalid file URL" });
+  expect(hasUnuploadedImages(result.current.attachments)).toBe(true);
+});
+
+it("ignores late retry completion after the attachment is removed", async () => {
+  mocks.upload.mockRejectedValueOnce(new Error("offline"));
+  let finish!: (url: string) => void;
+  const { result } = renderHook(() => useComposer());
+  await act(() => result.current.addFiles(fileList([new File(["jpg"], "photo.jpg", { type: "image/jpeg" })])));
+  mocks.upload.mockImplementation(() => new Promise<string>((resolve) => { finish = resolve; }));
+  const id = result.current.attachments[0].id;
+  act(() => result.current.retryUpload(id));
+  const signal = mocks.upload.mock.calls.at(-1)?.[4] as AbortSignal;
+  act(() => result.current.handleRemove(id));
+  expect(signal.aborted).toBe(true);
+  await act(async () => finish("https://files.example/photo.jpg"));
+  expect(result.current.attachments).toEqual([]);
+});
+
+it("ignores upload callbacks for the previous conversation", async () => {
+  let finish!: (url: string) => void;
+  mocks.upload.mockImplementation(() => new Promise<string>((resolve) => { finish = resolve; }));
+  const { result, rerender } = renderHook(({ key }) => useComposer(key), { initialProps: { key: "a" } });
+  await act(() => result.current.addFiles(fileList([new File(["jpg"], "photo.jpg", { type: "image/jpeg" })])));
+  rerender({ key: "b" });
+  await act(async () => finish("https://files.example/photo.jpg"));
+  // The owner normally resets the attachments on switch. Here retaining the
+  // same draft proves that callbacks are scoped to the original stream too.
+  expect(result.current.attachments[0].fileUrl).toBeUndefined();
+  expect(result.current.attachments[0].uploading).toBe(false);
+  act(() => result.current.retryUpload(result.current.attachments[0].id));
+  await act(async () => finish("https://files.example/retry.jpg"));
+  expect(result.current.attachments[0].fileUrl).toBe("https://files.example/retry.jpg");
 });
 
 it("settles every concurrent upload even when requests finish in separate render cycles", async () => {

@@ -157,6 +157,24 @@ vi.mock("../../../constants/commands", () => ({
 }));
 
 describe("useChatPanelState", () => {
+  it.each([false, true])("does not send or queue failed photo uploads (streaming: %s)", async (streaming) => {
+    mockIsStreaming = streaming;
+    const onSend = vi.fn();
+    const { result } = renderHook(() => useChatPanelState({ streamKey: "photo-test", onSend }));
+    const photos = Array.from({ length: 5 }, (_, i) => ({
+      id: `photo-${i}`, file: new File([], `${i}.jpg`), data: "A".repeat(1_466_668),
+      mediaType: "image/jpeg", name: `${i}.jpg`, attachmentType: "image" as const,
+      uploadError: "S3 upload failed: HTTP 403",
+    }));
+    await act(async () => result.current.handleSend("Research photos", undefined, photos));
+    expect(onSend).not.toHaveBeenCalled();
+    expect(mockEnqueue).not.toHaveBeenCalled();
+    expect(mockSetDraft).not.toHaveBeenCalled();
+    await act(async () => result.current.handleSend("Research photos", undefined, photos.map((a) => ({
+      ...a, fileUrl: `https://files.example/${a.name}`, uploadError: undefined,
+    }))));
+    expect(streaming ? mockEnqueue : onSend).toHaveBeenCalledOnce();
+  });
   beforeEach(() => {
     mockIsStreaming = false;
     mockStreamMessages = [];

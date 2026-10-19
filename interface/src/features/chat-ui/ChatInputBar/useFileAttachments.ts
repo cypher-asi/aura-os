@@ -4,6 +4,7 @@ import { uploadFile } from "../../../api/upload";
 import { api } from "../../../api/client";
 import { isPdf, isZip, unpackResearchZip } from "./research-attachments";
 import { processFile } from "./process-attachment-file";
+import { hasUploadedImage } from "./attachment-upload-state";
 export { processFile } from "./process-attachment-file";
 
 export const MAX_ATTACHMENTS = 5;
@@ -22,7 +23,7 @@ async function uploadAttachmentToS3(
   updateAttachment: (id: string, updates: Partial<AttachmentItem>) => void,
   signal: AbortSignal,
 ): Promise<void> {
-  updateAttachment(item.id, { uploading: true, uploadProgress: 0 });
+  updateAttachment(item.id, { uploading: true, uploadProgress: 0, uploadError: undefined });
   try {
     const blob = base64ToBlob(item.data, item.mediaType);
     const fileUrl = await uploadFile(
@@ -32,11 +33,13 @@ async function uploadAttachmentToS3(
       (percent) => updateAttachment(item.id, { uploadProgress: percent }),
       signal,
     );
-    updateAttachment(item.id, { fileUrl, uploading: false, uploadProgress: 100 });
+    if (signal.aborted) return;
+    if (!hasUploadedImage({ ...item, fileUrl })) throw new Error("Upload returned an invalid file URL");
+    updateAttachment(item.id, { fileUrl, uploading: false, uploadProgress: 100, uploadError: undefined });
   } catch (err) {
     if (signal.aborted) return;
     const message = err instanceof Error ? err.message : "Upload failed";
-    console.warn("[upload] S3 upload failed, will fall back to base64:", message);
+    console.warn("[upload] Attachment upload failed:", message);
     updateAttachment(item.id, { uploading: false, uploadError: message });
   }
 }
@@ -73,6 +76,7 @@ export function useFileAttachments(
 
   /** Update a single attachment by id using the latest ref state. */
   const updateAttachment = useCallback((id: string, updates: Partial<AttachmentItem>) => {
+    if (!attachmentsRef.current.some((a) => a.id === id)) return;
     const updated = attachmentsRef.current.map((a) =>
       a.id === id ? { ...a, ...updates } : a,
     );
@@ -85,6 +89,32 @@ export function useFileAttachments(
   useEffect(() => () => {
     for (const controller of uploadAbortRefs.current.values()) controller.abort();
   }, []);
+  useEffect(() => {
+    for (const [id, controller] of uploadAbortRefs.current) {
+      controller.abort();
+      uploadAbortRefs.current.delete(id);
+      updateAttachment(id, { uploading: false, uploadError: "Upload cancelled after switching conversations" });
+    }
+  }, [streamKey, updateAttachment]);
+
+  const startUpload = useCallback((item: AttachmentItem) => {
+    if (uploadAbortRefs.current.has(item.id)) return;
+    const controller = new AbortController();
+    uploadAbortRefs.current.set(item.id, controller);
+    const uploadStreamKey = activeStreamKey.current;
+    const update = (id: string, changes: Partial<AttachmentItem>) => {
+      if (controller.signal.aborted || uploadStreamKey !== activeStreamKey.current) return;
+      updateAttachment(id, changes);
+    };
+    void uploadAttachmentToS3(item, update, controller.signal).finally(() => {
+      if (uploadAbortRefs.current.get(item.id) === controller) uploadAbortRefs.current.delete(item.id);
+    });
+  }, [updateAttachment]);
+
+  const retryUpload = useCallback((id: string) => {
+    const item = attachmentsRef.current.find((a) => a.id === id);
+    if (item && !item.uploading) startUpload(item);
+  }, [startUpload]);
 
   const canAddMore = attachments.length < MAX_ATTACHMENTS && !isProcessing;
 
@@ -144,11 +174,7 @@ export function useFileAttachments(
         // The ref is already updated above so updateAttachment reads
         // the current array including the new items.
         for (const item of valid) {
-          const controller = new AbortController();
-          uploadAbortRefs.current.set(item.id, controller);
-          void uploadAttachmentToS3(item, updateAttachment, controller.signal).finally(() => {
-            uploadAbortRefs.current.delete(item.id);
-          });
+          startUpload(item);
         }
       }
       if (notices.length) setAttachmentNotice(notices.join("\n"));
@@ -165,7 +191,7 @@ export function useFileAttachments(
       pendingIntakes.current--;
       if (pendingIntakes.current === 0) setIsProcessing(false);
     }
-  }, [onAttachmentsChange, updateAttachment, textareaRef]);
+  }, [onAttachmentsChange, startUpload, textareaRef]);
 
   /**
    * Read a project file by path and attach it as a text attachment.
@@ -237,13 +263,9 @@ export function useFileAttachments(
     );
     const realItem = next.find((a) => a.id === id);
     if (!realItem) return;
-    const controller = new AbortController();
-    uploadAbortRefs.current.set(id, controller);
-    void uploadAttachmentToS3(realItem, updateAttachment, controller.signal).finally(() => {
-      uploadAbortRefs.current.delete(id);
-    });
+    startUpload(realItem);
     textareaRef?.current?.focus();
-  }, [canAddMore, onAttachmentsChange, remoteAgentId, textareaRef, updateAttachment]);
+  }, [canAddMore, onAttachmentsChange, remoteAgentId, textareaRef, startUpload]);
 
   const handleRemove = useCallback((id: string) => {
     // Abort any in-flight upload for this attachment
@@ -254,8 +276,10 @@ export function useFileAttachments(
     }
     const a = attachments.find((x) => x.id === id);
     if (a?.preview) URL.revokeObjectURL(a.preview);
+    // Prevent a late upload callback from changing the removed draft.
+    attachmentsRef.current = attachmentsRef.current.filter((item) => item.id !== id);
     onRemoveAttachment?.(id);
   }, [attachments, onRemoveAttachment]);
 
-  return { canAddMore, addFiles, addFileFromPath, handleRemove, isProcessing, attachmentNotice };
+  return { canAddMore, addFiles, addFileFromPath, handleRemove, retryUpload, isProcessing, attachmentNotice };
 }

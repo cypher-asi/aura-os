@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { ArrowUp, ChevronDown, FileText, Plus, X } from "lucide-react";
+import { ArrowUp, ChevronDown, Plus, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AgentEnvironment } from "../../../apps/agents/components/AgentEnvironment";
 import { CommandChips } from "../../../features/chat-ui/ChatInputBar/CommandChips";
@@ -21,8 +21,9 @@ import {
 } from "../../../features/chat-ui/ChatInputBar/PromptStash";
 import { SlashCommandMenu } from "../../../features/chat-ui/ChatInputBar/SlashCommandMenu";
 import { useFileAttachments } from "../../../features/chat-ui/ChatInputBar/useFileAttachments";
+import { AttachmentPreviews } from "../../../features/chat-ui/ChatInputBar/AttachmentPreviews";
+import { hasUnuploadedImages } from "../../../features/chat-ui/ChatInputBar/attachment-upload-state";
 import type {
-  AttachmentItem,
   ChatInputBarHandle,
   ChatInputBarProps,
 } from "../../../features/chat-ui/ChatInputBar/ChatInputBar";
@@ -66,38 +67,6 @@ import styles from "./MobileChatInputBar.module.css";
 const CHAT_COMPOSER_MODE_LABELS: Partial<Record<AgentMode, string>> = {
   code: "Chat",
 };
-
-function AttachmentPreviews({
-  attachments,
-  onRemove,
-}: {
-  attachments: AttachmentItem[];
-  onRemove: (id: string) => void;
-}) {
-  if (attachments.length === 0) return null;
-  return (
-    <div className={styles.attachmentPreviews}>
-      {attachments.map((attachment) => (
-        <div key={attachment.id} className={styles.attachmentThumb}>
-          {attachment.preview ? (
-            <img src={attachment.preview} alt="" className={styles.attachmentThumbImg} />
-          ) : (
-            <FileText size={18} className={styles.attachmentFileIcon} />
-          )}
-          <span className={styles.attachmentName}>{attachment.name}</span>
-          <button
-            type="button"
-            className={styles.attachmentRemove}
-            onClick={() => onRemove(attachment.id)}
-            aria-label="Remove attachment"
-          >
-            <X size={12} />
-          </button>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarProps>(
   function MobileChatInputBar(
@@ -195,11 +164,13 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       focus: () => textareaRef.current?.focus(),
     }));
 
-    const { canAddMore, addFiles, handleRemove } = useFileAttachments(
+    const { canAddMore, addFiles, handleRemove, retryUpload, isProcessing, attachmentNotice } = useFileAttachments(
       attachments,
       onAttachmentsChange,
       onRemoveAttachment,
       textareaRef,
+      undefined,
+      streamKey,
     );
     const mentionableAgents = useMemo(
       () =>
@@ -281,6 +252,9 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       (command) => command.id === "btw",
     );
     const canSend =
+      !isProcessing &&
+      !(generationMode !== "image" && attachments.some((a) => a.uploading)) &&
+      !(generationMode === "chat" && hasUnuploadedImages(attachments)) &&
       !runtimeUnavailable &&
       (!isExternallyBusy || isChatStreaming) &&
       !isPromptTooLong &&
@@ -918,7 +892,9 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
               className={styles.modeSelector}
             />
           )}
-          <AttachmentPreviews attachments={attachments} onRemove={handleRemove} />
+          {isProcessing ? <div role="status">Reading attachments…</div> : null}
+          {attachmentNotice ? <div role="alert">{attachmentNotice}</div> : null}
+          <AttachmentPreviews attachments={attachments} onRemove={handleRemove} onRetry={retryUpload} />
           {selectedAgentMentions.length > 0 ? (
             <div className={styles.agentMentionChips} aria-label="Agents included in this message">
               {selectedAgentMentions.map((mention) => (
