@@ -16,6 +16,29 @@ use aura_os_storage::{
 
 use common::*;
 
+// The mock client reads this process-wide owner override on every request,
+// including continuation pages. Keep it stable for each complete test.
+static OWNER_ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+struct TestOwnerOverride(Option<std::ffi::OsString>);
+
+impl TestOwnerOverride {
+    fn set(owner: &str) -> Self {
+        let previous = std::env::var_os("AURA_STORAGE_TEST_USER_ID");
+        std::env::set_var("AURA_STORAGE_TEST_USER_ID", owner);
+        Self(previous)
+    }
+}
+
+impl Drop for TestOwnerOverride {
+    fn drop(&mut self) {
+        match &self.0 {
+            Some(previous) => std::env::set_var("AURA_STORAGE_TEST_USER_ID", previous),
+            None => std::env::remove_var("AURA_STORAGE_TEST_USER_ID"),
+        }
+    }
+}
+
 async fn seed_project_agent(storage: &StorageClient, project_id: &str) -> String {
     storage
         .create_project_agent(
@@ -94,6 +117,7 @@ async fn stamp_owner(db: &aura_os_storage::testutil::SharedDb, session_id: &str,
 
 #[tokio::test]
 async fn recall_returns_only_safe_completed_owned_conversation_text() {
+    let _owner_lock = OWNER_ENV_LOCK.lock().await;
     let (app, _state, storage, db, _dir) = build_test_app_with_storage_db().await;
     let project_id = uuid::Uuid::new_v4().to_string();
     let project_agent_id = seed_project_agent(&storage, &project_id).await;
@@ -187,7 +211,7 @@ async fn recall_returns_only_safe_completed_owned_conversation_text() {
     }
     stamp_owner(&db, &another_users_session, &other_user).await;
 
-    std::env::set_var("AURA_STORAGE_TEST_USER_ID", &owner);
+    let _owner_override = TestOwnerOverride::set(&owner);
     let response = app
         .oneshot(json_request(
             "GET",
@@ -196,7 +220,6 @@ async fn recall_returns_only_safe_completed_owned_conversation_text() {
         ))
         .await
         .expect("request");
-    std::env::remove_var("AURA_STORAGE_TEST_USER_ID");
 
     assert_eq!(response.status(), StatusCode::OK);
     let body = response_json(response).await;
@@ -229,6 +252,7 @@ async fn recall_returns_only_safe_completed_owned_conversation_text() {
 
 #[tokio::test]
 async fn recall_cursor_can_reach_more_than_fifty_sessions_without_dropping_small_limits() {
+    let _owner_lock = OWNER_ENV_LOCK.lock().await;
     let (app, _state, storage, db, _dir) = build_test_app_with_storage_db().await;
     let project = uuid::Uuid::new_v4().to_string();
     let agent = seed_project_agent(&storage, &project).await;
@@ -247,7 +271,7 @@ async fn recall_cursor_can_reach_more_than_fifty_sessions_without_dropping_small
         stamp_owner(&db, &id, &owner).await;
         expected.insert(id);
     }
-    std::env::set_var("AURA_STORAGE_TEST_USER_ID", &owner);
+    let _owner_override = TestOwnerOverride::set(&owner);
     let mut cursor = None;
     let mut actual = std::collections::HashSet::new();
     loop {
@@ -273,6 +297,5 @@ async fn recall_cursor_can_reach_more_than_fifty_sessions_without_dropping_small
             break;
         }
     }
-    std::env::remove_var("AURA_STORAGE_TEST_USER_ID");
     assert_eq!(actual, expected);
 }
