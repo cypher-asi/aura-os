@@ -29,17 +29,13 @@ use crate::state::{AppState, AuthJwt};
 use super::conversions::events_to_session_history;
 use super::sessions::storage_session_is_deleted;
 
-/// This cloud-backed MVP performs one authenticated event read per candidate
-/// instead of using a storage-side search index. Fifty recent sessions keeps
-/// the fan-out useful while the per-read and total deadlines below keep it
-/// release-safe on a degraded network. A future storage index can remove this
-/// recency/latency tradeoff.
-const MAX_SCANNED_SESSIONS: usize = 50;
+/// Traverse the complete JWT-scoped session list in resumable batches. Each
+/// batch retains deadlines and limited concurrency; older chats are no longer
+/// silently excluded merely because the user has more than fifty sessions.
+const SESSION_BATCH_SIZE: usize = 10;
 const DEFAULT_RESULT_LIMIT: usize = 10;
 const MAX_RESULT_LIMIT: usize = 20;
 const MAX_QUERY_LEN: usize = 160;
-const MAX_EVENTS_PER_SESSION: u32 = 120;
-const MAX_SEARCHABLE_CONTENT_CHARS: usize = 8_000;
 const MAX_SNIPPET_CHARS: usize = 280;
 const EVENT_FETCH_CONCURRENCY: usize = 8;
 const PER_SESSION_READ_TIMEOUT: Duration = Duration::from_secs(4);
@@ -52,6 +48,8 @@ pub(crate) struct RecallSearchQuery {
     pub q: String,
     #[serde(default)]
     pub limit: Option<usize>,
+    /// Last session id from the previous batch, never an authorization source.
+    pub after: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -65,6 +63,7 @@ pub(crate) struct RecallSearchResponse {
     /// before the overall deadline. The UI surfaces this so a partial search
     /// is never presented as complete.
     pub skipped_sessions: usize,
+    pub next_cursor: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -118,7 +117,7 @@ pub(crate) async fn search_my_session_history(
         .clamp(1, MAX_RESULT_LIMIT);
     let storage = state.require_storage_client()?;
 
-    let candidates: Vec<EnrichedSession> =
+    let mut candidates: Vec<EnrichedSession> =
         timeout_at(search_deadline, storage.list_my_sessions(&jwt))
             .await
             .map_err(|_| ApiError::service_unavailable("Recall session listing timed out"))?
@@ -131,8 +130,20 @@ pub(crate) async fn search_my_session_history(
             .filter(|entry| {
                 !is_subagent_session_summary(&entry.session.summary_of_previous_context)
             })
-            .take(MAX_SCANNED_SESSIONS)
             .collect();
+    // Stable id ordering avoids offset shifts when a new chat is created.
+    // A cursor can only filter the caller's freshly authorized candidate set.
+    candidates.sort_by_key(|entry| entry.session.session_id.to_string());
+    if let Some(after) = &query.after {
+        uuid::Uuid::parse_str(after).map_err(|_| ApiError::bad_request("Invalid Recall cursor"))?;
+        candidates.retain(|entry| entry.session.session_id.to_string() > *after);
+    }
+    // One best match per session means no result is dropped by `limit` before
+    // its session cursor advances, even when the caller requests a small limit.
+    let batch_size = limit.min(SESSION_BATCH_SIZE);
+    let next_cursor = (candidates.len() > batch_size)
+        .then(|| candidates[batch_size - 1].session.session_id.to_string());
+    candidates.truncate(batch_size);
     let scanned_sessions = candidates.len();
 
     let candidate_outcomes = stream::iter(candidates)
@@ -144,11 +155,9 @@ pub(crate) async fn search_my_session_history(
                 let events = match await_with_timeout(
                     PER_SESSION_READ_TIMEOUT,
                     storage
-                        // This is intentionally a bounded first page. Until
-                        // Aura has a storage-side full-text index, a recall
-                        // request must not page through an entire long-lived
-                        // transcript.
-                        .list_events(&session_id, &jwt, Some(MAX_EVENTS_PER_SESSION), None),
+                        // None explicitly pages storage to exhaustion, including
+                        // delta events needed to reconstruct legacy messages.
+                        .list_events(&session_id, &jwt, None, None),
                 )
                 .await
                 {
@@ -210,6 +219,7 @@ pub(crate) async fn search_my_session_history(
         results,
         scanned_sessions,
         skipped_sessions: counts.skipped,
+        next_cursor,
     }))
 }
 
@@ -350,9 +360,8 @@ struct EventMatch<'a> {
 }
 
 fn score_event<'a>(event: &'a SessionEvent, terms: &[String]) -> Option<EventMatch<'a>> {
-    // Bound the raw scan, normalize visible whitespace once, then lowercase.
-    // Search and snippet generation therefore operate on the same bounded
-    // human-visible text, never on raw storage JSON.
+    // Search the entire visible message, not only its prefix. Credential
+    // exclusion uses this same full text before any excerpt is returned.
     let flattened = bounded_visible_text(&event.content);
     let searchable = flattened.to_lowercase();
     let mut score = 0;
@@ -376,13 +385,10 @@ fn score_event<'a>(event: &'a SessionEvent, terms: &[String]) -> Option<EventMat
 }
 
 fn bounded_visible_text(content: &str) -> String {
-    let mut flattened = String::with_capacity(MAX_SEARCHABLE_CONTENT_CHARS);
+    let mut flattened = String::with_capacity(content.len().min(8_000));
     let mut pending_space = false;
 
-    // Bound the raw scan itself. Normalizing an unbounded run of whitespace
-    // before truncating would still let a pathological event consume
-    // unbounded CPU even though it could not contribute a result.
-    for character in content.chars().take(MAX_SEARCHABLE_CONTENT_CHARS) {
+    for character in content.chars() {
         if character.is_whitespace() {
             pending_space = !flattened.is_empty();
             continue;
@@ -410,9 +416,8 @@ fn event_has_attachment(event: &SessionEvent) -> bool {
 /// private sentence; it skips the common credential-bearing forms entirely
 /// before a snippet can be constructed or returned to the browser.
 fn looks_sensitive(content: &str) -> bool {
-    // Recall cannot match or return text beyond this same bound. Apply it
-    // before allocating the lowercase copy so a pathological multi-megabyte
-    // event cannot turn the credential guard into an unbounded scan.
+    // Scan the entire message: a credential after the old prefix limit must
+    // still exclude the message before a late-match snippet is constructed.
     let lower = bounded_visible_text(content).to_lowercase();
     [
         "api_key",

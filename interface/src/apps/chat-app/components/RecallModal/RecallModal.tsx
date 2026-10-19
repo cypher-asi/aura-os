@@ -43,6 +43,8 @@ export function RecallModal({
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
   const [skippedSessions, setSkippedSessions] = useState(0);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [searchedQuery, setSearchedQuery] = useState("");
   const requestIdRef = useRef(0);
 
   const reset = useCallback(() => {
@@ -53,6 +55,8 @@ export function RecallModal({
     setError(null);
     setSearched(false);
     setSkippedSessions(0);
+    setNextCursor(null);
+    setSearchedQuery("");
   }, []);
 
   const close = useCallback(() => {
@@ -71,8 +75,8 @@ export function RecallModal({
     onAddToDraft(result);
   }, [onAddToDraft, reset]);
 
-  const submit = useCallback(async () => {
-    const trimmed = query.trim();
+  const submit = useCallback(async (after?: string) => {
+    const trimmed = after ? searchedQuery : query.trim();
     if (trimmed.length < 2) {
       setError("Enter at least two characters to search past chats.");
       return;
@@ -80,22 +84,29 @@ export function RecallModal({
     setLoading(true);
     setError(null);
     setSearched(true);
-    setResults([]);
-    setSkippedSessions(0);
+    if (!after) {
+      setResults([]);
+      setSkippedSessions(0);
+      setNextCursor(null);
+      setSearchedQuery(trimmed);
+    }
     const requestId = ++requestIdRef.current;
     try {
-      const response = await api.searchMySessionHistory(trimmed);
+      const response = after
+        ? await api.searchMySessionHistory(trimmed, undefined, after)
+        : await api.searchMySessionHistory(trimmed);
       if (requestId !== requestIdRef.current) return;
-      setResults(response.results);
-      setSkippedSessions(response.skippedSessions);
+      setResults((previous) => after ? [...previous, ...response.results] : response.results);
+      setSkippedSessions((previous) => (after ? previous : 0) + response.skippedSessions);
+      setNextCursor(response.nextCursor ?? null);
     } catch (cause) {
       if (requestId !== requestIdRef.current) return;
-      setResults([]);
+      if (!after) setResults([]);
       setError(cause instanceof Error ? cause.message : "Could not search past chats.");
     } finally {
       if (requestId === requestIdRef.current) setLoading(false);
     }
-  }, [query]);
+  }, [query, searchedQuery]);
 
   return (
     <Modal isOpen={isOpen} onClose={close} title="Recall past chats" size="md">
@@ -107,7 +118,7 @@ export function RecallModal({
         }}
       >
         <p className={styles.explainer}>
-          Search completed chats. Open the original source or add a cited excerpt to your draft; nothing is sent automatically.
+          Search the full text of completed chats, including older messages. Continue through batches to search all history. Attachments and tool output are excluded. Open the original source or add a cited excerpt to your draft; nothing is sent automatically.
         </p>
         <div className={styles.searchRow}>
           <Input
@@ -130,7 +141,12 @@ export function RecallModal({
           Some chats couldn&apos;t be searched. Results may be incomplete.
         </p>
       ) : null}
-      {searched && !loading && !error && results.length === 0 ? (
+      {nextCursor ? (
+        <Button type="button" size="sm" disabled={loading} onClick={() => void submit(nextCursor)}>
+          Search more history
+        </Button>
+      ) : null}
+      {searched && !loading && !error && results.length === 0 && !nextCursor ? (
         <p className={styles.empty}>No matching completed chats found.</p>
       ) : null}
       <div className={styles.results} aria-live="polite">
