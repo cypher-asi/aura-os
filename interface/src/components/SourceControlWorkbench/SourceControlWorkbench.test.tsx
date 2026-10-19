@@ -394,4 +394,96 @@ describe("SourceControlWorkbench", () => {
       await screen.findByText("This workspace is not a Git repository."),
     ).toBeInTheDocument();
   });
+
+  it("finds occurrences, wraps navigation, and closes without affecting review", async () => {
+    const user = userEvent.setup();
+    sourceControl.getDiff.mockResolvedValue({
+      path: "src/app.ts", area: "worktree",
+      diff: "@@ -1 +1 @@\n-old old\n+OLD\n", truncated: false, binary: false,
+    });
+    render(<SourceControlWorkbench projectId="project-1" />);
+    await user.click(await screen.findByRole("button", { name: "Find in diff" }));
+    const input = screen.getByRole("textbox", { name: "Find in diff" });
+    expect(input).toHaveFocus();
+    await user.type(input, "old");
+    expect(screen.getByText("1 of 3")).toBeInTheDocument();
+    expect(document.querySelectorAll("mark")).toHaveLength(3);
+    expect(document.querySelector('mark[aria-current="true"]')).toHaveTextContent("old");
+
+    await user.keyboard("{Enter}");
+    expect(screen.getByText("2 of 3")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Next diff match" }));
+    expect(screen.getByText("3 of 3")).toBeInTheDocument();
+    expect(document.querySelector('mark[aria-current="true"]')).toHaveTextContent("OLD");
+    await user.click(screen.getByRole("button", { name: "Next diff match" }));
+    expect(screen.getByText("1 of 3")).toBeInTheDocument();
+    await user.click(input);
+    await user.keyboard("{Shift>}{Enter}{/Shift}");
+    expect(screen.getByText("3 of 3")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("textbox", { name: "Find in diff" })).not.toBeInTheDocument();
+    expect(document.querySelectorAll("mark")).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Find in diff" })).toHaveFocus();
+    expect(sourceControl.getDiff).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens scoped search with Ctrl/Cmd+F and disables navigation for no matches", async () => {
+    const user = userEvent.setup();
+    render(<SourceControlWorkbench projectId="project-1" />);
+    const line = await screen.findByText("+next");
+    const diffPane = line.closest("pre");
+    diffPane?.focus();
+    await user.keyboard("{Control>}f{/Control}");
+    const input = screen.getByRole("textbox", { name: "Find in diff" });
+    expect(input).toHaveFocus();
+    await user.type(input, "missing");
+    expect(screen.getByText("No matches")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next diff match" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Previous diff match" })).toBeDisabled();
+    await user.keyboard("{Escape}");
+    diffPane?.focus();
+    await user.keyboard("{Meta>}f{/Meta}");
+    expect(screen.getByRole("textbox", { name: "Find in diff" })).toHaveFocus();
+  });
+
+  it("retains exact review context when a changed line contains search highlights", async () => {
+    const user = userEvent.setup();
+    const onDiscussChange = vi.fn();
+    render(<SourceControlWorkbench projectId="project-1" readOnly onDiscussChange={onDiscussChange} />);
+    await user.click(await screen.findByRole("button", { name: "Find in diff" }));
+    await user.type(screen.getByRole("textbox", { name: "Find in diff" }), "next");
+    await user.click(screen.getByRole("button", { name: "Ask agent about src/app.ts new line 1" }));
+    expect(onDiscussChange).toHaveBeenCalledWith({
+      path: "src/app.ts", area: "worktree", line: "+next", oldLine: null, newLine: 1,
+    });
+    expect(sourceControl.stage).not.toHaveBeenCalled();
+  });
+
+  it("searches remote read-only diffs and discloses the truncated search scope", async () => {
+    const user = userEvent.setup();
+    swarm.getRemoteGitDiff.mockResolvedValue({
+      path: "src/app.ts", area: "worktree", diff: "@@ -1 +1 @@\n-old\n+remote\n",
+      truncated: true, binary: false,
+    });
+    render(<SourceControlWorkbench projectId="project-1" remoteAgentId="remote-1" remoteWorkspacePath="/workspace" />);
+    await user.click(await screen.findByRole("button", { name: "Find in diff" }));
+    await user.type(screen.getByRole("textbox", { name: "Find in diff" }), "remote");
+    expect(screen.getByText("1 of 1")).toBeInTheDocument();
+    expect(screen.getByText("Diff truncated. Only the loaded portion is shown and searched.")).toBeInTheDocument();
+    expect(sourceControl.getDiff).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Stage src/app.ts" })).not.toBeInTheDocument();
+  });
+
+  it("resets search when another file is selected", async () => {
+    const user = userEvent.setup();
+    render(<SourceControlWorkbench projectId="project-1" />);
+    await user.click(await screen.findByRole("button", { name: "Find in diff" }));
+    await user.type(screen.getByRole("textbox", { name: "Find in diff" }), "next");
+    await user.click(screen.getByTitle("src/staged.ts"));
+    await waitFor(() => expect(sourceControl.getDiff).toHaveBeenLastCalledWith(
+      "project-1", "src/staged.ts", "staged", undefined,
+    ));
+    expect(screen.queryByRole("textbox", { name: "Find in diff" })).not.toBeInTheDocument();
+    expect(document.querySelectorAll("mark")).toHaveLength(0);
+  });
 });

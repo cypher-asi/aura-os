@@ -1,13 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
   Check,
+  ChevronDown,
+  ChevronUp,
   ExternalLink,
   GitBranch,
   Minus,
   Plus,
   RefreshCw,
+  Search,
+  X,
 } from "lucide-react";
 
 import { api, ApiClientError } from "../../api/client";
@@ -21,6 +25,7 @@ import { EmptyState } from "../EmptyState";
 import { useViewedFiles } from "./use-viewed-files";
 import { viewedFileKey } from "../../shared/lib/source-control-viewed-files";
 import styles from "./SourceControlWorkbench.module.css";
+import { findDiffMatches } from "./diff-search";
 
 interface SourceControlWorkbenchProps {
   projectId: string;
@@ -579,8 +584,139 @@ function DiffView({
   if (!diff.diff) {
     return <div className={styles.diffMessage}>No textual diff available.</div>;
   }
-  const lines = parseReviewableDiffLines(diff.diff);
   return (
+    <SearchableDiff
+      key={JSON.stringify([diff.path, diff.area])}
+      diff={diff}
+      onDiscussChange={onDiscussChange}
+    />
+  );
+}
+
+function SearchableDiff({ diff, onDiscussChange }: {
+  diff: SourceControlDiff;
+  onDiscussChange?: (context: SourceControlReviewContext) => void;
+}) {
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [activeIndex, setActiveIndex] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const activeRef = useRef<HTMLElement>(null);
+  const findButtonRef = useRef<HTMLButtonElement>(null);
+  const lines = useMemo(() => parseReviewableDiffLines(diff.diff), [diff.diff]);
+  const { matches, limited } = useMemo(
+    () => findDiffMatches(lines.map(({ line }) => line), searchOpen ? query : ""),
+    [lines, query, searchOpen],
+  );
+  const matchesByLine = useMemo(() => {
+    const result = new Map<number, { start: number; end: number; index: number }[]>();
+    matches.forEach((match, index) => {
+      const entries = result.get(match.line) ?? [];
+      entries.push({ ...match, index });
+      result.set(match.line, entries);
+    });
+    return result;
+  }, [matches]);
+
+  useEffect(() => {
+    if (searchOpen) inputRef.current?.focus();
+  }, [searchOpen]);
+
+  useEffect(() => {
+    activeRef.current?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [matches, activeIndex]);
+
+  const moveMatch = (direction: 1 | -1) => {
+    if (matches.length) {
+      setActiveIndex((current) => (current + direction + matches.length) % matches.length);
+    }
+  };
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setQuery("");
+    setActiveIndex(0);
+    findButtonRef.current?.focus();
+  };
+  const highlight = (line: string, lineIndex: number) => {
+    const segments = [];
+    let cursor = 0;
+    for (const match of matchesByLine.get(lineIndex) ?? []) {
+      segments.push(line.slice(cursor, match.start));
+      segments.push(
+        <mark
+          key={match.start}
+          ref={match.index === activeIndex ? activeRef : undefined}
+          className={match.index === activeIndex ? styles.activeMatch : styles.searchMatch}
+          aria-current={match.index === activeIndex ? "true" : undefined}
+        >
+          {line.slice(match.start, match.end)}
+        </mark>,
+      );
+      cursor = match.end;
+    }
+    segments.push(line.slice(cursor));
+    return segments;
+  };
+
+  return (
+    <div className={styles.searchableDiff} onKeyDown={(event) => {
+      if ((event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        event.stopPropagation();
+        setSearchOpen(true);
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      } else if (searchOpen && event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        closeSearch();
+      }
+    }}>
+      <div className={styles.diffSearch}>
+        {searchOpen ? <>
+          <input
+            ref={inputRef}
+            className={styles.searchInput}
+            aria-label="Find in diff"
+            placeholder="Find in loaded diff…"
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setActiveIndex(0);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                event.stopPropagation();
+                moveMatch(event.shiftKey ? -1 : 1);
+              }
+            }}
+          />
+          <span className={styles.matchCount} role="status">
+            {query ? matches.length ? `${activeIndex + 1} of ${matches.length}${limited ? "+" : ""}` : "No matches" : "Type to search"}
+          </span>
+          <button type="button" className={styles.iconButton} disabled={!matches.length}
+            aria-label="Previous diff match" onClick={() => moveMatch(-1)}>
+            <ChevronUp size={14} />
+          </button>
+          <button type="button" className={styles.iconButton} disabled={!matches.length}
+            aria-label="Next diff match" onClick={() => moveMatch(1)}>
+            <ChevronDown size={14} />
+          </button>
+          <button type="button" className={styles.iconButton}
+            aria-label="Close diff search" onClick={closeSearch}>
+            <X size={14} />
+          </button>
+        </> : null}
+        <button ref={findButtonRef} type="button" className={styles.iconButton}
+          aria-label="Find in diff" aria-keyshortcuts="Control+f Meta+f"
+          title="Find in diff (Ctrl/Cmd+F)"
+          onClick={() => { setSearchOpen(true); inputRef.current?.focus(); }}>
+          <Search size={14} />
+        </button>
+      </div>
+      {diff.truncated ? <div className={styles.searchScope}>Diff truncated. Only the loaded portion is shown and searched.</div> : null}
+      {limited ? <div className={styles.searchScope}>Showing the first 1,000 matches. Refine your search to see others.</div> : null}
     <pre className={styles.diff} tabIndex={0}>
       <code>
         {lines.map(({ line, oldLine, newLine }, index) => {
@@ -617,19 +753,20 @@ function DiffView({
                 aria-label={`Ask agent about ${diff.path} ${lineLabel}`}
                 title={`Ask agent about ${lineLabel}`}
               >
-                {line || " "}
+                {line ? highlight(line, index) : " "}
               </button>
             );
           }
           return (
             <span className={`${styles.diffLine}${kind ? ` ${kind}` : ""}`} key={`${index}:${line}`}>
-              {line || " "}
+              {line ? highlight(line, index) : " "}
               {"\n"}
             </span>
           );
         })}
       </code>
     </pre>
+    </div>
   );
 }
 
