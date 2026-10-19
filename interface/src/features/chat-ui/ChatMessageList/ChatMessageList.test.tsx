@@ -2,6 +2,7 @@ import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ChatMessageList } from "./ChatMessageList";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";
+import { clearChatPositions, followChatPosition, readChatPosition, rememberChatPosition } from "../../../shared/lib/chat-reading-positions";
 
 function makeMessage(
   id: string,
@@ -104,6 +105,7 @@ function makeScrollRef(overrides: { scrollHeight?: number; scrollTop?: number } 
 
 describe("ChatMessageList", () => {
   beforeEach(() => {
+    clearChatPositions();
     mockMessageBubble.mockReset();
     outboxMocks.retryChatCommandNow.mockReset();
     outboxMocks.cancelChatCommandReplay.mockReset();
@@ -117,6 +119,70 @@ describe("ChatMessageList", () => {
       timeline: [],
       progressText: "",
     });
+  });
+
+  it("restores by stable message id after rows above it change height", async () => {
+    rememberChatPosition("chat-a", { rowId: "b", offsetWithinRow: 15, scrollOffset: 115, atEnd: false });
+    mockRowHeight = 200;
+    const scrollRef = makeScrollRef();
+    render(<ChatMessageList readingPositionKey="chat-a" messages={[makeMessage("a", "a"), makeMessage("b", "b")]}
+      streamKey="stream-1" scrollRef={scrollRef} isAutoFollowing={false} />);
+    expect(scrollRef.current.scrollTop).toBe(215);
+    await act(async () => { await new Promise((done) => setTimeout(done, 60)); });
+    scrollRef.current.scrollTop = 225;
+    act(() => scrollRef.current.dispatchEvent(new Event("scroll")));
+    expect(readChatPosition("chat-a")?.offsetWithinRow).toBe(25);
+  });
+
+  it("waits for history hydration and fetches a missing older anchor", () => {
+    rememberChatPosition("chat-a", { rowId: "old", offsetWithinRow: 7, scrollOffset: 200, atEnd: false });
+    const scrollRef = makeScrollRef();
+    const load = vi.fn();
+    const { rerender } = render(<ChatMessageList readingPositionKey="chat-a" messages={[]}
+      streamKey="stream-1" scrollRef={scrollRef} isAutoFollowing={false} hasOlderMessages onLoadOlder={load} />);
+    expect(load).not.toHaveBeenCalled();
+    rerender(<ChatMessageList readingPositionKey="chat-a" messages={[makeMessage("new", "new")]}
+      streamKey="stream-1" scrollRef={scrollRef} isAutoFollowing={false} hasOlderMessages onLoadOlder={load} />);
+    expect(load).toHaveBeenCalledTimes(1);
+    rerender(<ChatMessageList readingPositionKey="chat-a" messages={[makeMessage("old", "old"), makeMessage("new", "new")]}
+      streamKey="stream-1" scrollRef={scrollRef} isAutoFollowing={false} hasOlderMessages onLoadOlder={load} />);
+    expect(scrollRef.current.scrollTop).toBe(7);
+  });
+
+  it("lets an explicit jump cancel a restoration waiting on older history", () => {
+    rememberChatPosition("chat-a", { rowId: "old", offsetWithinRow: 7, scrollOffset: 200, atEnd: false });
+    const scrollRef = makeScrollRef();
+    const { rerender } = render(<ChatMessageList readingPositionKey="chat-a" messages={[makeMessage("new", "new")]}
+      streamKey="stream-1" scrollRef={scrollRef} isAutoFollowing={false} hasOlderMessages />);
+    followChatPosition("chat-a");
+    rerender(<ChatMessageList readingPositionKey="chat-a" messages={[makeMessage("old", "old"), makeMessage("new", "new")]}
+      streamKey="stream-1" scrollRef={scrollRef} isAutoFollowing hasOlderMessages />);
+    expect(scrollRef.current.scrollTop).toBe(800);
+  });
+
+  it("does not consume the saved anchor on a one-message preview bridge", () => {
+    rememberChatPosition("chat-a", { rowId: "old", offsetWithinRow: 7, scrollOffset: 200, atEnd: false });
+    const scrollRef = makeScrollRef();
+    const { rerender } = render(<ChatMessageList readingPositionKey="chat-a" readingPositionReady={false}
+      messages={[makeMessage("new", "preview")]} streamKey="stream-1" scrollRef={scrollRef} isAutoFollowing={false} />);
+    expect(scrollRef.current.scrollTop).toBe(0);
+    rerender(<ChatMessageList readingPositionKey="chat-a" readingPositionReady
+      messages={[makeMessage("old", "old"), makeMessage("new", "new")]}
+      streamKey="stream-1" scrollRef={scrollRef} isAutoFollowing={false} />);
+    expect(scrollRef.current.scrollTop).toBe(7);
+  });
+
+  it("yields a pending restore to a user's scroll gesture", () => {
+    rememberChatPosition("chat-a", { rowId: "old", offsetWithinRow: 7, scrollOffset: 200, atEnd: false });
+    const scrollRef = makeScrollRef();
+    const { rerender } = render(<ChatMessageList readingPositionKey="chat-a" readingPositionReady={false}
+      messages={[makeMessage("new", "preview")]} streamKey="stream-1" scrollRef={scrollRef} isAutoFollowing={false} />);
+    act(() => scrollRef.current.dispatchEvent(new WheelEvent("wheel", { deltaY: 20 })));
+    scrollRef.current.scrollTop = 77;
+    rerender(<ChatMessageList readingPositionKey="chat-a" readingPositionReady
+      messages={[makeMessage("old", "old")]}
+      streamKey="stream-1" scrollRef={scrollRef} isAutoFollowing={false} />);
+    expect(scrollRef.current.scrollTop).toBe(77);
   });
 
   it("renders historical bubbles with default collapse state for activity rows", () => {
