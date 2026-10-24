@@ -416,6 +416,18 @@ img[data-aura-wordmark] {
   filter: invert(1);
 }
 
+/* Desktop titlebar wordmark tint (`AuraWordmark` / `.titleLogoDesktop`).
+   CSS-level default when the user hasn't picked a color in
+   Settings → Theme → Desktop → Aura logo: white on dark themes, black on
+   light, matching the plain PNG wordmark's legibility rules above. */
+:root {
+  --desktop-logo-color: white;
+}
+
+[data-theme='light'] {
+  --desktop-logo-color: black;
+}
+
 /*
  * Light-mode override for the Sage plan badge. Pro and Crusader inherit
  * theme-aware values automatically via `--color-success` /
