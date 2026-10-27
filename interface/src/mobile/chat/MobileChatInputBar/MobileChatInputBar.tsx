@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { ArrowUp, ChevronDown, Plus, X } from "lucide-react";
+import { ArrowUp, ChevronDown, Keyboard, Plus, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AgentEnvironment } from "../../../apps/agents/components/AgentEnvironment";
 import { CommandChips } from "../../../features/chat-ui/ChatInputBar/CommandChips";
@@ -1127,6 +1127,15 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
               ) : null}
             </span>
             <span className={styles.metaSpacer} />
+            {isTextInputFocused ? (
+              <button type="button" className={styles.dismissKeyboardButton}
+                aria-label="Hide keyboard" title="Hide keyboard"
+                onPointerDown={(event) => event.preventDefault()}
+                onClick={() => textareaRef.current?.blur()}>
+                <Keyboard size={16} aria-hidden="true" />
+                <ChevronDown size={12} aria-hidden="true" />
+              </button>
+            ) : null}
             {contextUsage != null && contextUsage.utilization > 0 ? (
               <ContextUsageIndicator
                 utilization={contextUsage.utilization}

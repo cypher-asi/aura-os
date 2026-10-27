@@ -263,6 +263,25 @@ describe("MobileChatInputBar", () => {
     },
   );
 
+  it("hides the keyboard without sending or changing the draft and can resume editing", async () => {
+    const user = userEvent.setup();
+    const onSend = vi.fn();
+    const onInputChange = vi.fn();
+    renderInputBar({ input: "Keep this draft", onSend, onInputChange });
+    expect(screen.queryByRole("button", { name: "Hide keyboard" })).not.toBeInTheDocument();
+    const textarea = screen.getByPlaceholderText("Message agent");
+    await user.click(textarea);
+    expect(textarea).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: "Hide keyboard" }));
+    expect(textarea).not.toHaveFocus();
+    expect(textarea).toHaveValue("Keep this draft");
+    expect(onSend).not.toHaveBeenCalled();
+    expect(onInputChange).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Hide keyboard" })).not.toBeInTheDocument();
+    await user.click(textarea);
+    expect(screen.getByRole("button", { name: "Hide keyboard" })).toBeInTheDocument();
+  });
+
   it("queues a follow-up by touch or Enter during an active chat turn", async () => {
     const user = userEvent.setup();
     const onSend = vi.fn();
