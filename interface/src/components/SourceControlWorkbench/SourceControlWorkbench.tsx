@@ -128,7 +128,8 @@ function WorkspaceSourceControl({
   const [selection, setSelection] = useState<Selection | null>(null);
   const [diff, setDiff] = useState<SourceControlDiff | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
-  const [diffFailed, setDiffFailed] = useState(false);
+  const [diffError, setDiffError] = useState<string | null>(null);
+  const [diffRequestKey, setDiffRequestKey] = useState(0);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [commitMessage, setCommitMessage] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
@@ -144,7 +145,7 @@ function WorkspaceSourceControl({
     status.branch, status.pull_request?.url,
   ]) : null;
   const viewed = useViewedFiles(reviewScope, status?.files ?? EMPTY_FILES,
-    !diffLoading && !diffFailed && !statusLoading && diff?.path === selection?.path && diff?.area === selection?.area ? diff : null,
+    !diffLoading && !diffError && !statusLoading && diff?.path === selection?.path && diff?.area === selection?.area ? diff : null,
     refreshKey, loadDiff);
 
   const refresh = useCallback(() => {
@@ -194,12 +195,14 @@ function WorkspaceSourceControl({
   useEffect(() => {
     if (!selection) {
       setDiff(null);
+      setDiffError(null);
+      setDiffLoading(false);
       return;
     }
     let cancelled = false;
     setDiff(null);
     setDiffLoading(true);
-    setDiffFailed(false);
+    setDiffError(null);
     const request = remoteAgentId && remoteWorkspacePath
       ? api.swarm.getRemoteGitDiff(remoteAgentId, remoteWorkspacePath, selection.path, selection.area)
       : api.sourceControl.getDiff(projectId, selection.path, selection.area, agentInstanceId);
@@ -209,14 +212,7 @@ function WorkspaceSourceControl({
       })
       .catch((error: unknown) => {
         if (cancelled) return;
-        setDiffFailed(true);
-        setDiff({
-          path: selection.path,
-          area: selection.area,
-          diff: errorMessage(error, Boolean(remoteAgentId)),
-          truncated: false,
-          binary: false,
-        });
+        setDiffError(errorMessage(error, Boolean(remoteAgentId)));
       })
       .finally(() => {
         if (!cancelled) setDiffLoading(false);
@@ -224,7 +220,7 @@ function WorkspaceSourceControl({
     return () => {
       cancelled = true;
     };
-  }, [agentInstanceId, projectId, refreshKey, remoteAgentId, remoteWorkspacePath, selection]);
+  }, [agentInstanceId, projectId, refreshKey, diffRequestKey, remoteAgentId, remoteWorkspacePath, selection]);
 
   const stagedFiles = useMemo(
     () => status?.files.filter((file) => file.staged_status) ?? [],
@@ -435,14 +431,21 @@ function WorkspaceSourceControl({
                 Viewed
               </label>
             </div>
-            {diff && !diffLoading && !diffFailed && (diff.truncated || diff.binary) ? (
+            {diff && !diffLoading && !diffError && (diff.truncated || diff.binary) ? (
               <div className={styles.diffMessage}>Viewed marks require a complete text diff. Binary and truncated diffs cannot be marked viewed.</div>
             ) : null}
-            <DiffView
+            {diffError ? <div className={styles.diffMessage} role="alert">
+              <p>Could not load this diff.</p>
+              <p>{diffError}</p>
+              <button type="button" className={styles.retryButton}
+                onClick={() => setDiffRequestKey((key) => key + 1)}>
+                Retry diff
+              </button>
+            </div> : <DiffView
               loading={diffLoading}
               diff={diff}
               onDiscussChange={onDiscussChange}
-            />
+            />}
           </>
         ) : (
           <div className={styles.cleanState}>
