@@ -1,5 +1,6 @@
-import { useId, useState, type ReactNode } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
 import { WrapText } from "lucide-react";
+import { CopyButton } from "../CopyButton";
 import styles from "./MarkdownCodeBlock.module.css";
 
 export function MarkdownCodeBlock({ children, className }: {
@@ -8,6 +9,7 @@ export function MarkdownCodeBlock({ children, className }: {
 }) {
   const [wrapped, setWrapped] = useState(false);
   const codeId = useId();
+  const codeRef = useRef<HTMLPreElement>(null);
   return (
     <div className={styles.codeBlock}>
       <div className={styles.toolbar} data-markdown-copy-ignore>
@@ -23,8 +25,10 @@ export function MarkdownCodeBlock({ children, className }: {
           <WrapText size={14} aria-hidden="true" />
           {wrapped ? "Unwrap" : "Wrap"}
         </button>
+        <CopyButton getText={() => codeRef.current?.textContent ?? ""}
+          ariaLabel="Copy code" className={styles.wrapButton} />
       </div>
-      <pre id={codeId} className={`${styles.pre}${className ? ` ${className}` : ""}`}
+      <pre ref={codeRef} id={codeId} className={`${styles.pre}${className ? ` ${className}` : ""}`}
         data-wrapped={wrapped} tabIndex={0} aria-label="Code block">
         {children}
       </pre>
