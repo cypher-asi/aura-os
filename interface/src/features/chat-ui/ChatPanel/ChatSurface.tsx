@@ -282,6 +282,7 @@ export function ChatSurface({
     handleSend,
     handleQueueEdit,
     handleQueueRemove,
+    handleQueueMove,
     handleQueueSendNow,
     handleQueueResume,
     queuePersistenceError,
@@ -995,6 +996,7 @@ export function ChatSurface({
               streamKey={streamKey}
               onEdit={handleQueueEdit}
               onRemove={handleQueueRemove}
+              onMove={handleQueueMove}
               onSendNow={handleQueueSendNow}
               onResume={handleQueueResume}
             />

@@ -9,6 +9,7 @@ import {
   prepareNextQueuedMessage,
   removeQueuedMessage,
   resumeQueuedMessages,
+  moveQueuedMessage,
   useMessageQueue,
 } from "../../../stores/message-queue-store";
 import type { QueuedMessage } from "../../../stores/message-queue-store";
@@ -570,6 +571,14 @@ export function useChatPanelState({
     [streamKey],
   );
 
+  const handleQueueMove = useCallback((id: string, direction: "up" | "down") => {
+    void moveQueuedMessage(streamKey, id, direction).then(() => {
+      setQueuePersistenceError(null);
+    }).catch(() => {
+      setQueuePersistenceError("Couldn't save the new queue order. The previous order was kept.");
+    });
+  }, [streamKey]);
+
   // Force-send a queued prompt past the current turn. The handler
   // (1) removes the item from the queue so the regular
   // dequeue-on-completion effect doesn't replay it from the head
@@ -666,6 +675,7 @@ export function useChatPanelState({
     handleSend,
     handleQueueEdit,
     handleQueueRemove,
+    handleQueueMove,
     handleQueueSendNow,
     handleQueueResume,
     queuePersistenceError,

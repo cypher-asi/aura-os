@@ -121,7 +121,8 @@
   transition: opacity 0.1s ease;
 }
 
-.queueItem:hover .queueActions {
+.queueItem:hover .queueActions,
+.queueItem:focus-within .queueActions {
   opacity: 1;
 }
 
@@ -165,6 +166,16 @@
 }
 
 @media (max-width: 767px) {
+  .queueItem {
+    flex-wrap: wrap;
+  }
+
+  .queueActions {
+    flex-basis: 100%;
+    justify-content: flex-end;
+    opacity: 1;
+  }
+
   .queueToggle,
   .resumeButton,
   .queueActionBtn {
