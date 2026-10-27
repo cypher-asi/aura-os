@@ -1,0 +1,92 @@
+.root {
+  flex-shrink: 0;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.controls {
+  display: flex;
+  gap: 6px;
+}
+
+.panel {
+  padding-bottom: 6px;
+}
+
+.controls input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.results {
+  max-height: min(220px, 30dvh);
+  overflow: auto;
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.result:hover,
+.action:hover {
+  background: var(--color-bg-hover);
+}
+
+.result mark {
+  background: color-mix(in srgb, var(--color-accent) 25%, transparent);
+  color: inherit;
+}
+
+.status {
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.result:focus-visible,
+.action:focus-visible {
+  outline: 1px solid var(--color-accent);
+  outline-offset: -1px;
+}
+
+@media (max-width: 767px) {
+  .action { min-width: 44px; min-height: 44px; }
+  .controls input { font-size: 16px; }
+}

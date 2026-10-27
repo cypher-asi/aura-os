@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from "react";
 import { useVirtualizer, type VirtualItem, type Virtualizer } from "@tanstack/react-virtual";
 import { useScrollMargin } from "../../../shared/hooks/use-scroll-margin";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";
@@ -41,6 +41,7 @@ interface UseVirtualChatListOptions {
 }
 
 interface UseVirtualChatListResult {
+  navigateToRow: (index: number) => void;
   virtualizer: Virtualizer<HTMLDivElement, Element>;
   virtualItems: VirtualItem[];
   totalSize: number;
@@ -249,5 +250,9 @@ export function useVirtualChatList({
     firstVisibleIndex,
   ]);
 
-  return { virtualizer, virtualItems, totalSize, scrollMargin };
+  const navigateToRow = useCallback((index: number) => {
+    pendingRestoreRef.current = false;
+    virtualizer.scrollToIndex(index, { align: "start" });
+  }, [virtualizer]);
+  return { virtualizer, virtualItems, totalSize, scrollMargin, navigateToRow };
 }

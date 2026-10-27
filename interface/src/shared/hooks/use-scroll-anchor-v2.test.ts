@@ -72,6 +72,23 @@ describe("useScrollAnchorV2", () => {
     expect(container.scrollTop).toBe(1000);
   });
 
+  it("pauses following for a search jump until the user explicitly returns to latest", () => {
+    const container = makeContainer();
+    const ref = { current: container };
+    const { result, rerender } = renderHook(() => useScrollAnchorV2(ref, { resetKey: "thread-1" }));
+    act(() => result.current.pauseAutoFollow());
+    expect(result.current.isAutoFollowing).toBe(false);
+    expect(result.current.getUserUnpinnedAt()).toBeGreaterThan(0);
+    container.scrollTop = 100;
+    container.scrollHeight = 2000;
+    rerender();
+    expect(container.scrollTop).toBe(100);
+    act(() => result.current.scrollToBottom());
+    expect(result.current.isAutoFollowing).toBe(true);
+    expect(result.current.getUserUnpinnedAt()).toBe(0);
+    expect(container.scrollTop).toBe(2000);
+  });
+
   it("can reset follow state without forcing a bottom scroll", () => {
     const container = makeContainer({ scrollTop: 100, scrollHeight: 1000, clientHeight: 400 });
     const ref = { current: container };

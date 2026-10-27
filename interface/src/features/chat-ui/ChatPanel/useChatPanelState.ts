@@ -180,7 +180,7 @@ export function useChatPanelState({
     attachmentsRef.current = attachments;
   }, [attachments]);
 
-  const { handleScroll, scrollToBottom, isAutoFollowing, getUserUnpinnedAt } =
+  const { handleScroll, scrollToBottom, pauseAutoFollow, isAutoFollowing, getUserUnpinnedAt } =
     useScrollAnchorV2(messageAreaRef, {
       resetKey: scrollResetKey,
       scrollToBottomOnReset,
@@ -655,6 +655,7 @@ export function useChatPanelState({
     inputBarRef,
     isMobileLayout,
     handleScroll,
+    pauseAutoFollow,
     isAutoFollowing,
     getUserUnpinnedAt,
     isStreaming,

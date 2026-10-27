@@ -21,6 +21,7 @@ const UPWARD_INTENT_EPSILON_PX = 2;
 export interface UseScrollAnchorV2Return {
   handleScroll: () => void;
   scrollToBottom: () => void;
+  pauseAutoFollow: () => void;
   isAutoFollowing: boolean;
   /**
    * Returns the `performance.now()` timestamp of the user's most recent
@@ -252,5 +253,5 @@ export function useScrollAnchorV2(
 
   const getUserUnpinnedAt = useCallback(() => userUnpinnedAtRef.current, []);
 
-  return { handleScroll, scrollToBottom, isAutoFollowing, getUserUnpinnedAt };
+  return { handleScroll, scrollToBottom, pauseAutoFollow: markUserUnpinned, isAutoFollowing, getUserUnpinnedAt };
 }
