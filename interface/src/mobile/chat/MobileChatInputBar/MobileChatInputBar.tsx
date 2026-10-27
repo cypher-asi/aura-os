@@ -597,6 +597,8 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
     }, [isStreaming, sendDisabled, stopVoiceDictation]);
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
+      if (event.key === "Enter" && event.repeat) return;
       if (
         (event.metaKey || event.ctrlKey) &&
         !event.altKey &&

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { MobileChatInputBar } from "./MobileChatInputBar";
@@ -251,6 +251,17 @@ describe("MobileChatInputBar", () => {
     expect(onSend).toHaveBeenCalledTimes(1);
     expect(onSend).toHaveBeenCalledWith("Keyboard send", undefined, undefined);
   });
+
+  it.each([{ isComposing: true }, { keyCode: 229 }, { repeat: true }])(
+    "keeps composition or repeated Enter in the editor for %j", (modifiers) => {
+      const onSend = vi.fn();
+      renderInputBar({ input: "日本語", onSend });
+      const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true, ...modifiers });
+      fireEvent(screen.getByPlaceholderText("Message agent"), event);
+      expect(onSend).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+    },
+  );
 
   it("queues a follow-up by touch or Enter during an active chat turn", async () => {
     const user = userEvent.setup();

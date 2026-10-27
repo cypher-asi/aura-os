@@ -39,6 +39,8 @@ export const SlashCommandMenu = memo(function SlashCommandMenu({
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
+      if (e.isComposing || e.keyCode === 229) return;
+      if (e.key === "Enter" && e.repeat) return;
       if (filtered.length === 0) return;
       switch (e.key) {
         case "ArrowDown":
