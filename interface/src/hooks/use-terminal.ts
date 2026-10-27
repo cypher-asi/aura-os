@@ -5,6 +5,7 @@ import {
   terminalWsUrl,
   remoteTerminalWsUrl,
 } from "../shared/api/terminal";
+import { encodeUtf8Base64 } from "../shared/api/workspace-files";
 
 export interface UseTerminalOptions {
   /** Fallback if `spawn()` is somehow never called by the consumer.
@@ -24,7 +25,8 @@ export interface UseTerminalOptions {
 
 /** PTY output chunk: local terminals deliver raw bytes (binary WS
  *  frames, handed to xterm.js as `Uint8Array` with zero decode work);
- *  remote terminals and synthesized error banners deliver strings. */
+ *  remote base64 frames are also forwarded as bytes so xterm can decode
+ *  UTF-8 across frame boundaries. Synthesized error banners use strings. */
 export type TerminalOutputChunk = string | Uint8Array;
 
 export interface UseTerminalReturn {
@@ -122,8 +124,8 @@ export function useTerminal(opts: UseTerminalOptions = {}): UseTerminalReturn {
       try {
         const msg = JSON.parse(event.data);
         if (msg.type === "output" && msg.data) {
-          const decoded = atob(msg.data);
-          outputListeners.current.forEach((cb) => cb(decoded));
+          const bytes = Uint8Array.from(atob(msg.data), (char) => char.charCodeAt(0));
+          outputListeners.current.forEach((cb) => cb(bytes));
         }
       } catch {
         // ignore parse errors
@@ -228,7 +230,7 @@ export function useTerminal(opts: UseTerminalOptions = {}): UseTerminalReturn {
   const write = useCallback((data: string) => {
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: "input", data: btoa(data) }));
+      ws.send(JSON.stringify({ type: "input", data: encodeUtf8Base64(data) }));
     }
   }, []);
 

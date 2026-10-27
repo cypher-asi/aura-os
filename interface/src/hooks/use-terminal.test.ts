@@ -185,7 +185,43 @@ describe("useTerminal", () => {
       }),
     );
 
-    expect(received).toEqual(["hello world"]);
+    expect(received).toHaveLength(1);
+    expect(received[0]).toBeInstanceOf(Uint8Array);
+    expect(new TextDecoder().decode(received[0] as Uint8Array)).toBe("hello world");
+  });
+
+  it.each([undefined, "agent-1"])("encodes Unicode input as UTF-8 for %s", async (remoteAgentId) => {
+    const { result } = renderHook(() => useTerminal({ remoteAgentId }));
+    act(() => result.current.spawn(80, 24));
+    await vi.waitFor(() => expect(result.current.connected).toBe(true));
+
+    const input = "echo 'café 日本語 🦋'\r";
+    act(() => result.current.write(input));
+
+    const message = JSON.parse(lastWS!.sent.at(-1)!);
+    const bytes = Uint8Array.from(atob(message.data), (char) => char.charCodeAt(0));
+    expect(new TextDecoder().decode(bytes)).toBe(input);
+  });
+
+  it("preserves remote UTF-8 characters split across output frames", async () => {
+    const { result } = renderHook(() => useTerminal({ remoteAgentId: "agent-1" }));
+    act(() => result.current.spawn(80, 24));
+    await vi.waitFor(() => expect(result.current.connected).toBe(true));
+
+    const decoder = new TextDecoder();
+    let output = "";
+    result.current.onOutput((data) => {
+      expect(data).toBeInstanceOf(Uint8Array);
+      output += decoder.decode(data as Uint8Array, { stream: true });
+    });
+    const bytes = new TextEncoder().encode("日本語 🦋");
+    for (const byte of bytes) {
+      lastWS!.onmessage?.call(lastWS as unknown as WebSocket, new MessageEvent("message", {
+        data: JSON.stringify({ type: "output", data: btoa(String.fromCharCode(byte)) }),
+      }));
+    }
+    output += decoder.decode();
+    expect(output).toBe("日本語 🦋");
   });
 
   it("forwards binary frames as raw bytes without JSON/base64 decoding", async () => {
