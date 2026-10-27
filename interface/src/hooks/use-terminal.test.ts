@@ -45,7 +45,14 @@ vi.mock("../shared/api/terminal", () => ({
   remoteTerminalWsUrl: vi.fn((id: string) => `ws://test/ws/agents/${id}/terminal`),
 }));
 
-import { spawnTerminal, killTerminal } from "../shared/api/terminal";
+import { spawnTerminal, killTerminal, terminalWsUrl, remoteTerminalWsUrl } from "../shared/api/terminal";
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (error: Error) => void;
+  const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
+  return { promise, resolve, reject };
+}
 
 describe("useTerminal", () => {
   let origWS: typeof WebSocket;
@@ -60,6 +67,8 @@ describe("useTerminal", () => {
     vi.mocked(killTerminal).mockClear();
     vi.mocked(spawnTerminal).mockResolvedValue({ id: "term-1", shell: "bash" });
     vi.mocked(killTerminal).mockResolvedValue(undefined);
+    vi.mocked(terminalWsUrl).mockReset().mockImplementation(async (id) => `ws://test/ws/terminal/${id}`);
+    vi.mocked(remoteTerminalWsUrl).mockReset().mockImplementation(async (id) => `ws://test/ws/agents/${id}/terminal`);
   });
 
   afterEach(() => {
@@ -301,5 +310,88 @@ describe("useTerminal", () => {
     unmount();
 
     expect(killTerminal).toHaveBeenCalledWith("term-1");
+  });
+
+  it("kills a PTY that finishes spawning after kill()", async () => {
+    const pending = deferred<{ id: string; shell: string }>();
+    vi.mocked(spawnTerminal).mockReturnValueOnce(pending.promise);
+    const { result } = renderHook(() => useTerminal());
+    act(() => result.current.spawn(80, 24));
+    act(() => result.current.kill());
+    await act(async () => pending.resolve({ id: "late", shell: "bash" }));
+    expect(killTerminal).toHaveBeenCalledWith("late");
+    expect(lastWS).toBeNull();
+    expect(result.current.terminalId).toBeNull();
+    expect(result.current.connected).toBe(false);
+  });
+
+  it.each([undefined, "agent-1"])("does not connect after closing during URL resolution for %s", async (remoteAgentId) => {
+    const pending = deferred<string>();
+    const url = remoteAgentId ? remoteTerminalWsUrl : terminalWsUrl;
+    vi.mocked(url).mockReturnValueOnce(pending.promise);
+    const { result } = renderHook(() => useTerminal({ remoteAgentId }));
+    act(() => result.current.spawn(80, 24));
+    await vi.waitFor(() => expect(url).toHaveBeenCalled());
+    act(() => result.current.kill());
+    await act(async () => pending.resolve("ws://test/late"));
+    expect(lastWS).toBeNull();
+    expect(result.current.connected).toBe(false);
+    if (!remoteAgentId) expect(killTerminal).toHaveBeenCalledWith("term-1");
+  });
+
+  it("does not connect after unmounting during remote URL resolution", async () => {
+    const pending = deferred<string>();
+    vi.mocked(remoteTerminalWsUrl).mockReturnValueOnce(pending.promise);
+    const { result, unmount } = renderHook(() => useTerminal({ remoteAgentId: "agent-1" }));
+    act(() => result.current.spawn(80, 24));
+    unmount();
+    await act(async () => pending.resolve("ws://test/late"));
+    expect(lastWS).toBeNull();
+  });
+
+  it("ignores old socket events after a terminal is replaced", async () => {
+    const { result } = renderHook(() => useTerminal({ remoteAgentId: "agent-1" }));
+    act(() => result.current.spawn(80, 24));
+    await vi.waitFor(() => expect(result.current.connected).toBe(true));
+    const oldSocket = lastWS!;
+    const output = vi.fn();
+    result.current.onOutput(output);
+    act(() => { result.current.kill(); result.current.spawn(80, 24); });
+    await vi.waitFor(() => expect(result.current.connected).toBe(true));
+    expect(lastWS).not.toBe(oldSocket);
+    act(() => {
+      oldSocket.onmessage?.call(oldSocket as unknown as WebSocket, new MessageEvent("message", {
+        data: JSON.stringify({ type: "output", data: btoa("stale") }),
+      }));
+      oldSocket.onclose?.call(oldSocket as unknown as WebSocket, new Event("close"));
+    });
+    expect(result.current.connected).toBe(true);
+    expect(output).not.toHaveBeenCalled();
+  });
+
+  it("does not let an older rejected spawn reset a newer terminal", async () => {
+    const pending = deferred<{ id: string; shell: string }>();
+    vi.mocked(spawnTerminal).mockReturnValueOnce(pending.promise);
+    const { result } = renderHook(() => useTerminal());
+    act(() => result.current.spawn(80, 24));
+    act(() => { result.current.kill(); result.current.spawn(80, 24); });
+    await vi.waitFor(() => expect(result.current.connected).toBe(true));
+    await act(async () => pending.reject(new Error("old failure")));
+    expect(result.current.connected).toBe(true);
+    expect(result.current.terminalId).toBe("term-1");
+    act(() => result.current.spawn(80, 24));
+    expect(spawnTerminal).toHaveBeenCalledTimes(2);
+    expect(killTerminal).not.toHaveBeenCalled();
+  });
+
+  it("cleans up the PTY when connection setup fails and allows retry", async () => {
+    vi.mocked(terminalWsUrl).mockRejectedValueOnce(new Error("auth failed"));
+    const { result } = renderHook(() => useTerminal());
+    await act(async () => result.current.spawn(80, 24));
+    expect(killTerminal).toHaveBeenCalledWith("term-1");
+    expect(result.current.terminalId).toBeNull();
+    act(() => result.current.spawn(80, 24));
+    await vi.waitFor(() => expect(result.current.connected).toBe(true));
+    expect(spawnTerminal).toHaveBeenCalledTimes(2);
   });
 });

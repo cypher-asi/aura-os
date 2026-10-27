@@ -75,6 +75,7 @@ export function useTerminal(opts: UseTerminalOptions = {}): UseTerminalReturn {
   const idRef = useRef<string | null>(null);
   const cancelledRef = useRef(false);
   const spawnedRef = useRef(false);
+  const generationRef = useRef(0);
   // Latest opts captured in a ref so the deferred `spawn()` callback
   // doesn't close over a stale snapshot from the first render.
   // Updated in an effect rather than during render to satisfy the
@@ -91,8 +92,10 @@ export function useTerminal(opts: UseTerminalOptions = {}): UseTerminalReturn {
     cancelledRef.current = false;
     return () => {
       cancelledRef.current = true;
-      wsRef.current?.close();
+      generationRef.current += 1;
+      const socket = wsRef.current;
       wsRef.current = null;
+      socket?.close();
       if (idRef.current) {
         killTerminal(idRef.current).catch(() => {});
         idRef.current = null;
@@ -100,12 +103,15 @@ export function useTerminal(opts: UseTerminalOptions = {}): UseTerminalReturn {
     };
   }, []);
 
-  const wireWs = useCallback((socket: WebSocket, isRemote: boolean) => {
+  const wireWs = useCallback((socket: WebSocket, isRemote: boolean, generation: number) => {
     wsRef.current = socket;
     socket.binaryType = "arraybuffer";
     let receivedData = false;
+    const isCurrent = () => !cancelledRef.current
+      && generationRef.current === generation && wsRef.current === socket;
 
     socket.onmessage = (event) => {
+      if (!isCurrent()) return;
       receivedData = true;
       // Local PTY output arrives as raw binary frames — forward the
       // bytes untouched (xterm.js consumes Uint8Array natively). This
@@ -133,7 +139,9 @@ export function useTerminal(opts: UseTerminalOptions = {}): UseTerminalReturn {
     };
 
     socket.onclose = () => {
-      if (cancelledRef.current) return;
+      if (!isCurrent()) return;
+      wsRef.current = null;
+      spawnedRef.current = false;
       setConnected(false);
       if (!receivedData && isRemote) {
         emitRemoteConnectionError(outputListeners.current);
@@ -149,6 +157,8 @@ export function useTerminal(opts: UseTerminalOptions = {}): UseTerminalReturn {
     (cols: number, rows: number) => {
       if (spawnedRef.current || cancelledRef.current) return;
       spawnedRef.current = true;
+      const generation = ++generationRef.current;
+      const isCurrent = () => !cancelledRef.current && generationRef.current === generation;
 
       const currentOpts = optsRef.current;
       const remote = currentOpts.remoteAgentId;
@@ -161,7 +171,7 @@ export function useTerminal(opts: UseTerminalOptions = {}): UseTerminalReturn {
           projectId: currentOpts.projectId,
         });
 
-        if (cancelledRef.current) {
+        if (!isCurrent()) {
           killTerminal(resp.id).catch(() => {});
           return;
         }
@@ -169,20 +179,24 @@ export function useTerminal(opts: UseTerminalOptions = {}): UseTerminalReturn {
         idRef.current = resp.id;
         setTerminalId(resp.id);
 
-        const socket = new WebSocket(await terminalWsUrl(resp.id));
-        wireWs(socket, false);
+        const url = await terminalWsUrl(resp.id);
+        if (!isCurrent()) return;
+        const socket = new WebSocket(url);
+        wireWs(socket, false, generation);
 
         socket.onopen = () => {
-          if (!cancelledRef.current) setConnected(true);
+          if (isCurrent() && wsRef.current === socket) setConnected(true);
         };
       };
 
       const initRemote = async (agentId: string) => {
-        const socket = new WebSocket(await remoteTerminalWsUrl(agentId));
-        wireWs(socket, true);
+        const url = await remoteTerminalWsUrl(agentId);
+        if (!isCurrent()) return;
+        const socket = new WebSocket(url);
+        wireWs(socket, true, generation);
 
         socket.onopen = () => {
-          if (cancelledRef.current) {
+          if (!isCurrent() || wsRef.current !== socket) {
             socket.close();
             return;
           }
@@ -207,7 +221,12 @@ export function useTerminal(opts: UseTerminalOptions = {}): UseTerminalReturn {
             await initLocal();
           }
         } catch (err) {
-          if (cancelledRef.current) return;
+          if (!isCurrent()) return;
+          if (idRef.current) {
+            killTerminal(idRef.current).catch(() => {});
+            idRef.current = null;
+          }
+          setTerminalId(null);
           // Allow a retry from the consumer if the failure was transient.
           spawnedRef.current = false;
           if (remote) {
@@ -249,8 +268,10 @@ export function useTerminal(opts: UseTerminalOptions = {}): UseTerminalReturn {
   }, []);
 
   const kill = useCallback(() => {
-    wsRef.current?.close();
+    generationRef.current += 1;
+    const socket = wsRef.current;
     wsRef.current = null;
+    socket?.close();
     if (idRef.current) {
       killTerminal(idRef.current).catch(() => {});
       idRef.current = null;
