@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, Spinner, Text } from "@cypher-asi/zui";
-import { ArrowLeft, MessageSquare, RefreshCw } from "lucide-react";
+import { ArrowLeft, MessageSquare, RefreshCw, WrapText } from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../../../api/client";
 import { FileExplorer } from "../../../components/FileExplorer";
+import { CopyButton } from "../../../components/CopyButton";
 import { PanelSearch } from "../../../components/PanelSearch";
 import {
   SourceControlWorkbench,
@@ -462,6 +463,7 @@ function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, hostedWorkspa
   askAgentDisabled: boolean;
 }) {
   const hostedProjectId = hostedWorkspace?.projectId;
+  const [wrapped, setWrapped] = useState(true);
   const hostedAgentInstanceId = hostedWorkspace?.agentInstanceId;
   const [state, setState] = useState<{
     loading: boolean;
@@ -534,6 +536,16 @@ function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, hostedWorkspa
               Refresh
             </Button>
           ) : null}
+          <CopyButton getText={() => filePath} ariaLabel="Copy file path" label="Copy path" className={styles.previewToolAction} />
+          {state.content !== null && !state.loading && !state.error ? <>
+            <CopyButton getText={() => state.content ?? ""} ariaLabel="Copy file contents" label="Copy contents" className={styles.previewToolAction} />
+            <button type="button" className={styles.inlineBackButton}
+              aria-label="Wrap file lines" aria-pressed={wrapped}
+              onClick={() => setWrapped((value) => !value)}>
+              <WrapText size={14} aria-hidden="true" />
+              {wrapped ? "Unwrap" : "Wrap"}
+            </button>
+          </> : null}
         </div>
         <div className={styles.previewHeaderText}>
           <Text size="sm" weight="medium">{fileName}</Text>
@@ -573,7 +585,7 @@ function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, hostedWorkspa
             <Text size="sm" variant="muted">{state.error}</Text>
           </div>
         ) : actionablePreviewLines ? (
-          <pre className={styles.previewContent}>
+          <pre className={styles.previewContent} data-wrapped={wrapped}>
             <code>
               {actionablePreviewLines.map((line, index) => (
                 <button
@@ -593,7 +605,7 @@ function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, hostedWorkspa
             </code>
           </pre>
         ) : (
-          <pre className={`${styles.previewContent} ${styles.previewContentPlain}`}>
+          <pre className={`${styles.previewContent} ${styles.previewContentPlain}`} data-wrapped={wrapped}>
             {state.content ?? ""}
           </pre>
         )}

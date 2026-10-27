@@ -214,9 +214,14 @@
 
 .previewHeaderActions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 12px;
+}
+
+.previewToolAction {
+  min-height: 44px;
 }
 
 .previewHeaderText {
@@ -310,4 +315,23 @@
   min-width: 0;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.previewContent[data-wrapped="true"],
+.previewContent[data-wrapped="true"] code,
+.previewContent[data-wrapped="true"] .previewLineCode {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.previewContent[data-wrapped="false"],
+.previewContent[data-wrapped="false"] .previewLineCode {
+  white-space: pre;
+  word-break: normal;
+}
+
+.previewContent[data-wrapped="true"] .previewLine {
+  width: 100%;
+  min-width: 0;
 }
