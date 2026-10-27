@@ -166,6 +166,12 @@
 }
 
 @media (max-width: 767px) {
+  .queueList {
+    max-height: min(240px, 30dvh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
   .queueItem {
     flex-wrap: wrap;
   }
