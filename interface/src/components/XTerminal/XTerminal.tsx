@@ -202,15 +202,16 @@ export function XTerminal({ terminal: hook, visible, focused, historyKey }: XTer
         && !event.altKey
         && !event.metaKey
         && (event.key === "ArrowUp" || event.key === "ArrowDown")
+        && xterm.buffer.active.type !== "alternate"
       ) {
-        lineHistoryRef.current?.handleArrow(event.key === "ArrowUp" ? "up" : "down");
-        return false;
+        const handled = lineHistoryRef.current?.handleArrow(event.key === "ArrowUp" ? "up" : "down");
+        return !handled;
       }
       return true;
     });
 
     const dataDisposable = xterm.onData((data) => {
-      lineHistoryRef.current?.onData(data);
+      if (xterm.buffer.active.type !== "alternate") lineHistoryRef.current?.onData(data);
       hook.write(data);
     });
 

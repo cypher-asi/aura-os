@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render } from "@testing-library/react";
+import { useTerminalHistoryStore } from "../../stores/terminal-history-store";
 
 // xterm.js renders to a real canvas/webgl context that JSDOM doesn't
 // implement. Replace it (and its addons) with inert stubs so we can mount
@@ -12,8 +13,10 @@ const testState = vi.hoisted(() => ({
     options: { theme: unknown };
     cols: number;
     rows: number;
+    buffer: { active: { type: string } };
     clear: ReturnType<typeof vi.fn>;
     customKeyHandler: ((event: KeyboardEvent) => boolean) | null;
+    dataHandler: ((data: string) => void) | null;
   }>,
   capturedFitAddons: [] as Array<{
     fit: ReturnType<typeof vi.fn>;
@@ -30,8 +33,10 @@ vi.mock("@xterm/xterm", () => {
     options: { theme: unknown };
     cols = 80;
     rows = 24;
+    buffer = { active: { type: "normal" } };
     clear = vi.fn();
     customKeyHandler: CustomKeyHandler | null = null;
+    dataHandler: ((data: string) => void) | null = null;
     constructor(opts: { theme: unknown }) {
       this.options = { theme: opts.theme };
       testState.capturedTerminals.push(this);
@@ -44,7 +49,8 @@ vi.mock("@xterm/xterm", () => {
       viewport.className = "xterm-viewport";
       container?.appendChild(viewport);
     }
-    onData(): { dispose: () => void } {
+    onData(handler: (data: string) => void): { dispose: () => void } {
+      this.dataHandler = handler;
       return { dispose: () => {} };
     }
     attachCustomKeyEventHandler(handler: CustomKeyHandler): void {
@@ -133,6 +139,7 @@ async function flushAnimationFrames() {
 }
 
 beforeEach(() => {
+  useTerminalHistoryStore.setState({ historyByKey: {} });
   testState.capturedTerminals.length = 0;
   testState.capturedFitAddons.length = 0;
   testState.proposedDimensions = { cols: 80, rows: 24 };
@@ -265,6 +272,42 @@ describe("XTerminal Ctrl+L handling", () => {
     term!.customKeyHandler!(new KeyboardEvent("keyup", { key: "l", ctrlKey: true }));
 
     expect(term!.clear).not.toHaveBeenCalled();
+  });
+});
+
+describe("XTerminal shell history routing", () => {
+  it("passes arrows through when shared history cannot handle them", async () => {
+    const { XTerminal } = await import("./XTerminal");
+    const hook = makeHook();
+    render(<XTerminal terminal={hook} visible focused historyKey="test" />);
+    const term = testState.capturedTerminals.at(-1)!;
+    for (const key of ["ArrowUp", "ArrowDown"]) {
+      expect(term.customKeyHandler!(new KeyboardEvent("keydown", { key }))).toBe(true);
+    }
+    expect(hook.write).not.toHaveBeenCalled();
+  });
+
+  it("leaves alternate-screen arrows and input to terminal applications", async () => {
+    const { XTerminal } = await import("./XTerminal");
+    useTerminalHistoryStore.getState().pushCommand("test", "echo prior");
+    const hook = makeHook();
+    render(<XTerminal terminal={hook} visible focused historyKey="test" />);
+    const term = testState.capturedTerminals.at(-1)!;
+    term.buffer.active.type = "alternate";
+    for (const key of ["ArrowUp", "ArrowDown"]) {
+      expect(term.customKeyHandler!(new KeyboardEvent("keydown", { key }))).toBe(true);
+    }
+    expect(hook.write).not.toHaveBeenCalled();
+    term.dataHandler!("editor input\r");
+    expect(hook.write).toHaveBeenCalledWith("editor input\r");
+    expect(useTerminalHistoryStore.getState().getHistory("test")).toEqual(["echo prior"]);
+
+    term.buffer.active.type = "normal";
+    expect(term.customKeyHandler!(new KeyboardEvent("keydown", { key: "ArrowUp" }))).toBe(false);
+    expect(hook.write).toHaveBeenLastCalledWith("echo prior");
+    expect(term.customKeyHandler!(new KeyboardEvent("keydown", { key: "ArrowDown" }))).toBe(false);
+    expect(hook.write).toHaveBeenLastCalledWith("\x7f".repeat(10));
+    expect(term.customKeyHandler!(new KeyboardEvent("keydown", { key: "ArrowDown" }))).toBe(true);
   });
 });
 
