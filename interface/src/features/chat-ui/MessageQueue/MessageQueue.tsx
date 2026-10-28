@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from "react";
-import { ChevronDown, Pencil, ArrowUp, Play, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Pencil, ArrowUp, Play, Trash2 } from "lucide-react";
 import { useIsStreaming } from "../../../hooks/stream/hooks";
 import { useMessageQueue } from "../../../stores/message-queue-store";
 import type { QueuedMessage } from "../../../stores/message-queue-store";
@@ -9,6 +9,7 @@ interface Props {
   streamKey: string;
   onEdit: (item: QueuedMessage) => void;
   onRemove: (id: string) => void;
+  onMove?: (id: string, direction: "up" | "down") => void;
   /**
    * Cancel the in-flight turn and immediately send this queued
    * prompt. The button is only rendered when a stream is currently
@@ -24,6 +25,7 @@ export const MessageQueue = memo(function MessageQueue({
   streamKey,
   onEdit,
   onRemove,
+  onMove,
   onSendNow,
   onResume,
 }: Props) {
@@ -74,11 +76,23 @@ export const MessageQueue = memo(function MessageQueue({
 
       {!collapsed && (
         <div className={styles.queueList}>
-          {queue.map((item) => (
+          {queue.map((item, index) => (
             <div key={item.id} className={styles.queueItem}>
               <span className={`${styles.queueIndicator} ${item.heldAfterRestart ? styles.queueIndicatorHeld : ""}`} />
               <span className={styles.queueItemText}>{item.content}</span>
               <div className={styles.queueActions}>
+                {onMove ? <>
+                  <button type="button" className={styles.queueActionBtn}
+                    disabled={index === 0} onClick={() => onMove(item.id, "up")}
+                    aria-label={`Move queued message ${index + 1} up`}>
+                    <ChevronUp size={13} aria-hidden="true" />
+                  </button>
+                  <button type="button" className={styles.queueActionBtn}
+                    disabled={index === queue.length - 1} onClick={() => onMove(item.id, "down")}
+                    aria-label={`Move queued message ${index + 1} down`}>
+                    <ChevronDown size={13} aria-hidden="true" />
+                  </button>
+                </> : null}
                 <button
                   type="button"
                   className={styles.queueActionBtn}

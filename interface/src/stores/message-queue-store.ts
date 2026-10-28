@@ -284,6 +284,37 @@ export async function clearQueuedMessages(streamKey: string): Promise<void> {
 }
 
 /** Make restored work eligible again only after an explicit user action. */
+export async function moveQueuedMessage(
+  streamKey: string,
+  id: string,
+  direction: "up" | "down",
+): Promise<void> {
+  const offset = direction === "up" ? -1 : 1;
+  if (!currentScope()) {
+    useMessageQueueStore.setState((state) => {
+      const queue = state.queues[streamKey];
+      const index = queue?.findIndex((item) => item.id === id) ?? -1;
+      if (!queue || index < 0 || !queue[index + offset]) return state;
+      const next = [...queue];
+      [next[index], next[index + offset]] = [next[index + offset], next[index]];
+      return { queues: { ...state.queues, [streamKey]: next } };
+    });
+    return;
+  }
+  await mutatePersistedQueue((records, scope) => {
+    const indices = records.flatMap((record, index) =>
+      record.ownerId === scope.ownerId && record.hostOrigin === scope.hostOrigin
+        && record.streamKey === streamKey ? [index] : []);
+    const position = indices.findIndex((index) => records[index].id === id);
+    const target = indices[position + offset];
+    if (position < 0 || target === undefined) return { records, result: undefined };
+    const next = [...records];
+    const index = indices[position];
+    [next[index], next[target]] = [next[target], next[index]];
+    return { records: next, result: undefined };
+  });
+}
+
 export async function resumeQueuedMessages(streamKey: string): Promise<void> {
   const scope = currentScope();
   if (!scope) return;
