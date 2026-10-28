@@ -31,7 +31,8 @@ concurrency:
 jobs:
   build-android:
     if: github.event_name != 'workflow_dispatch' || inputs.platform == 'android' || inputs.platform == 'both'
-    runs-on: ubuntu-latest
+    # The pinned Ruby 4.0.2 toolchain has a prebuilt image for Ubuntu 24.04.
+    runs-on: ubuntu-24.04
     env:
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
