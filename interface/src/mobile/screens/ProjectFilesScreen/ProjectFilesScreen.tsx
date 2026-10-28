@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Button, Spinner, Text } from "@cypher-asi/zui";
 import { ArrowLeft, MessageSquare, RefreshCw, WrapText } from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -23,6 +23,7 @@ import {
   useSessionsListStore,
 } from "../../../stores/sessions-list-store";
 import { getRemoteFileErrorDescription } from "./remote-file-error";
+import { DelimitedFilePreview } from "./DelimitedFilePreview";
 import styles from "./ProjectFilesScreen.module.css";
 
 const MAX_ACTIONABLE_PREVIEW_LINES = 1_000;
@@ -482,6 +483,7 @@ function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, hostedWorkspa
     && previewLines.length <= MAX_ACTIONABLE_PREVIEW_LINES
     ? previewLines
     : null;
+  const delimiter = /\.csv$/i.test(filePath) ? "," : /\.tsv$/i.test(filePath) ? "\t" : null;
 
   useEffect(() => {
     if (!previewSupported) return;
@@ -564,7 +566,7 @@ function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, hostedWorkspa
       <div className={styles.previewBody}>
         <div className={styles.previewPath}>
           <Text size="xs" variant="muted">{filePath}</Text>
-          {!askAgentDisabled && actionablePreviewLines ? (
+          {!askAgentDisabled && actionablePreviewLines && !delimiter ? (
             <Text size="xs" variant="muted">Tap a source line to ask the agent about it.</Text>
           ) : null}
         </div>
@@ -584,30 +586,34 @@ function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, hostedWorkspa
             <Text size="sm" weight="medium">Could not load file</Text>
             <Text size="sm" variant="muted">{state.error}</Text>
           </div>
-        ) : actionablePreviewLines ? (
-          <pre className={styles.previewContent} data-wrapped={wrapped}>
-            <code>
-              {actionablePreviewLines.map((line, index) => (
-                <button
-                  type="button"
-                  className={styles.previewLine}
-                  key={index}
-                  disabled={askAgentDisabled}
-                  onClick={() => onAskAgentLine(filePath, index + 1, line)}
-                  aria-label={`Ask agent about ${filePath} line ${index + 1}`}
-                >
-                  <span className={styles.previewLineNumber} aria-hidden="true">
-                    {index + 1}
-                  </span>
-                  <span className={styles.previewLineCode}>{line || " "}</span>
-                </button>
-              ))}
-            </code>
-          </pre>
         ) : (
-          <pre className={`${styles.previewContent} ${styles.previewContentPlain}`} data-wrapped={wrapped}>
-            {state.content ?? ""}
-          </pre>
+          <DelimitedPreviewBoundary content={state.content ?? ""} delimiter={delimiter}>
+            {actionablePreviewLines ? (
+              <pre className={styles.previewContent} data-wrapped={wrapped}>
+                <code>
+                  {actionablePreviewLines.map((line, index) => (
+                    <button
+                      type="button"
+                      className={styles.previewLine}
+                      key={index}
+                      disabled={askAgentDisabled}
+                      onClick={() => onAskAgentLine(filePath, index + 1, line)}
+                      aria-label={`Ask agent about ${filePath} line ${index + 1}`}
+                    >
+                      <span className={styles.previewLineNumber} aria-hidden="true">
+                        {index + 1}
+                      </span>
+                      <span className={styles.previewLineCode}>{line || " "}</span>
+                    </button>
+                  ))}
+                </code>
+              </pre>
+            ) : (
+              <pre className={`${styles.previewContent} ${styles.previewContentPlain}`} data-wrapped={wrapped}>
+                {state.content ?? ""}
+              </pre>
+            )}
+          </DelimitedPreviewBoundary>
         )}
       </div>
     </div>
@@ -617,7 +623,15 @@ function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, hostedWorkspa
 function isMobilePreviewableTextFile(path: string): boolean {
   const lower = path.toLowerCase();
   return (
-    /\.(txt|md|markdown|json|yml|yaml|toml|ini|cfg|conf|env|log|csv|ts|tsx|js|jsx|mjs|cjs|css|scss|html|xml|sh|bash|zsh|py|go|rs|java|kt|swift|sql)$/.test(lower)
+    /\.(txt|md|markdown|json|yml|yaml|toml|ini|cfg|conf|env|log|csv|tsv|ts|tsx|js|jsx|mjs|cjs|css|scss|html|xml|sh|bash|zsh|py|go|rs|java|kt|swift|sql)$/.test(lower)
     || !lower.includes(".")
   );
+}
+
+function DelimitedPreviewBoundary({ content, delimiter, children }: {
+  content: string;
+  delimiter: "," | "\t" | null;
+  children: ReactNode;
+}) {
+  return delimiter ? <DelimitedFilePreview content={content} delimiter={delimiter}>{children}</DelimitedFilePreview> : children;
 }
