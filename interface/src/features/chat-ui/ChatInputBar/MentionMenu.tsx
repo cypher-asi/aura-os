@@ -93,6 +93,8 @@ export const MentionMenu = memo(function MentionMenu({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.isComposing || event.keyCode === 229) return;
+      if (event.key === "Enter" && event.repeat) return;
       if (items.length === 0) {
         if (event.key === "Escape") {
           event.preventDefault();

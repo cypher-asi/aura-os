@@ -213,6 +213,27 @@ describe("InputBarShell", () => {
     }
   });
 
+  it.each([{ isComposing: true }, { keyCode: 229 }, { repeat: true }])(
+    "does not submit or intercept editor keys for %j", (modifiers) => {
+      vi.useFakeTimers();
+      const onSubmit = vi.fn();
+      const onTextareaKeyDown = vi.fn();
+      try {
+        const { container } = render(
+          <InputBarShell {...makeProps({ value: "日本語", onSubmit, onTextareaKeyDown })} />,
+        );
+        const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true, ...modifiers });
+        fireEvent(container.querySelector("textarea")!, event);
+        act(() => vi.advanceTimersByTime(ENTER_SUBMIT_GRACE_MS));
+        expect(onSubmit).not.toHaveBeenCalled();
+        expect(onTextareaKeyDown).not.toHaveBeenCalled();
+        expect(event.defaultPrevented).toBe(false);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
   it("does not double-submit when Send is clicked during the Enter grace period", () => {
     vi.useFakeTimers();
     const onSubmit = vi.fn();
