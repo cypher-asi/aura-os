@@ -6,6 +6,7 @@ import { FadeInImage } from "../FadeInImage";
 import { useStreamSafeContent } from "../../hooks/use-stream-safe-content";
 import { splitMarkdownBlocks } from "./split-markdown-blocks";
 import { MarkdownCodeBlock } from "./MarkdownCodeBlock";
+import { MarkdownTable } from "./MarkdownTable";
 
 /**
  * Markdown renderer for a segment of LLM prose.
@@ -38,7 +39,12 @@ const MarkdownBlock = memo(function MarkdownBlock({ content }: { content: string
     <ReactMarkdown
       remarkPlugins={MD_PLUGINS_REMARK}
       rehypePlugins={MD_PLUGINS_REHYPE}
-      components={MD_COMPONENTS}
+      components={{ ...MD_COMPONENTS, table: ({ node, ...props }) => {
+        // Include the first line's quote/list prefix too: later lines already
+        // contain theirs, so slicing at the first pipe would break nested tables.
+        const start = content.slice(0, node?.position?.start.offset ?? 0).lastIndexOf("\n") + 1;
+        return <MarkdownTable {...props} markdown={content.slice(start, node?.position?.end.offset)} />;
+      } }}
     >
       {content}
     </ReactMarkdown>
