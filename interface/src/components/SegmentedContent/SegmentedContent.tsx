@@ -1,6 +1,7 @@
 import { memo, useMemo, type AnchorHTMLAttributes, type ImgHTMLAttributes } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { remarkWindowsPaths } from "../../shared/utils/remark-windows-paths";
 import rehypeHighlight from "rehype-highlight";
 import { FadeInImage } from "../FadeInImage";
 import { useStreamSafeContent } from "../../hooks/use-stream-safe-content";
@@ -21,7 +22,7 @@ import { MarkdownTable } from "./MarkdownTable";
  * surfaces instead of being silently re-styled as a stale pill.
  */
 
-const MD_PLUGINS_REMARK = [remarkGfm];
+const MD_PLUGINS_REMARK = [remarkGfm, remarkWindowsPaths];
 const MD_PLUGINS_REHYPE = [rehypeHighlight];
 
 function ExternalLink(props: AnchorHTMLAttributes<HTMLAnchorElement>) {
