@@ -17,6 +17,7 @@ interface CopyButtonProps {
   getMarkdown?: () => string;
   className?: string;
   ariaLabel?: string;
+  label?: string;
   /** Hide the text label and render icon only. */
   iconOnly?: boolean;
 }
@@ -38,6 +39,7 @@ export function CopyButton({
   getMarkdown,
   className,
   ariaLabel = "Copy",
+  label = "Copy",
   iconOnly = false,
 }: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
@@ -79,7 +81,7 @@ export function CopyButton({
     [getMarkdown, getText],
   );
 
-  const label = copied ? "Copied" : "Copy";
+  const displayLabel = copied ? "Copied" : label;
   const Icon = copied ? Check : Copy;
 
   return (
@@ -92,7 +94,7 @@ export function CopyButton({
       data-testid="copy-button"
     >
       <Icon size={12} aria-hidden="true" />
-      {iconOnly ? null : <span className={styles.label}>{label}</span>}
+      {iconOnly ? null : <span className={styles.label}>{displayLabel}</span>}
     </button>
   );
 }
