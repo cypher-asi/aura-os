@@ -12,6 +12,7 @@ import {
 import { MessageSquare, AlertCircle } from "lucide-react";
 import { Text } from "@cypher-asi/zui";
 import { ChatMessageList } from "../ChatMessageList";
+import { ConversationSearch } from "../ChatMessageList/ConversationSearch";
 import {
   DesktopChatInputBar,
   type ChatInputBarHandle,
@@ -270,6 +271,7 @@ export function ChatSurface({
     inputBarRef,
     isMobileLayout,
     handleScroll,
+    pauseAutoFollow,
     isAutoFollowing,
     getUserUnpinnedAt,
     readingPositionKey,
@@ -282,6 +284,7 @@ export function ChatSurface({
     handleSend,
     handleQueueEdit,
     handleQueueRemove,
+    handleQueueMove,
     handleQueueSendNow,
     handleQueueResume,
     queuePersistenceError,
@@ -860,6 +863,12 @@ export function ChatSurface({
     queue.length === 0 &&
     !shouldHideThreadForInitialReveal;
 
+  const [searchTarget, setSearchTarget] = useState<{ scope: string; id: string; requestId: number } | null>(null);
+  const navigateSearchResult = (id: string) => {
+    pauseAutoFollow();
+    setSearchTarget((current) => ({ scope: readingPositionKey, id, requestId: (current?.requestId ?? 0) + 1 }));
+  };
+
   // Memoized so a stable reference is handed to the memoized
   // `ChatMessageList`; otherwise a fresh element each render (e.g. on
   // every draft keystroke) would defeat the list's `React.memo`.
@@ -889,6 +898,10 @@ export function ChatSurface({
       onAnimationEnd={onAnimationEnd}
     >
       {header}
+      <ConversationSearch key={readingPositionKey} messages={transcriptMessages}
+        onSelect={navigateSearchResult} hasOlderMessages={hasOlderMessages} isLoadingOlder={isLoadingOlder}
+        onJumpToLatest={() => { setSearchTarget(null); scrollToBottom(); }}
+        onLoadOlder={() => { pauseAutoFollow(); loadOlder(); }} />
       <div className={styles.chatArea} ref={chatAreaRef}>
         {failedCommands.length > 0 && (
           <div className={styles.commandExecutionWarning} role="alert">
@@ -951,6 +964,7 @@ export function ChatSurface({
                 readingPositionKey={readingPositionKey}
                 readingPositionReady={historyResolved && !isLoading}
                 messages={transcriptMessages}
+                navigationTarget={searchTarget?.scope === readingPositionKey ? searchTarget : undefined}
                 streamKey={streamKey}
                 scrollRef={messageAreaRef}
                 emptyState={emptyState}
@@ -995,6 +1009,7 @@ export function ChatSurface({
               streamKey={streamKey}
               onEdit={handleQueueEdit}
               onRemove={handleQueueRemove}
+              onMove={handleQueueMove}
               onSendNow={handleQueueSendNow}
               onResume={handleQueueResume}
             />

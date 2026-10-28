@@ -1,6 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SegmentedContent } from "./SegmentedContent";
+import { copyToClipboard } from "../../shared/utils/clipboard";
+
+vi.mock("../../shared/utils/clipboard", () => ({ copyToClipboard: vi.fn().mockResolvedValue(undefined) }));
 
 it("wraps only code blocks and preserves the exact highlighted source text", async () => {
   const user = userEvent.setup();
@@ -37,6 +40,25 @@ it("does not add controls to prose or inline code", () => {
   render(<SegmentedContent content={"A paragraph with `inline code`."} />);
   expect(screen.queryByRole("button", { name: "Wrap code" })).not.toBeInTheDocument();
   expect(screen.getByText("inline code").tagName).toBe("CODE");
+});
+
+it("copies only the selected code block with indentation and Unicode intact", async () => {
+  const user = userEvent.setup();
+  const source = '\tconst name = "日本語 🦋";\n  return name;\n';
+  render(<SegmentedContent content={`Prose.\n\n\`\`\`ts\n${source}\`\`\`\n\n\`\`\`\nsecond\n\`\`\``} />);
+  await user.click(screen.getAllByRole("button", { name: "Wrap code" })[0]);
+  await user.click(screen.getAllByRole("button", { name: "Copy code" })[0]);
+  expect(copyToClipboard).toHaveBeenLastCalledWith(source);
+  await user.click(screen.getAllByRole("button", { name: "Copy code" })[1]);
+  expect(copyToClipboard).toHaveBeenLastCalledWith("second\n");
+});
+
+it("reads the current code when a streaming block grows", async () => {
+  const user = userEvent.setup();
+  const { rerender } = render(<SegmentedContent content={"```txt\nfirst"} isStreaming />);
+  rerender(<SegmentedContent content={"```txt\nfirst and second\n```"} isStreaming />);
+  await user.click(screen.getByRole("button", { name: "Copy code" }));
+  expect(copyToClipboard).toHaveBeenLastCalledWith("first and second\n");
 });
 
 it("retains the toggle when later streamed paragraphs arrive", async () => {

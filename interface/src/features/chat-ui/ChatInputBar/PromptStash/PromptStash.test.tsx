@@ -36,6 +36,22 @@ describe("PromptStash", () => {
     expect(onRestore).toHaveBeenCalledWith(expect.objectContaining({ id: "two" }));
   });
 
+  it.each([{ isComposing: true }, { keyCode: 229 }, { repeat: true }])(
+    "does not replace a composing draft or repeat a restore for %j", (modifiers) => {
+      const onRestore = vi.fn();
+      render(<PromptStashMenu entries={[entry("one", "First prompt")]}
+        onRestore={onRestore} onDelete={vi.fn()} onClose={vi.fn()} />);
+      const event = new KeyboardEvent("keydown", {
+        key: "Enter", bubbles: true, cancelable: true, ...modifiers,
+      });
+      fireEvent(window, event);
+      expect(event.defaultPrevented).toBe(false);
+      expect(onRestore).not.toHaveBeenCalled();
+      fireEvent.keyDown(window, { key: "Enter" });
+      expect(onRestore).toHaveBeenCalledTimes(1);
+    },
+  );
+
   it("deletes a saved prompt without restoring it", () => {
     const onDelete = vi.fn();
     render(

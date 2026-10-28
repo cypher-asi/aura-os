@@ -320,6 +320,10 @@ function InputBarShellInner(
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      // IME confirmation belongs to the editor, including Safari's final
+      // composition keydown, which can report only the legacy 229 key code.
+      if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
+      if (e.key === "Enter" && e.repeat) return;
       onTextareaKeyDown?.(e);
       if (e.defaultPrevented) return;
       if (e.key === "Enter" && !e.shiftKey) {

@@ -62,6 +62,17 @@ describe("terminalLineHistory capture", () => {
 });
 
 describe("terminalLineHistory navigation", () => {
+  it("claims only arrows that shared history can handle", () => {
+    const { ctrl } = setup();
+    expect(ctrl.handleArrow("up")).toBe(false);
+    expect(ctrl.handleArrow("down")).toBe(false);
+    type(ctrl, "echo prior\r");
+    expect(ctrl.handleArrow("down")).toBe(false);
+    expect(ctrl.handleArrow("up")).toBe(true);
+    expect(ctrl.handleArrow("up")).toBe(true);
+    expect(ctrl.handleArrow("down")).toBe(true);
+    expect(ctrl.handleArrow("down")).toBe(false);
+  });
   it("does nothing on Arrow Up when history is empty", () => {
     const { ctrl, write } = setup();
     ctrl.handleArrow("up");

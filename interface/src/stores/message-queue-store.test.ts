@@ -5,9 +5,10 @@ const persistence = vi.hoisted(() => ({
   outbox: [] as unknown[],
   durableError: null as Error | null,
 }));
+const auth = vi.hoisted(() => ({ ownerId: "user-1" as string | null }));
 
 vi.mock("../shared/lib/auth-token", () => ({
-  getStoredSession: () => ({ user_id: "user-1" }),
+  getStoredSession: () => auth.ownerId ? { user_id: auth.ownerId } : null,
 }));
 
 vi.mock("../shared/lib/host-config", () => ({
@@ -33,6 +34,7 @@ import {
   _resetMessageQueuePersistenceForTests,
   enqueueQueuedMessage,
   hydrateMessageQueues,
+  moveQueuedMessage,
   MessageQueueUnavailableError,
   resumeQueuedMessages,
   takeNextQueuedMessage,
@@ -40,6 +42,7 @@ import {
 } from "./message-queue-store";
 
 beforeEach(() => {
+  auth.ownerId = "user-1";
   persistence.stored = [];
   persistence.outbox = [];
   persistence.durableError = null;
@@ -48,6 +51,75 @@ beforeEach(() => {
 });
 
 describe("message-queue-store", () => {
+  describe("durable reordering", () => {
+    it("restores ordering and preserves attachment and execution context", async () => {
+      const first = await enqueueQueuedMessage("s", { content: "first", action: null });
+      const second = await enqueueQueuedMessage("s", {
+        content: "second", action: "run", model: "selected-model", commands: ["test"],
+        attachments: [{ type: "text", media_type: "text/plain", data: "日本語" }],
+        sourceImageUrl: "https://example.test/source.png",
+      });
+      await moveQueuedMessage("s", second.id, "up");
+      expect(useMessageQueueStore.getState().queues.s).toEqual([second, first]);
+      _resetMessageQueuePersistenceForTests();
+      await hydrateMessageQueues();
+      expect(useMessageQueueStore.getState().queues.s).toEqual([
+        { ...second, heldAfterRestart: true }, { ...first, heldAfterRestart: true },
+      ]);
+      expect(await takeNextQueuedMessage("s")).toBeUndefined();
+      await resumeQueuedMessages("s");
+      expect((await takeNextQueuedMessage("s"))?.id).toBe(second.id);
+    });
+
+    it("never swaps a neighboring record belonging to another queue, owner, or host", async () => {
+      const first = await enqueueQueuedMessage("s", { content: "first", action: null });
+      const second = await enqueueQueuedMessage("s", { content: "second", action: null });
+      const template = persistence.stored[0] as Record<string, unknown>;
+      const other = [
+        { ...template, id: "other-stream", streamKey: "other" },
+        { ...template, id: "other-owner", ownerId: "user-2" },
+        { ...template, id: "other-host", hostOrigin: "https://other.example" },
+      ];
+      persistence.stored.splice(1, 0, ...other);
+      await moveQueuedMessage("s", first.id, "down");
+      expect(persistence.stored.slice(1, 4)).toEqual(other);
+      expect(useMessageQueueStore.getState().queues.s.map((item) => item.id)).toEqual([second.id, first.id]);
+    });
+
+    it("keeps the previous order when durable storage fails", async () => {
+      await enqueueQueuedMessage("s", { content: "first", action: null });
+      const second = await enqueueQueuedMessage("s", { content: "second", action: null });
+      const before = useMessageQueueStore.getState().queues.s;
+      const stored = structuredClone(persistence.stored);
+      persistence.durableError = new Error("quota");
+      await expect(moveQueuedMessage("s", second.id, "up")).rejects.toThrow("quota");
+      expect(useMessageQueueStore.getState().queues.s).toBe(before);
+      expect(persistence.stored).toEqual(stored);
+    });
+
+    it("serializes reorder with dispatch and ignores missing or boundary rows", async () => {
+      const first = await enqueueQueuedMessage("s", { content: "first", action: null });
+      const second = await enqueueQueuedMessage("s", { content: "second", action: null });
+      await moveQueuedMessage("s", first.id, "up");
+      await moveQueuedMessage("s", second.id, "down");
+      await moveQueuedMessage("s", "missing", "up");
+      expect(useMessageQueueStore.getState().queues.s.map((item) => item.id)).toEqual([first.id, second.id]);
+      const [, sent] = await Promise.all([moveQueuedMessage("s", second.id, "up"), takeNextQueuedMessage("s")]);
+      expect(sent?.id).toBe(second.id);
+      expect(useMessageQueueStore.getState().queues.s.map((item) => item.id)).toEqual([first.id]);
+    });
+
+    it("supports public in-memory queues without writing authenticated storage", async () => {
+      auth.ownerId = null;
+      const store = useMessageQueueStore.getState();
+      store.enqueue("public", { content: "first", action: null });
+      store.enqueue("public", { content: "second", action: null });
+      const second = useMessageQueueStore.getState().queues.public[1];
+      await moveQueuedMessage("public", second.id, "up");
+      expect(useMessageQueueStore.getState().queues.public.map((item) => item.content)).toEqual(["second", "first"]);
+      expect(persistence.stored).toEqual([]);
+    });
+  });
   describe("initial state", () => {
     it("starts with empty queues", () => {
       expect(useMessageQueueStore.getState().queues).toEqual({});

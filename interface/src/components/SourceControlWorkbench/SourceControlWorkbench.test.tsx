@@ -22,6 +22,7 @@ vi.mock("../../api/client", () => ({
 }));
 
 import { SourceControlWorkbench } from "./SourceControlWorkbench";
+import { ApiClientError } from "../../api/client";
 import { clearViewedFiles } from "../../shared/lib/source-control-viewed-files";
 
 const status = {
@@ -104,6 +105,51 @@ describe("SourceControlWorkbench", () => {
     render(<SourceControlWorkbench projectId="project-1" />);
     await screen.findByText(kind === "error" ? "Diff unavailable" : "partial");
     expect(screen.getByRole("checkbox")).toBeDisabled();
+  });
+
+  it("shows diff failures as errors and retries the selected file without refreshing status", async () => {
+    const user = userEvent.setup();
+    sourceControl.getDiff.mockRejectedValueOnce(new Error("+transport unavailable"));
+    render(<SourceControlWorkbench projectId="project-1" onDiscussChange={vi.fn()} />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("+transport unavailable");
+    expect(screen.queryByRole("button", { name: "Find in diff" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Discuss/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("checkbox")).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Retry diff" }));
+    await screen.findByText("+next");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(sourceControl.getStatus).toHaveBeenCalledTimes(1);
+    expect(sourceControl.getDiff).toHaveBeenCalledTimes(2);
+    expect(sourceControl.getDiff).toHaveBeenLastCalledWith("project-1", "src/app.ts", "worktree", undefined);
+    await waitFor(() => expect(screen.getByRole("checkbox")).toBeEnabled());
+  });
+
+  it("retries remote diffs through the same remote workspace without enabling mutations", async () => {
+    const user = userEvent.setup();
+    swarm.getRemoteGitDiff.mockRejectedValueOnce(new ApiClientError(503, "unavailable"));
+    render(<SourceControlWorkbench projectId="p" remoteAgentId="remote" remoteWorkspacePath="/work" />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("The remote agent is offline");
+    await user.click(screen.getByRole("button", { name: "Retry diff" }));
+    await screen.findByText("+next");
+    expect(swarm.getRemoteGitStatus).toHaveBeenCalledTimes(1);
+    expect(swarm.getRemoteGitDiff).toHaveBeenLastCalledWith("remote", "/work", "src/app.ts", "worktree");
+    expect(sourceControl.getDiff).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Stage src/app.ts" })).not.toBeInTheDocument();
+  });
+
+  it("clears an old diff error when another file is selected", async () => {
+    const user = userEvent.setup();
+    sourceControl.getDiff.mockRejectedValueOnce(new Error("first file failed"));
+    render(<SourceControlWorkbench projectId="project-1" />);
+    await screen.findByRole("alert");
+    sourceControl.getDiff.mockResolvedValue({
+      path: "src/staged.ts", area: "staged", diff: "+staged content", truncated: false, binary: false,
+    });
+    await user.click(screen.getByTitle("src/staged.ts"));
+    await screen.findByText("+staged content");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Retry diff" })).not.toBeInTheDocument();
   });
 
   it("does not transfer viewed state across branch or workspace changes", async () => {

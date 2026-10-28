@@ -20,10 +20,12 @@ import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import remarkRehype from "remark-rehype";
 import rehypeStringify from "rehype-stringify";
+import { remarkWindowsPaths } from "./remark-windows-paths";
 
 const processor = unified()
   .use(remarkParse)
   .use(remarkGfm)
+  .use(remarkWindowsPaths)
   .use(remarkRehype)
   .use(rehypeStringify);
 

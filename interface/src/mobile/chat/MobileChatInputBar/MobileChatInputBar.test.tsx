@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { MobileChatInputBar } from "./MobileChatInputBar";
@@ -250,6 +250,36 @@ describe("MobileChatInputBar", () => {
 
     expect(onSend).toHaveBeenCalledTimes(1);
     expect(onSend).toHaveBeenCalledWith("Keyboard send", undefined, undefined);
+  });
+
+  it.each([{ isComposing: true }, { keyCode: 229 }, { repeat: true }])(
+    "keeps composition or repeated Enter in the editor for %j", (modifiers) => {
+      const onSend = vi.fn();
+      renderInputBar({ input: "日本語", onSend });
+      const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true, ...modifiers });
+      fireEvent(screen.getByPlaceholderText("Message agent"), event);
+      expect(onSend).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+    },
+  );
+
+  it("hides the keyboard without sending or changing the draft and can resume editing", async () => {
+    const user = userEvent.setup();
+    const onSend = vi.fn();
+    const onInputChange = vi.fn();
+    renderInputBar({ input: "Keep this draft", onSend, onInputChange });
+    expect(screen.queryByRole("button", { name: "Hide keyboard" })).not.toBeInTheDocument();
+    const textarea = screen.getByPlaceholderText("Message agent");
+    await user.click(textarea);
+    expect(textarea).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: "Hide keyboard" }));
+    expect(textarea).not.toHaveFocus();
+    expect(textarea).toHaveValue("Keep this draft");
+    expect(onSend).not.toHaveBeenCalled();
+    expect(onInputChange).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Hide keyboard" })).not.toBeInTheDocument();
+    await user.click(textarea);
+    expect(screen.getByRole("button", { name: "Hide keyboard" })).toBeInTheDocument();
   });
 
   it("queues a follow-up by touch or Enter during an active chat turn", async () => {

@@ -34,6 +34,7 @@ const mockStreamEntry = {
 // simulate measured growth (e.g. the streaming tail gaining tokens)
 // which is what drives the pin-to-bottom effect in production.
 let mockRowHeight = 100;
+const mockScrollToIndex = vi.hoisted(() => vi.fn());
 
 vi.mock("@tanstack/react-virtual", () => ({
   useVirtualizer: (opts: {
@@ -51,6 +52,7 @@ vi.mock("@tanstack/react-virtual", () => ({
       })),
     getTotalSize: () => opts.count * mockRowHeight,
     measureElement: () => {},
+    scrollToIndex: mockScrollToIndex,
   }),
 }));
 
@@ -104,6 +106,23 @@ function makeScrollRef(overrides: { scrollHeight?: number; scrollTop?: number } 
 }
 
 describe("ChatMessageList", () => {
+  it("navigates a requested virtual row once and permits selecting it again", () => {
+    mockScrollToIndex.mockClear();
+    const messages = [makeMessage("a", "first"), makeMessage("b", "second")];
+    const scrollRef = makeScrollRef();
+    const target = { id: "b", requestId: 1 };
+    const { rerender, container } = render(<ChatMessageList messages={messages} streamKey="stream-1"
+      scrollRef={scrollRef} isAutoFollowing={false} navigationTarget={target} />);
+    expect(mockScrollToIndex).toHaveBeenLastCalledWith(1, { align: "start" });
+    expect(container.querySelector('[data-message-id="b"]')).toHaveAttribute("data-search-target", "true");
+    mockScrollToIndex.mockClear();
+    rerender(<ChatMessageList messages={[...messages, makeMessage("c", "new output")]} streamKey="stream-1"
+      scrollRef={scrollRef} isAutoFollowing={false} navigationTarget={target} />);
+    expect(mockScrollToIndex).not.toHaveBeenCalled();
+    rerender(<ChatMessageList messages={messages} streamKey="stream-1" scrollRef={scrollRef}
+      isAutoFollowing={false} navigationTarget={{ id: "b", requestId: 2 }} />);
+    expect(mockScrollToIndex).toHaveBeenCalledWith(1, { align: "start" });
+  });
   beforeEach(() => {
     clearChatPositions();
     mockMessageBubble.mockReset();

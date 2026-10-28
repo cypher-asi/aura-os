@@ -28,7 +28,9 @@ concurrency:
 
 jobs:
   mobile-regressions:
-    runs-on: ubuntu-latest
+    # Ruby 4.0.2 is part of the shared mobile toolchain. Its prebuilt image
+    # exists on 24.04; newer Ubuntu images only offer the latest Ruby patch.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults:
       run:

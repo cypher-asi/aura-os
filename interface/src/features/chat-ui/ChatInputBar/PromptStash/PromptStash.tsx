@@ -88,6 +88,8 @@ export function PromptStashMenu({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.isComposing || event.keyCode === 229) return;
+      if (event.key === "Enter" && event.repeat) return;
       if (event.key === "Escape") {
         event.preventDefault();
         onClose();
