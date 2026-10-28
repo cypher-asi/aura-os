@@ -26,8 +26,8 @@ const DISCARD = ["\x03", "\x15"]; // Ctrl+C, Ctrl+U
 export interface TerminalLineHistory {
   /** Feed every chunk that the user types (before it reaches the PTY). */
   onData(data: string): void;
-  /** Drive Arrow Up/Down navigation; injects the recalled command. */
-  handleArrow(direction: "up" | "down"): void;
+  /** Returns true when shared history handled the key; otherwise the shell owns it. */
+  handleArrow(direction: "up" | "down"): boolean;
 }
 
 export function createTerminalLineHistory(opts: {
@@ -82,7 +82,7 @@ export function createTerminalLineHistory(opts: {
 
   const handleArrow = (direction: "up" | "down") => {
     const history = useTerminalHistoryStore.getState().getHistory(opts.getHistoryKey());
-    if (history.length === 0) return;
+    if (history.length === 0) return false;
 
     if (direction === "up") {
       if (navIndex === null) {
@@ -91,14 +91,14 @@ export function createTerminalLineHistory(opts: {
       } else if (navIndex > 0) {
         navIndex -= 1;
       } else {
-        return; // already at the oldest entry
+        return true; // keep the shell from replacing our oldest entry
       }
       replaceLine(history[navIndex]);
-      return;
+      return true;
     }
 
     // direction === "down"
-    if (navIndex === null) return; // not navigating: leave the draft untouched
+    if (navIndex === null) return false;
     if (navIndex < history.length - 1) {
       navIndex += 1;
       replaceLine(history[navIndex]);
@@ -106,6 +106,7 @@ export function createTerminalLineHistory(opts: {
       navIndex = null;
       replaceLine(draft);
     }
+    return true;
   };
 
   return { onData, handleArrow };
