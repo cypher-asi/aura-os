@@ -150,6 +150,19 @@ pub(crate) fn powershell_args() -> Vec<&'static str> {
 }
 
 fn configure_shell_command(cmd: &mut CommandBuilder, shell: &str) {
+    // These identify the pane that launched Aura, not the new PTY. Keeping
+    // them makes multiplexer-aware commands target an unrelated terminal.
+    for key in [
+        "TMUX",
+        "TMUX_PANE",
+        "STY",
+        "WINDOW",
+        "ZELLIJ",
+        "ZELLIJ_SESSION_NAME",
+        "ZELLIJ_PANE_ID",
+    ] {
+        cmd.env_remove(key);
+    }
     #[cfg(windows)]
     if is_powershell_shell(shell) {
         for arg in powershell_args() {
@@ -386,6 +399,51 @@ mod tests {
     fn test_default_cwd_returns_nonempty() {
         let cwd = default_cwd();
         assert!(!cwd.is_empty(), "default_cwd() must not be empty");
+    }
+
+    #[test]
+    fn terminal_shell_does_not_inherit_parent_multiplexer_identity() {
+        let mut cmd = CommandBuilder::new("bash");
+        for key in [
+            "TMUX",
+            "TMUX_PANE",
+            "STY",
+            "WINDOW",
+            "ZELLIJ",
+            "ZELLIJ_SESSION_NAME",
+            "ZELLIJ_PANE_ID",
+        ] {
+            cmd.env(key, "parent-pane");
+        }
+        cmd.env("ZELLIJ_CONFIG_DIR", "/tmp/zellij-config");
+        cmd.env("PATH", "/usr/bin:/bin");
+        cmd.env("AURA_TERMINAL_TEST", "keep-me");
+
+        configure_shell_command(&mut cmd, "bash");
+
+        for key in [
+            "TMUX",
+            "TMUX_PANE",
+            "STY",
+            "WINDOW",
+            "ZELLIJ",
+            "ZELLIJ_SESSION_NAME",
+            "ZELLIJ_PANE_ID",
+        ] {
+            assert!(cmd.get_env(key).is_none(), "inherited parent pane: {key}");
+        }
+        assert_eq!(
+            cmd.get_env("ZELLIJ_CONFIG_DIR"),
+            Some(std::ffi::OsStr::new("/tmp/zellij-config"))
+        );
+        assert_eq!(
+            cmd.get_env("PATH"),
+            Some(std::ffi::OsStr::new("/usr/bin:/bin"))
+        );
+        assert_eq!(
+            cmd.get_env("AURA_TERMINAL_TEST"),
+            Some(std::ffi::OsStr::new("keep-me"))
+        );
     }
 
     #[cfg(windows)]
