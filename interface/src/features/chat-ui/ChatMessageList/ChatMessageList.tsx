@@ -30,6 +30,7 @@ import type { SessionBoundary } from "../../../hooks/use-prior-sessions";
 import styles from "./ChatMessageList.module.css";
 
 interface ChatMessageListProps {
+  navigationTarget?: { id: string; requestId: number };
   messages: DisplaySessionEvent[];
   streamKey: string;
   readingPositionKey?: string;
@@ -92,6 +93,7 @@ interface ChatMessageListProps {
  * in the parent `ChatSurface` don't re-run the transcript.
  */
 function ChatMessageListImpl({
+  navigationTarget,
   messages,
   streamKey,
   readingPositionKey,
@@ -207,7 +209,7 @@ function ChatMessageListImpl({
   }, [visibleMessages, boundaryByEventId, nowStreaming]);
 
   const listRef = useRef<HTMLDivElement>(null);
-  const { virtualizer, virtualItems, totalSize, scrollMargin } = useVirtualChatList({
+  const { virtualizer, virtualItems, totalSize, scrollMargin, navigateToRow } = useVirtualChatList({
     readingPositionKey,
     readingPositionReady,
     rows,
@@ -221,6 +223,15 @@ function ChatMessageListImpl({
     hasOlderMessages,
     isLoadingOlder,
   });
+
+  const handledNavigationRef = useRef<typeof navigationTarget>(undefined);
+  useLayoutEffect(() => {
+    if (!navigationTarget || handledNavigationRef.current === navigationTarget) return;
+    const index = rows.findIndex((row) => row.kind === "message" && row.msg.id === navigationTarget.id);
+    if (index < 0) return;
+    handledNavigationRef.current = navigationTarget;
+    navigateToRow(index);
+  }, [navigationTarget, rows, navigateToRow]);
 
   if (!hasMessages) {
     return <>{emptyState}</>;
@@ -287,7 +298,7 @@ function ChatMessageListImpl({
                         startedAt={row.boundary.startedAt}
                       />
                     )}
-                    <div data-message-id={row.msg.id} className={styles.messageRow}>
+                    <div data-message-id={row.msg.id} data-search-target={navigationTarget?.id === row.msg.id || undefined} className={styles.messageRow}>
                       <MessageBubble
                         message={row.msg}
                         isStreaming={isStreaming && row.msg.id.startsWith("stream-")}
