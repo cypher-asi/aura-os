@@ -104,7 +104,8 @@ jobs:
 
   ship-android:
     if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    # Keep the shared Ruby 4.0.2 toolchain on its supported runner image.
+    runs-on: ubuntu-24.04
     env:
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
