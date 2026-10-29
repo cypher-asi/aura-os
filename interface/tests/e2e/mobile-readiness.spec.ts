@@ -130,7 +130,11 @@ test("mobile answers a question raised by a desktop-started agent", async ({ pag
     /\/projects\/proj-1\/agents\/agent-inst-1\?session=session-mobile-1$/,
   );
 
-  await expect(page.getByRole("region", { name: "Agent question" })).toBeInViewport();
+  const questionCard = page.getByRole("region", { name: "Agent question" });
+  // Navigation commits before the cold conversation finishes mounting on
+  // slower WebKit runners. Check placement after the form is actually ready.
+  await expect(questionCard).toBeVisible({ timeout: 15_000 });
+  await expect(questionCard).toBeInViewport();
   await page.getByRole("radio", { name: /Include API/ }).tap();
   await page.getByRole("button", { name: "Continue agent" }).tap();
   await expect.poll(() => submittedAnswers).toEqual({
