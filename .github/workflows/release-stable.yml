@@ -955,6 +955,7 @@ jobs:
           name: AURA ${{ steps.version.outputs.version }}
           draft: false
           prerelease: false
+          generate_release_notes: true
           files: all-artifacts/**/*
           body: |
             Automated release at ${{ github.sha }}.
