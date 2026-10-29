@@ -5,7 +5,21 @@ import { mockAuthenticatedApp } from "./helpers/mockAuthenticatedApp";
 test.use({ serviceWorkers: "block" });
 test.beforeEach(async ({ page }) => { await mockAuthenticatedApp(page); });
 test.afterEach(async ({ page }, testInfo) => {
-  await testInfo.attach("mobile-screen", { body: await page.screenshot(), contentType: "image/png" });
+  const screenshot = testInfo.outputPath("mobile-screen.png");
+  await page.screenshot({ path: screenshot });
+  await testInfo.attach("mobile-screen", { path: screenshot, contentType: "image/png" });
+  if (testInfo.status !== testInfo.expectedStatus) {
+    console.log("mobile overlay geometry", JSON.stringify(await page.evaluate(() => {
+      const rows = [];
+      let node = document.querySelector('[aria-label="Agent question"]');
+      while (node && rows.length < 8) {
+        const css = getComputedStyle(node);
+        rows.push({ className: node.className, rect: node.getBoundingClientRect().toJSON(), overflow: css.overflow, visibility: css.visibility, maxHeight: css.maxHeight, bottom: css.bottom });
+        node = node.parentElement;
+      }
+      return { width: innerWidth, height: innerHeight, rows };
+    })));
+  }
 });
 
 test("mobile navigation keeps all five tabs visible and exposes Process and Stats under More", async ({ page }) => {
