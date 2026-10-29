@@ -16,6 +16,7 @@ import {
 import { ArrowUp } from "lucide-react";
 import styles from "./InputBarShell.module.css";
 import { useInputAutosize } from "./useInputAutosize";
+import { useCenteredComposerAnchor } from "./useCenteredComposerAnchor";
 
 export const ENTER_SUBMIT_GRACE_MS = 100;
 
@@ -256,6 +257,8 @@ function InputBarShellInner(
   ref: Ref<InputBarShellHandle>,
 ) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  useCenteredComposerAnchor(rootRef, textareaRef, isCentered && isVisible && !isStatic);
   const contentMirrorRef = useRef<HTMLDivElement>(null);
   const baselineMirrorRef = useRef<HTMLDivElement>(null);
   const pendingEnterSubmitRef = useRef<PendingEnterSubmit | null>(null);
@@ -433,6 +436,7 @@ function InputBarShellInner(
   return (
     <div
       {...rootProps}
+      ref={rootRef}
       className={wrapperClassName}
       aria-hidden={isVisible ? undefined : true}
       data-visible={isVisible ? "true" : "false"}
