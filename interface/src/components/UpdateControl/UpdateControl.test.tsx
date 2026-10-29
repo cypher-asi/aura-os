@@ -39,6 +39,7 @@ interface PartialState {
   bundleInfo?: unknown;
   isFailed?: boolean;
   relocatePending?: boolean;
+  availableVersion?: string | null;
 }
 
 function setMockState(overrides: PartialState = {}) {
@@ -47,7 +48,7 @@ function setMockState(overrides: PartialState = {}) {
     loaded: true,
     status: overrides.status ?? "failed",
     currentVersion: "1.0.0",
-    availableVersion: null,
+    availableVersion: overrides.availableVersion ?? null,
     error: overrides.error ?? "update install failed: Read-only file system (os error 30)",
     lastStep: overrides.lastStep ?? "preflight_failed",
     lastCheckedAt: null,
@@ -71,6 +72,38 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.clearAllMocks();
+});
+
+describe("UpdateControl release notes", () => {
+  for (const layout of ["inline", "panel"] as const) {
+    it.each(["0.1.0-nightly.869.1", "1.2.3", "v1.2.3", "1.2.3+build.4"])(
+      `${layout} links to the exact immutable release for %s before installing`,
+      async (version) => {
+        setMockState({ status: "available", availableVersion: version });
+        render(<UpdateControl layout={layout} />);
+        const link = screen.getByRole("link", { name: /What's changed/ });
+        expect(link).toHaveAttribute("href", `https://github.com/cypher-asi/aura-os/releases/tag/${encodeURIComponent(`v${version.replace(/^v/, "")}`)}`);
+        expect(link).toHaveAttribute("target", "_blank");
+        expect(link).toHaveAttribute("rel", "noopener noreferrer");
+        expect(installUpdate).not.toHaveBeenCalled();
+        await userEvent.setup().click(screen.getByRole("button", { name: "Install update" }));
+        expect(installUpdate).toHaveBeenCalledTimes(1);
+      },
+    );
+  }
+
+  it.each([null, "", "nightly", "https://example.com", "../latest"])("omits an unknown release version (%s)", (version) => {
+    setMockState({ status: "available", availableVersion: version });
+    render(<UpdateControl />);
+    expect(screen.queryByRole("link", { name: /What's changed/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Install update" })).toBeEnabled();
+  });
+
+  it("does not show a stale release link after a failed install", () => {
+    setMockState({ status: "failed", availableVersion: "1.2.3" });
+    render(<UpdateControl />);
+    expect(screen.queryByRole("link", { name: /What's changed/ })).not.toBeInTheDocument();
+  });
 });
 
 describe("UpdateControl macOS read-only recovery", () => {

@@ -981,6 +981,7 @@ jobs:
           draft: false
           prerelease: true
           make_latest: false
+          generate_release_notes: true
           overwrite_files: true
           files: all-artifacts/**/*
           body: |
