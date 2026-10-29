@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDown,
+  ArrowLeft,
+  ArrowRight,
   ArrowUp,
   Check,
   ChevronDown,
@@ -26,6 +28,7 @@ import { useViewedFiles } from "./use-viewed-files";
 import { viewedFileKey } from "../../shared/lib/source-control-viewed-files";
 import styles from "./SourceControlWorkbench.module.css";
 import { findDiffMatches } from "./diff-search";
+import { filterReviewFiles } from "./review-files";
 
 interface SourceControlWorkbenchProps {
   projectId: string;
@@ -87,9 +90,10 @@ function fileInArea(
 }
 
 function firstSelection(status: SourceControlStatus): Selection | null {
-  const worktreeFile = status.files.find((file) => file.worktree_status);
+  const files = filterReviewFiles(status.files, "", false);
+  const worktreeFile = files.find((file) => file.worktree_status);
   if (worktreeFile) return { path: worktreeFile.path, area: "worktree" };
-  const stagedFile = status.files.find((file) => file.staged_status);
+  const stagedFile = files.find((file) => file.staged_status);
   return stagedFile ? { path: stagedFile.path, area: "staged" } : null;
 }
 
@@ -125,6 +129,9 @@ function WorkspaceSourceControl({
   const [status, setStatus] = useState<SourceControlStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [pullRequest, setPullRequest] = useState<SourceControlStatus["pull_request"]>();
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState(false);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [diff, setDiff] = useState<SourceControlDiff | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
@@ -134,15 +141,17 @@ function WorkspaceSourceControl({
   const [commitMessage, setCommitMessage] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [fileQuery, setFileQuery] = useState("");
+  const [hideTests, setHideTests] = useState(false);
   const effectiveReadOnly = readOnly || Boolean(remoteAgentId);
   const loadDiff = useCallback((path: string, area: SourceControlArea) =>
     remoteAgentId && remoteWorkspacePath
       ? api.swarm.getRemoteGitDiff(remoteAgentId, remoteWorkspacePath, path, area)
       : api.sourceControl.getDiff(projectId, path, area, agentInstanceId),
   [projectId, agentInstanceId, remoteAgentId, remoteWorkspacePath]);
-  const reviewScope = status?.available ? JSON.stringify([
+  const reviewScope = status?.available && !reviewLoading ? JSON.stringify([
     projectId, agentInstanceId, remoteAgentId, remoteWorkspacePath,
-    status.branch, status.pull_request?.url,
+    status.branch, pullRequest?.url,
   ]) : null;
   const viewed = useViewedFiles(reviewScope, status?.files ?? EMPTY_FILES,
     !diffLoading && !diffError && !statusLoading && diff?.path === selection?.path && diff?.area === selection?.area ? diff : null,
@@ -159,6 +168,9 @@ function WorkspaceSourceControl({
     setStatusError(null);
     setStatus(null);
     setDiff(null);
+    setPullRequest(undefined);
+    setReviewLoading(false);
+    setReviewError(false);
     const request = remoteAgentId
       ? remoteWorkspacePath
         ? api.swarm.getRemoteGitStatus(remoteAgentId, remoteWorkspacePath)
@@ -169,16 +181,30 @@ function WorkspaceSourceControl({
             behind: 0,
             files: [],
           })
-      : api.sourceControl.getStatus(projectId, agentInstanceId);
+      : api.sourceControl.getLocalStatus(projectId, agentInstanceId);
     void request
       .then((nextStatus) => {
         if (cancelled) return;
         setStatus(nextStatus);
+        setPullRequest(nextStatus.pull_request);
         setSelection((current) =>
           current && selectionExists(nextStatus, current)
             ? current
             : firstSelection(nextStatus),
         );
+        if (!remoteAgentId && nextStatus.available && nextStatus.branch && !nextStatus.pull_request) {
+          setReviewLoading(true);
+          // Publish local files immediately; only consume review metadata from
+          // this later response, never its potentially stale file/status data.
+          void api.sourceControl.getStatus(projectId, agentInstanceId)
+            .then((reviewStatus) => {
+              if (!cancelled && reviewStatus.available && reviewStatus.branch === nextStatus.branch) {
+                setPullRequest(reviewStatus.pull_request);
+              }
+            })
+            .catch(() => { if (!cancelled) setReviewError(true); })
+            .finally(() => { if (!cancelled) setReviewLoading(false); });
+        }
       })
       .catch((error: unknown) => {
         if (cancelled) return;
@@ -230,6 +256,19 @@ function WorkspaceSourceControl({
     () => status?.files.filter((file) => file.worktree_status) ?? [],
     [status],
   );
+  const visibleStaged = useMemo(() => filterReviewFiles(stagedFiles, fileQuery, hideTests), [stagedFiles, fileQuery, hideTests]);
+  const visibleWorktree = useMemo(() => filterReviewFiles(worktreeFiles, fileQuery, hideTests), [worktreeFiles, fileQuery, hideTests]);
+  const visibleSelections = [...visibleStaged.map((file): Selection => ({ path: file.path, area: "staged" })),
+    ...visibleWorktree.map((file): Selection => ({ path: file.path, area: "worktree" }))];
+  const visibleIndex = visibleSelections.findIndex((file) => file.path === selection?.path && file.area === selection.area);
+  const filtersActive = Boolean(fileQuery.trim()) || hideTests;
+  const clearFileFilters = () => { setFileQuery(""); setHideTests(false); };
+  const navigateFile = (direction: number) => {
+    if (!visibleSelections.length) return;
+    const index = visibleIndex < 0 ? (direction > 0 ? 0 : visibleSelections.length - 1)
+      : (visibleIndex + direction + visibleSelections.length) % visibleSelections.length;
+    setSelection(visibleSelections[index]);
+  };
 
   const mutateFiles = async (
     area: SourceControlArea,
@@ -340,19 +379,21 @@ function WorkspaceSourceControl({
             <ArrowDown size={12} /> {status.behind}
           </span>
         </div>
-        {status.pull_request ? (
+        {pullRequest ? (
           <a
             className={styles.pullRequest}
-            href={status.pull_request.url}
+            href={pullRequest.url}
             target="_blank"
             rel="noopener noreferrer"
-            title={status.pull_request.title}
+            title={pullRequest.title}
           >
-            <span>PR #{status.pull_request.number}</span>
-            <span className={styles.pullRequestTitle}>{status.pull_request.title}</span>
+            <span>PR #{pullRequest.number}</span>
+            <span className={styles.pullRequestTitle}>{pullRequest.title}</span>
             <ExternalLink size={12} />
           </a>
         ) : null}
+        {reviewLoading ? <p aria-live="polite">Loading pull request details…</p> : null}
+        {reviewError ? <p aria-live="polite">Pull request details unavailable. Refresh source control to retry.</p> : null}
       </header>
 
       <div className={styles.reviewProgress} aria-live="polite">
@@ -361,10 +402,22 @@ function WorkspaceSourceControl({
       </div>
 
       <div className={styles.changesPane}>
+        <div className={styles.fileFilters} role="group" aria-label="Changed file filters">
+          <input type="search" aria-label="Filter changed files" placeholder="Filter changed files"
+            value={fileQuery} onChange={(event) => setFileQuery(event.target.value)} />
+          <button type="button" aria-pressed={hideTests} onClick={() => setHideTests((value) => !value)}
+            title="Also hides fixtures, mocks, and snapshots">Hide tests</button>
+          {filtersActive ? <button type="button" onClick={clearFileFilters}>Clear file filters</button> : null}
+        </div>
+        {filtersActive ? <div className={styles.filterNotice} role="status">
+          Showing {visibleStaged.length + visibleWorktree.length} of {stagedFiles.length + worktreeFiles.length} changed entries.
+          {stagedFiles.length > visibleStaged.length ? ` ${stagedFiles.length - visibleStaged.length} staged entries are hidden; a commit still includes all staged changes.` : ""}
+        </div> : null}
         <FileGroup
           title="Staged changes"
           viewedMarks={viewed.marks}
-          files={stagedFiles}
+          files={visibleStaged}
+          filtered={filtersActive}
           area="staged"
           selection={selection}
           pendingAction={pendingAction}
@@ -407,7 +460,8 @@ function WorkspaceSourceControl({
         <FileGroup
           title="Changes"
           viewedMarks={viewed.marks}
-          files={worktreeFiles}
+          files={visibleWorktree}
+          filtered={filtersActive}
           area="worktree"
           selection={selection}
           pendingAction={pendingAction}
@@ -420,6 +474,14 @@ function WorkspaceSourceControl({
       <section className={styles.diffPane} aria-label="Source-control diff">
         {selection ? (
           <>
+            <div className={styles.fileNavigation} aria-label="Changed file navigation" role="group">
+              <button type="button" aria-label="Previous changed file" onClick={() => navigateFile(-1)}
+                disabled={!visibleSelections.length || (visibleSelections.length === 1 && visibleIndex === 0)}><ArrowLeft size={14} /></button>
+              <span>{visibleIndex >= 0 ? `${visibleIndex + 1} / ${visibleSelections.length}` : "Selected file hidden by filters"}</span>
+              <button type="button" aria-label="Next changed file" onClick={() => navigateFile(1)}
+                disabled={!visibleSelections.length || (visibleSelections.length === 1 && visibleIndex === 0)}><ArrowRight size={14} /></button>
+              {visibleIndex < 0 ? <button type="button" onClick={clearFileFilters}>Show selected file</button> : null}
+            </div>
             <div className={styles.diffHeader} title={selection.path}>
               <span>{selection.path}</span>
               <span className={styles.areaBadge}>
@@ -459,6 +521,7 @@ function WorkspaceSourceControl({
 }
 
 interface FileGroupProps {
+  filtered: boolean;
   viewedMarks: Map<string, string>;
   title: string;
   files: SourceControlFile[];
@@ -470,6 +533,7 @@ interface FileGroupProps {
 }
 
 function FileGroup({
+  filtered,
   viewedMarks,
   title,
   files,
@@ -505,12 +569,12 @@ function FileGroup({
             }
             disabled={Boolean(pendingAction)}
           >
-            {verb} all
+            {verb} {filtered ? "visible" : "all"}
           </button>
         ) : null}
       </div>
       {files.length === 0 ? (
-        <div className={styles.emptyGroup}>No {title.toLowerCase()}</div>
+        <div className={styles.emptyGroup}>{filtered ? `No matching ${title.toLowerCase()}` : `No ${title.toLowerCase()}`}</div>
       ) : (
         files.map((file) => {
           const status =
