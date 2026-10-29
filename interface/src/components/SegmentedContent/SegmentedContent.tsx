@@ -1,4 +1,4 @@
-import { memo, useMemo, type AnchorHTMLAttributes, type ImgHTMLAttributes } from "react";
+import { memo, useMemo, type AnchorHTMLAttributes, type HTMLAttributes, type ImgHTMLAttributes } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { remarkWindowsPaths } from "../../shared/utils/remark-windows-paths";
@@ -33,7 +33,15 @@ function MarkdownImage(props: ImgHTMLAttributes<HTMLImageElement>) {
   return <FadeInImage {...props} />;
 }
 
-const MD_COMPONENTS = { a: ExternalLink, img: MarkdownImage, pre: MarkdownCodeBlock };
+function MarkdownCode({ children, className }: HTMLAttributes<HTMLElement>) {
+  return <code className={className} onDoubleClick={(event) => {
+    // Code fences retain their normal word selection and dedicated Copy action.
+    if (event.currentTarget.closest("pre")) return;
+    event.currentTarget.ownerDocument.getSelection()?.selectAllChildren(event.currentTarget);
+  }}>{children}</code>;
+}
+
+const MD_COMPONENTS = { a: ExternalLink, img: MarkdownImage, pre: MarkdownCodeBlock, code: MarkdownCode };
 
 const MarkdownBlock = memo(function MarkdownBlock({ content }: { content: string }) {
   return (
