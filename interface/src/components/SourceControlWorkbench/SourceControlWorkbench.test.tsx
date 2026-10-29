@@ -73,6 +73,69 @@ describe("SourceControlWorkbench", () => {
     });
   });
 
+  it("filters test files and rename sources without changing the selected diff", async () => {
+    const user = userEvent.setup();
+    sourceControl.getStatus.mockResolvedValue({ ...status, files: [
+      { path: "src/a.test.ts", worktree_status: "M" },
+      { path: "src/current.ts", original_path: "src/old.ts", worktree_status: "R" },
+      { path: "src/Latest.java", staged_status: "M" },
+    ] });
+    sourceControl.getDiff.mockImplementation((_project, path, area) => Promise.resolve({ path, area, diff: `+${path}`, truncated: false, binary: false }));
+    render(<SourceControlWorkbench projectId="project-1" readOnly />);
+    await screen.findByText("+src/a.test.ts");
+    await user.click(screen.getByRole("button", { name: "Hide tests" }));
+    expect(screen.queryByRole("button", { name: /^M\s*src\/a\.test\.ts/ })).not.toBeInTheDocument();
+    expect(screen.getByTitle("src/Latest.java")).toBeInTheDocument();
+    expect(screen.getByText("Selected file hidden by filters")).toBeInTheDocument();
+    expect(screen.getByText("+src/a.test.ts")).toBeInTheDocument();
+    await user.type(screen.getByRole("searchbox", { name: "Filter changed files" }), "old");
+    expect(screen.getByTitle("src/old.ts → src/current.ts")).toBeInTheDocument();
+    expect(screen.queryByTitle("src/Latest.java")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("1 staged entries are hidden");
+    await user.click(screen.getByRole("button", { name: "Show selected file" }));
+    expect(screen.getByRole("button", { name: /^M\s*src\/a\.test\.ts/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Hide tests" })).toHaveAttribute("aria-pressed", "false");
+    expect(sourceControl.stage).not.toHaveBeenCalled();
+  });
+
+  it("limits filtered bulk staging to the paths explicitly shown", async () => {
+    const user = userEvent.setup();
+    sourceControl.getStatus.mockResolvedValue({ ...status, files: [
+      { path: "src/a.test.ts", worktree_status: "M" },
+      { path: "src/b.ts", worktree_status: "M" },
+      { path: "src/a.ts", worktree_status: "M" },
+    ] });
+    render(<SourceControlWorkbench projectId="project-1" />);
+    await user.click(await screen.findByRole("button", { name: "Hide tests" }));
+    await user.click(screen.getByRole("button", { name: "Stage visible" }));
+    expect(sourceControl.stage).toHaveBeenCalledWith("project-1", ["src/a.ts", "src/b.ts"], undefined);
+  });
+
+  it("navigates visible files in rendered order and keeps staged/worktree selections distinct", async () => {
+    const user = userEvent.setup();
+    sourceControl.getStatus.mockResolvedValue({ ...status, files: [
+      { path: "z.ts", worktree_status: "M" },
+      { path: "src/same.ts", staged_status: "M", worktree_status: "M" },
+      { path: "src/hidden.test.ts", worktree_status: "M" },
+    ] });
+    sourceControl.getDiff.mockImplementation((_project, path, area) => Promise.resolve({ path, area, diff: `+${path}:${area}`, truncated: false, binary: false }));
+    render(<SourceControlWorkbench projectId="project-1" readOnly />);
+    await screen.findByText("+src/hidden.test.ts:worktree");
+    await user.click(screen.getByRole("button", { name: "Hide tests" }));
+    await user.click(screen.getByRole("button", { name: "Next changed file" }));
+    await screen.findByText("+src/same.ts:staged");
+    await user.click(screen.getByRole("button", { name: "Next changed file" }));
+    await screen.findByText("+src/same.ts:worktree");
+    await user.click(screen.getByRole("button", { name: "Next changed file" }));
+    await screen.findByText("+z.ts:worktree");
+    await user.click(screen.getByRole("button", { name: "Next changed file" }));
+    await screen.findByText("+src/same.ts:staged");
+    await user.type(screen.getByRole("searchbox", { name: "Filter changed files" }), "nothing-matches");
+    expect(screen.getByRole("button", { name: "Next changed file" })).toBeDisabled();
+    expect(screen.getByText("No matching changes")).toBeInTheDocument();
+    expect(screen.getByText("+src/same.ts:staged")).toBeInTheDocument();
+  });
+
   it("marks a complete diff viewed locally and retains it after refresh", async () => {
     const user = userEvent.setup();
     render(<SourceControlWorkbench projectId="project-1" readOnly />);
