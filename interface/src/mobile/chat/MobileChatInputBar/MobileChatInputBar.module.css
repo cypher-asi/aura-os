@@ -45,7 +45,7 @@
 
 .rootCentered {
   bottom: 44%;
-  transform: translate3d(0, 50%, 0);
+  transform: translate3d(0, var(--centered-composer-offset, 50%), 0);
   background: transparent;
 }
 

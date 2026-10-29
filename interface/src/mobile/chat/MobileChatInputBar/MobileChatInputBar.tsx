@@ -62,6 +62,7 @@ import { promptLengthError } from "../../../features/chat-ui/ChatInputBar/compos
 import { refreshRemoteAgentStatus } from "../../../stores/profile-status-store";
 import { useUIModalStore } from "../../../stores/ui-modal-store";
 import { DesktopRelayStatus } from "../../components/DesktopRelayStatus";
+import { useCenteredComposerAnchor } from "../../../components/InputBarShell/useCenteredComposerAnchor";
 import styles from "./MobileChatInputBar.module.css";
 
 const CHAT_COMPOSER_MODE_LABELS: Partial<Record<AgentMode, string>> = {
@@ -114,6 +115,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
     const selectedMode = chatUI.selectedMode;
     const imageQuality = chatUI.imageQuality;
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const rootRef = useRef<HTMLDivElement>(null);
     const {
       supported: voiceSupported,
       listening: voiceListening,
@@ -726,6 +728,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
 
     const shouldCenterComposer =
       isCentered && !isTextInputFocused && !modelSheetOpen && !qualitySheetOpen;
+    useCenteredComposerAnchor(rootRef, textareaRef, shouldCenterComposer && isVisible);
 
     return (
       <>
@@ -804,6 +807,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
         ) : null}
 
         <div
+          ref={rootRef}
           className={`${styles.root}${isVisible ? "" : ` ${styles.rootHidden}`}${shouldCenterComposer ? ` ${styles.rootCentered}` : ""}${isTextInputFocused ? ` ${styles.rootInputFocused}` : ""}`}
           aria-hidden={isVisible ? undefined : true}
           data-visible={isVisible ? "true" : "false"}
