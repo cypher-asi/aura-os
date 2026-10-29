@@ -48,7 +48,7 @@
    is smoothly animatable. */
 .inputWrapper.inputWrapperCentered {
   bottom: 50%;
-  transform: translateY(50%);
+  transform: translateY(var(--centered-composer-offset, 50%));
   background: transparent;
 }
 
