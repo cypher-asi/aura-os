@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { createServer } from "node:http";
 import { mockAuthenticatedApp } from "./helpers/mockAuthenticatedApp";
 
 test.use({ serviceWorkers: "block" });
@@ -179,6 +180,64 @@ test("native chat hides browser dictation even when the WebView exposes the API"
   await page.goto("/projects/proj-1/agents/agent-inst-1");
   await expect(page.getByRole("textbox", { name: "Message agent" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Start voice dictation" })).toHaveCount(0);
+});
+
+test("mobile fits a real photo to the upload byte limit before sending it", async ({ page }) => {
+  const uploads: Array<{ bytes: number; type: string; magic: string }> = [];
+  // WebKit's automation protocol omits binary Blob request bodies. A real
+  // local receiver verifies bytes on the wire for both browser engines.
+  const receiver = createServer((request, response) => {
+    response.setHeader("Access-Control-Allow-Origin", "*");
+    response.setHeader("Access-Control-Allow-Methods", "PUT");
+    response.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    if (request.method === "OPTIONS") { response.writeHead(204).end(); return; }
+    const chunks: Buffer[] = [];
+    request.on("data", chunk => chunks.push(Buffer.from(chunk)));
+    request.on("end", () => {
+      const body = Buffer.concat(chunks);
+      uploads.push({ bytes: body.length, type: String(request.headers["content-type"]), magic: body.subarray(0, 2).toString("hex") });
+      response.writeHead(200).end();
+    });
+  });
+  await new Promise<void>(resolve => receiver.listen(0, "127.0.0.1", resolve));
+  try {
+    const address = receiver.address();
+    if (!address || typeof address === "string") throw new Error("No photo receiver port");
+    await page.route("**/api/upload/presign", async (route) => {
+      await route.fulfill({ json: {
+        upload_url: `http://127.0.0.1:${address.port}/photo`,
+        file_url: "https://files.example/photo.jpg", key: "photo", expires_in: 300,
+      } });
+    });
+    await page.goto("/projects/proj-1/agents/agent-inst-1");
+    await expect(page.getByRole("textbox", { name: "Message agent" })).toBeVisible();
+    // Real browser PNG decoding and canvas encoding: random opaque pixels
+    // produce a photo whose first dimension-limited JPEG can still be too big.
+    const data = await page.evaluate(() => {
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 1536;
+      const context = canvas.getContext("2d")!;
+      const image = context.createImageData(canvas.width, canvas.height);
+      let seed = 42;
+      for (let i = 0; i < image.data.length; i++) {
+        seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+        image.data[i] = i % 4 === 3 ? 255 : seed >>> 24;
+      }
+      context.putImageData(image, 0, 0);
+      return canvas.toDataURL("image/png").split(",")[1];
+    });
+    const original = Buffer.from(data, "base64");
+    expect(original.length).toBeGreaterThan(1_100_000);
+    expect(original.length).toBeLessThan(10 * 1024 * 1024);
+    await page.locator('[data-agent-surface="mobile-chat-input-bar"] input[type="file"]').setInputFiles({ name: "photo.png", mimeType: "image/png", buffer: original });
+    await expect.poll(() => uploads.length).toBe(1);
+    expect(uploads[0].bytes).toBeLessThanOrEqual(1_100_000);
+    expect(uploads[0].type).toBe("image/jpeg");
+    expect(uploads[0].magic).toBe("ffd8");
+  } finally {
+    receiver.closeAllConnections();
+    await new Promise<void>(resolve => receiver.close(() => resolve()));
+  }
 });
 
 test("native mobile creates a hosted web agent without provisioning a remote VM", async ({ page }) => {
