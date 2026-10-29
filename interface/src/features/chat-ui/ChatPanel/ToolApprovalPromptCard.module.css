@@ -1,5 +1,12 @@
 .card {
-  margin: 0 12px 8px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--streaming-indicator-bottom, 108px) + 8px);
+  z-index: 32;
+  max-height: calc(100% - var(--streaming-indicator-bottom, 108px) - 24px);
+  overflow-y: auto;
+  margin: 0 12px;
   padding: 12px;
   border: 1px solid color-mix(in srgb, var(--color-warning) 42%, var(--color-border));
   border-radius: 14px;

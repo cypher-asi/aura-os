@@ -143,6 +143,50 @@ test("mobile answers a question raised by a desktop-started agent", async ({ pag
   await expect(page.getByRole("region", { name: "Agent question" })).toHaveCount(0);
 });
 
+test("mobile reviews the exact command and reaches approval actions above the composer", async ({ page }, testInfo) => {
+  const command = "printf '%s\\n' 'hello 世界'\nnpm test -- --runInBand";
+  let decision: unknown = null;
+  await page.route("**/api/projects/proj-1/agents/agent-inst-1/events/stream", async (route) => {
+    const body = route.request().postDataJSON();
+    await route.fulfill({
+      contentType: "text/event-stream",
+      headers: { "x-aura-chat-persisted": "true", "x-aura-chat-command-id": body.client_command_id },
+      body: `event: tool_approval_prompt\ndata: ${JSON.stringify({
+        request_id: "approval-mobile-command", tool_name: "run_command",
+        args: { command, description: "Check the project", cwd: "/workspace" },
+        agent_id: "agent-1", remember_options: ["once", "session"],
+      })}\n\n`,
+    });
+  });
+  await page.route("**/api/streams/tool-approvals/approval-mobile-command", async (route) => {
+    decision = route.request().postDataJSON();
+    await route.fulfill({ json: { accepted: true } });
+  });
+  await page.goto("/projects/proj-1/agents/agent-inst-1");
+  await page.getByRole("textbox", { name: "Message agent" }).fill("Run the project checks");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  const card = page.getByRole("region", { name: "Agent action approval" });
+  await expect(card).toBeVisible({ timeout: 15_000 });
+  const commandPreview = card.getByLabel("Full command", { exact: true });
+  expect(await commandPreview.textContent()).toBe(command);
+  await commandPreview.scrollIntoViewIfNeeded();
+  await expect(commandPreview).toBeInViewport();
+  await page.screenshot({ path: testInfo.outputPath("approval-command.png") });
+  const allow = card.getByRole("button", { name: "Allow", exact: true });
+  // A long request scrolls inside its card, while its actions stay above
+  // the composer rather than being covered by its absolute overlay.
+  await allow.scrollIntoViewIfNeeded();
+  await expect(allow).toBeInViewport();
+  const buttonBox = await allow.boundingBox();
+  const composerBox = await page.locator('[data-agent-surface="mobile-chat-input-bar"]').boundingBox();
+  expect(buttonBox!.y + buttonBox!.height).toBeLessThanOrEqual(composerBox!.y);
+  expect(buttonBox!.height).toBeGreaterThanOrEqual(44);
+  await page.screenshot({ path: testInfo.outputPath("approval-actions.png") });
+  await allow.tap();
+  await expect.poll(() => decision).toEqual({ decision: "on", remember: "once" });
+  await expect(card).toHaveCount(0);
+});
+
 test.describe("tablet reporting a desktop user agent", () => {
   test.use({ viewport: { width: 1024, height: 768 }, hasTouch: true, isMobile: false,
     userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15" });
