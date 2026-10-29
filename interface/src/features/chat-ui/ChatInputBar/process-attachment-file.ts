@@ -45,8 +45,10 @@ function loadImage(dataUrl: string): Promise<HTMLImageElement> {
 
 async function compressImageDataUrl(dataUrl: string): Promise<{ data: string; mediaType: string }> {
   const originalBase64 = dataUrlToBase64(dataUrl);
-  if (originalBase64.length <= Math.ceil(MAX_IMAGE_UPLOAD_BYTES * 4 / 3)) {
-    const mediaType = dataUrl.match(/^data:([^;,]+)/)?.[1] ?? "image/png";
+  const originalBytes = originalBase64.length * 3 / 4
+    - (originalBase64.endsWith("==") ? 2 : originalBase64.endsWith("=") ? 1 : 0);
+  const mediaType = dataUrl.match(/^data:([^;,]+)/)?.[1] ?? "image/png";
+  if (originalBytes <= MAX_IMAGE_UPLOAD_BYTES) {
     return { data: originalBase64, mediaType };
   }
 
@@ -55,38 +57,46 @@ async function compressImageDataUrl(dataUrl: string): Promise<{ data: string; me
     1,
     MAX_IMAGE_DIMENSION / Math.max(image.naturalWidth, image.naturalHeight),
   );
-  const width = Math.max(1, Math.round(image.naturalWidth * scale));
-  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+  let width = Math.max(1, Math.round(image.naturalWidth * scale));
+  let height = Math.max(1, Math.round(image.naturalHeight * scale));
   const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return { data: originalBase64, mediaType: "image/png" };
-  ctx.drawImage(image, 0, 0, width, height);
-
-  const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, "image/jpeg", IMAGE_JPEG_QUALITY),
-  );
-  if (!blob) return { data: originalBase64, mediaType: "image/png" };
-  const compressedDataUrl = await blobToDataUrl(blob);
-  const compressedBase64 = dataUrlToBase64(compressedDataUrl);
-  if (compressedBase64.length >= originalBase64.length) {
-    const mediaType = dataUrl.match(/^data:([^;,]+)/)?.[1] ?? "image/png";
-    return { data: originalBase64, mediaType };
+  const tooLarge = () => new Error("Photo could not fit the upload limit. Choose a smaller image.");
+  // Encoded size is not guaranteed by dimensions or JPEG quality. In
+  // particular, browsers may fall back to PNG and ignore the quality hint.
+  for (let attempt = 0; attempt < 4; attempt++) {
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw tooLarge();
+    ctx.drawImage(image, 0, 0, width, height);
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", IMAGE_JPEG_QUALITY),
+    );
+    if (!blob || blob.size === 0) throw tooLarge();
+    if (blob.size <= MAX_IMAGE_UPLOAD_BYTES) {
+      const encoded = await blobToDataUrl(blob);
+      return {
+        data: dataUrlToBase64(encoded),
+        mediaType: blob.type || encoded.match(/^data:([^;,]+)/)?.[1] || "image/png",
+      };
+    }
+    const shrink = Math.sqrt(MAX_IMAGE_UPLOAD_BYTES / blob.size) * 0.9;
+    const nextWidth = Math.max(1, Math.floor(width * shrink));
+    const nextHeight = Math.max(1, Math.floor(height * shrink));
+    if (nextWidth === width && nextHeight === height) break;
+    width = nextWidth;
+    height = nextHeight;
   }
-  return { data: compressedBase64, mediaType: "image/jpeg" };
+  throw tooLarge();
 }
 
 function processImageFile(file: File): Promise<AttachmentItem | null> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = async () => {
       try {
         const data = reader.result as string;
-        const processed = await compressImageDataUrl(data).catch(() => ({
-          data: dataUrlToBase64(data),
-          mediaType: file.type,
-        }));
+        const processed = await compressImageDataUrl(data);
         resolve({
           id: crypto.randomUUID(), file,
           data: processed.data,
@@ -95,8 +105,7 @@ function processImageFile(file: File): Promise<AttachmentItem | null> {
           preview: URL.createObjectURL(file),
         });
       } catch (err) {
-        console.warn("[attach] processImageFile onload threw, dropping", { name: file.name, err });
-        resolve(null);
+        reject(err);
       }
     };
     // Without an explicit onerror the Promise hangs forever on read failure
