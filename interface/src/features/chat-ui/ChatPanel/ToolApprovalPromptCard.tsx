@@ -38,6 +38,12 @@ function formatArgs(args: unknown): string | null {
   }
 }
 
+function commandToRun(prompt: ToolApprovalPrompt): string | null {
+  if (prompt.tool_name !== "run_command" || !prompt.args || typeof prompt.args !== "object" || Array.isArray(prompt.args)) return null;
+  const command = (prompt.args as Record<string, unknown>).command;
+  return typeof command === "string" && command.trim() ? command : null;
+}
+
 export function ToolApprovalPromptCard({ streamKey }: ToolApprovalPromptCardProps) {
   const prompt = useToolApprovalStore((state) => state.prompts[streamKey]);
   if (!prompt) return null;
@@ -58,6 +64,7 @@ function ToolApprovalPromptContent({
   const [submitting, setSubmitting] = useState<ToolApprovalDecision | null>(null);
   const [error, setError] = useState<string | null>(null);
   const args = formatArgs(prompt.args);
+  const command = commandToRun(prompt);
 
   const respond = async (decision: ToolApprovalDecision) => {
     setSubmitting(decision);
@@ -84,6 +91,13 @@ function ToolApprovalPromptContent({
           </span>
         </div>
       </div>
+
+      {command ? (
+        <div className={styles.command} role="region" aria-label="Command to run">
+          <strong>Command to run</strong>
+          <pre tabIndex={0} aria-label="Full command"><code>{command}</code></pre>
+        </div>
+      ) : null}
 
       {args ? (
         <details className={styles.details}>
