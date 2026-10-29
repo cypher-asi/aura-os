@@ -35,6 +35,8 @@ pub(crate) enum DiffArea {
 #[derive(Debug, Deserialize, Default)]
 pub(crate) struct SourceControlQuery {
     agent_instance_id: Option<AgentInstanceId>,
+    /// Older callers keep review lookup enabled. Local-first clients opt out.
+    include_pull_request: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -604,11 +606,32 @@ pub(crate) async fn get_status(
             Ok(inspection) => inspection,
             Err(reason) => return Ok(Json(SourceControlStatusResponse::unavailable(reason))),
         };
+    Ok(Json(
+        status_with_review(
+            inspection,
+            query.include_pull_request.unwrap_or(true),
+            |remote| async move { detect_github_pull_request(&remote).await },
+        )
+        .await,
+    ))
+}
+
+async fn status_with_review<F, Fut>(
+    inspection: RepositoryInspection,
+    include_pull_request: bool,
+    lookup: F,
+) -> SourceControlStatusResponse
+where
+    F: FnOnce(GithubRemote) -> Fut,
+    Fut: std::future::Future<Output = Option<SourceControlPullRequest>>,
+{
     let mut status = inspection.status;
-    if let Some(remote) = inspection.github_remote.as_ref() {
-        status.pull_request = detect_github_pull_request(remote).await;
+    if include_pull_request {
+        if let Some(remote) = inspection.github_remote {
+            status.pull_request = lookup(remote).await;
+        }
     }
-    Ok(Json(status))
+    status
 }
 
 pub(crate) async fn get_diff(
@@ -715,6 +738,61 @@ pub(crate) async fn commit(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn review_inspection() -> RepositoryInspection {
+        RepositoryInspection {
+            root: PathBuf::from("/unused"),
+            status: parse_status_porcelain(b"# branch.head feature\x00? notes.txt\x00"),
+            github_remote: Some(GithubRemote {
+                base_owner: "example".into(),
+                base_repo: "repo".into(),
+                head_owner: "example".into(),
+                branch: "feature".into(),
+            }),
+        }
+    }
+
+    #[tokio::test]
+    async fn local_status_does_not_start_a_review_lookup() {
+        let status = status_with_review(review_inspection(), false, |_| async {
+            panic!("local status must not wait on a network request");
+        })
+        .await;
+        assert_eq!(status.branch.as_deref(), Some("feature"));
+        assert_eq!(status.files[0].path, "notes.txt");
+        assert!(status.pull_request.is_none());
+    }
+
+    #[tokio::test]
+    async fn review_lookup_enriches_status_without_changing_local_files() {
+        let status = status_with_review(review_inspection(), true, |remote| async move {
+            assert_eq!(remote.branch, "feature");
+            Some(SourceControlPullRequest {
+                provider: "github".into(),
+                number: 42,
+                title: "Review".into(),
+                state: "open".into(),
+                url: "https://github.com/example/repo/pull/42".into(),
+                head_branch: "feature".into(),
+                base_branch: "main".into(),
+            })
+        })
+        .await;
+        assert_eq!(status.files[0].path, "notes.txt");
+        assert_eq!(status.pull_request.unwrap().number, 42);
+    }
+
+    #[tokio::test]
+    async fn repositories_without_github_metadata_do_not_start_a_lookup() {
+        let mut inspection = review_inspection();
+        inspection.github_remote = None;
+        let status = status_with_review(inspection, true, |_| async {
+            panic!("a non-GitHub repository must not start a lookup");
+        })
+        .await;
+        assert!(status.available);
+        assert!(status.pull_request.is_none());
+    }
 
     #[test]
     fn parses_branch_and_both_index_states() {

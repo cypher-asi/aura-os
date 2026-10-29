@@ -129,6 +129,9 @@ function WorkspaceSourceControl({
   const [status, setStatus] = useState<SourceControlStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [pullRequest, setPullRequest] = useState<SourceControlStatus["pull_request"]>();
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState(false);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [diff, setDiff] = useState<SourceControlDiff | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
@@ -146,9 +149,9 @@ function WorkspaceSourceControl({
       ? api.swarm.getRemoteGitDiff(remoteAgentId, remoteWorkspacePath, path, area)
       : api.sourceControl.getDiff(projectId, path, area, agentInstanceId),
   [projectId, agentInstanceId, remoteAgentId, remoteWorkspacePath]);
-  const reviewScope = status?.available ? JSON.stringify([
+  const reviewScope = status?.available && !reviewLoading ? JSON.stringify([
     projectId, agentInstanceId, remoteAgentId, remoteWorkspacePath,
-    status.branch, status.pull_request?.url,
+    status.branch, pullRequest?.url,
   ]) : null;
   const viewed = useViewedFiles(reviewScope, status?.files ?? EMPTY_FILES,
     !diffLoading && !diffError && !statusLoading && diff?.path === selection?.path && diff?.area === selection?.area ? diff : null,
@@ -165,6 +168,9 @@ function WorkspaceSourceControl({
     setStatusError(null);
     setStatus(null);
     setDiff(null);
+    setPullRequest(undefined);
+    setReviewLoading(false);
+    setReviewError(false);
     const request = remoteAgentId
       ? remoteWorkspacePath
         ? api.swarm.getRemoteGitStatus(remoteAgentId, remoteWorkspacePath)
@@ -175,16 +181,30 @@ function WorkspaceSourceControl({
             behind: 0,
             files: [],
           })
-      : api.sourceControl.getStatus(projectId, agentInstanceId);
+      : api.sourceControl.getLocalStatus(projectId, agentInstanceId);
     void request
       .then((nextStatus) => {
         if (cancelled) return;
         setStatus(nextStatus);
+        setPullRequest(nextStatus.pull_request);
         setSelection((current) =>
           current && selectionExists(nextStatus, current)
             ? current
             : firstSelection(nextStatus),
         );
+        if (!remoteAgentId && nextStatus.available && nextStatus.branch && !nextStatus.pull_request) {
+          setReviewLoading(true);
+          // Publish local files immediately; only consume review metadata from
+          // this later response, never its potentially stale file/status data.
+          void api.sourceControl.getStatus(projectId, agentInstanceId)
+            .then((reviewStatus) => {
+              if (!cancelled && reviewStatus.available && reviewStatus.branch === nextStatus.branch) {
+                setPullRequest(reviewStatus.pull_request);
+              }
+            })
+            .catch(() => { if (!cancelled) setReviewError(true); })
+            .finally(() => { if (!cancelled) setReviewLoading(false); });
+        }
       })
       .catch((error: unknown) => {
         if (cancelled) return;
@@ -359,19 +379,21 @@ function WorkspaceSourceControl({
             <ArrowDown size={12} /> {status.behind}
           </span>
         </div>
-        {status.pull_request ? (
+        {pullRequest ? (
           <a
             className={styles.pullRequest}
-            href={status.pull_request.url}
+            href={pullRequest.url}
             target="_blank"
             rel="noopener noreferrer"
-            title={status.pull_request.title}
+            title={pullRequest.title}
           >
-            <span>PR #{status.pull_request.number}</span>
-            <span className={styles.pullRequestTitle}>{status.pull_request.title}</span>
+            <span>PR #{pullRequest.number}</span>
+            <span className={styles.pullRequestTitle}>{pullRequest.title}</span>
             <ExternalLink size={12} />
           </a>
         ) : null}
+        {reviewLoading ? <p aria-live="polite">Loading pull request details…</p> : null}
+        {reviewError ? <p aria-live="polite">Pull request details unavailable. Refresh source control to retry.</p> : null}
       </header>
 
       <div className={styles.reviewProgress} aria-live="polite">
