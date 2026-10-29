@@ -63,6 +63,11 @@ function requestBody(agentInstanceId: string | undefined, body: object): string 
 }
 
 export const sourceControlApi = {
+  getLocalStatus: (projectId: string, agentInstanceId?: string) => {
+    const query = withAgentInstance(new URLSearchParams({ include_pull_request: "false" }), agentInstanceId);
+    return apiFetch<SourceControlStatus>(`${projectPath(projectId)}?${query.toString()}`, { timeoutMs: 8_000 });
+  },
+
   getStatus: (projectId: string, agentInstanceId?: string) => {
     const query = withAgentInstance(new URLSearchParams(), agentInstanceId);
     const suffix = query.size > 0 ? `?${query.toString()}` : "";

@@ -38,6 +38,16 @@ describe("sourceControlApi", () => {
     );
   });
 
+  it("requests local-only status while preserving the project and agent scope", async () => {
+    const fetchMock = mockFetch({ available: true, files: [] });
+    globalThis.fetch = fetchMock;
+    await sourceControlApi.getLocalStatus("project one", "agent/one");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/projects/project%20one/source-control?include_pull_request=false&agent_instance_id=agent%2Fone",
+      expect.any(Object),
+    );
+  });
+
   it("encodes diff paths and areas as query parameters", async () => {
     const fetchMock = mockFetch({ diff: "" });
     globalThis.fetch = fetchMock;

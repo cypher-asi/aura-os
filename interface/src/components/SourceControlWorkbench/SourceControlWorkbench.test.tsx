@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const sourceControl = vi.hoisted(() => ({
+  getLocalStatus: vi.fn(),
   getStatus: vi.fn(),
   getDiff: vi.fn(),
   stage: vi.fn(),
@@ -50,6 +51,7 @@ describe("SourceControlWorkbench", () => {
   beforeEach(() => {
     clearViewedFiles();
     sourceControl.getStatus.mockReset().mockResolvedValue(status);
+    sourceControl.getLocalStatus.mockReset().mockImplementation((...args) => sourceControl.getStatus(...args));
     sourceControl.getDiff.mockReset().mockResolvedValue({
       path: "src/app.ts",
       area: "worktree",
