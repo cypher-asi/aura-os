@@ -524,12 +524,10 @@ export function ChatSurface({
       '[data-agent-surface="chat-input-bar"], [data-agent-surface="mobile-chat-input-bar"]',
     );
     if (!inputBar) return;
-    // Gap above the input bar (matches the 5px the static 108px tuning
-    // exposed) plus the indicator's own ~68px height, so a freshly
-    // measured single-row input bar (~103px) reproduces the original
-    // 108px / 176px layout exactly.
+    // Reserve only the overlays that are actually present. A permanent
+    // indicator reserve can scroll retry controls out of a short viewport
+    // even after streaming has stopped.
     const GAP_PX = 5;
-    const INDICATOR_PX = 68;
     const isMobileInput =
       inputBar.dataset.agentSurface === "mobile-chat-input-bar";
     const pill = inputBar.querySelector<HTMLElement>('[data-input-pill="true"]');
@@ -537,6 +535,7 @@ export function ChatSurface({
     let lastIndicatorBottom: number | null = null;
     let lastClearance: number | null = null;
     let lastMaskCutoff: number | null = null;
+    let observedIndicator: HTMLElement | null = null;
     // If `--chat-input-clearance` changes while the user is pinned to the
     // bottom, the `.messageArea` padding-bottom change would visibly shift
     // the last bubble relative to the input (most noticeably when sending
@@ -571,7 +570,15 @@ export function ChatSurface({
         : 0;
       const bottom = Math.round(inputRect.height + keyboardInset + GAP_PX);
       if (bottom <= GAP_PX) return;
-      const clearance = bottom + INDICATOR_PX;
+      const indicator = area.querySelector<HTMLElement>(
+        `.${styles.pinnedStreamingIndicator}`,
+      );
+      if (indicator !== observedIndicator) {
+        if (observedIndicator) ro.unobserve(observedIndicator);
+        if (indicator) ro.observe(indicator);
+        observedIndicator = indicator;
+      }
+      const clearance = bottom + Math.ceil(indicator?.getBoundingClientRect().height ?? 0);
       if (lastIndicatorBottom !== bottom) {
         area.style.setProperty("--streaming-indicator-bottom", `${bottom}px`);
         area.style.setProperty("--streaming-indicator-bottom-mobile", `${bottom}px`);
@@ -612,6 +619,11 @@ export function ChatSurface({
     scheduleApply();
     const ro = new ResizeObserver(scheduleApply);
     ro.observe(inputBar);
+    ro.observe(area);
+    // The indicator mounts and unmounts independently of ChatSurface's
+    // props as stream state changes. Observe only direct overlay children.
+    const overlayMo = new MutationObserver(scheduleApply);
+    overlayMo.observe(area, { childList: true });
     // Centering, docking, and mobile keyboard focus can animate or change
     // `bottom`/`transform` without changing wrapper size, so ResizeObserver
     // alone is insufficient. Re-measure when the relevant root attributes
@@ -640,6 +652,7 @@ export function ChatSurface({
         window.cancelAnimationFrame(frame);
       }
       ro.disconnect();
+      overlayMo.disconnect();
       mo.disconnect();
       keyboardMo.disconnect();
       inputBar.removeEventListener("transitionend", onTransitionEnd);

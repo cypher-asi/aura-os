@@ -498,6 +498,14 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
     );
     if (matchingAgentInstanceEvents) return json([]);
 
+    const matchingSessionEvents = agentInstances.find(
+      (instance) => allProjects.some((candidate) => {
+        const prefix = `/api/projects/${candidate.project_id}/agents/${instance.agent_instance_id}/sessions/`;
+        return pathname.startsWith(prefix) && pathname.endsWith("/events/paginated");
+      }),
+    );
+    if (matchingSessionEvents) return json({ events: [], has_more: false, next_before: null });
+
     if (allProjects.some((candidate) => pathname === `/api/projects/${candidate.project_id}/sessions`)) return json([]);
 
     const matchingAgentInstanceSessions = agentInstances.find(
