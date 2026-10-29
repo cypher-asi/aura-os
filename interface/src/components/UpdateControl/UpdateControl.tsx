@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   Check,
   Download,
+  ExternalLink,
   FolderOpen,
   RefreshCw,
 } from "lucide-react";
@@ -192,6 +193,22 @@ interface RenderCommon {
   relocatePending: boolean;
 }
 
+function ReleaseNotesLink({ version }: { version: string | null }) {
+  const tag = version?.replace(/^v/, "");
+  if (!tag || !/^\d+\.\d+\.\d+(?:-[\da-zA-Z.-]+)?(?:\+[\da-zA-Z.-]+)?$/.test(tag)) return null;
+  return (
+    <a
+      className={styles.releaseNotesLink}
+      href={`https://github.com/cypher-asi/aura-os/releases/tag/${encodeURIComponent(`v${tag}`)}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`What's changed in Aura ${version} (opens in a new tab)`}
+    >
+      What&rsquo;s changed <ExternalLink size={14} aria-hidden />
+    </a>
+  );
+}
+
 function formatLastStepLabel(step: string | null): string | null {
   if (!step) return null;
   return step
@@ -355,6 +372,7 @@ function renderInline(
     );
     actions = (
       <>
+        <ReleaseNotesLink version={availableVersion} />
         <Button
           variant="primary"
           size="sm"
@@ -602,16 +620,19 @@ function renderPanel(props: RenderCommon): React.ReactElement {
     );
     icon = <Download size={18} aria-hidden />;
     actions = (
-      <Button
-        variant="primary"
-        size="sm"
-        onClick={() => void installUpdate()}
-        disabled={isInstalling}
-        icon={isInstalling ? <Spinner size="sm" /> : <Download size={14} />}
-        data-testid="settings-update-install"
-      >
-        {isInstalling ? "Preparing\u2026" : "Install update"}
-      </Button>
+      <>
+        <ReleaseNotesLink version={availableVersion} />
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => void installUpdate()}
+          disabled={isInstalling}
+          icon={isInstalling ? <Spinner size="sm" /> : <Download size={14} />}
+          data-testid="settings-update-install"
+        >
+          {isInstalling ? "Preparing\u2026" : "Install update"}
+        </Button>
+      </>
     );
     testId = "settings-update-panel-available";
   } else {
