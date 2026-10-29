@@ -52,10 +52,19 @@ Ordinary integration merges retain the original implementation commits below.
   enrichment subsequently appeared. Filtering, rename matching, navigation,
   and restoring a hidden selection worked. A 390px viewport had no page-wide
   horizontal overflow and the new controls measured 44px high.
-- Native device testing and hosted CI results are still outstanding when this
-  batch is prepared. No release, version, workflow, or signing settings change.
+- Hosted Linux/Windows desktop checks, server checks, security checks, and native
+  shell validation passed. macOS notarization remains blocked by Apple's pending
+  agreement, which the owner explicitly allowed us to leave blocked.
+- Mobile WebKit exposed an existing short-viewport retry-control problem. The
+  follow-up fix reserves the measured streaming indicator height only while the
+  indicator exists and observes panel resizing. All 16 mobile Chromium/WebKit
+  scenarios passed locally, retaining the question/retry viewport assertions.
+  The authenticated fixture now also returns the empty paginated session history
+  response instead of an unrelated HTTP error on a desktop-started session.
+- Native device testing remains outstanding. No release, version, workflow, or
+  signing settings change.
 
-Keep the combined PR unmerged until reviewed. When approved, use **Create a
+The owner authorized merging and publishing this batch. Use **Create a
 merge commit** so the implementation SHAs remain part of main's history. That
 single main push starts the existing release cycle; do not merge the source
 branches separately or squash this batch if original commit identities matter.
